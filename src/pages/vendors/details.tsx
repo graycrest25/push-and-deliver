@@ -350,6 +350,24 @@ export default function VendorDetailsPage() {
                 )}
               </div>
             </div>
+            <div>
+              <p className="text-sm text-muted-foreground">RC Number</p>
+              {restaurant.rcNumber ? (
+                <p className="font-mono text-sm">{restaurant.rcNumber}</p>
+              ) : (
+                <p className="font-medium">N/A</p>
+              )}
+            </div>
+            <div>
+              <p className="text-sm text-muted-foreground">TIN Number</p>
+              {restaurant.tinNumber ? (
+                <p className="font-mono text-sm">{restaurant.tinNumber}</p>
+              ) : (
+                <p className="text-sm text-muted-foreground italic">
+                  Not provided
+                </p>
+              )}
+            </div>
           </div>
         </CardContent>
       </Card>
@@ -388,7 +406,7 @@ export default function VendorDetailsPage() {
       {/* Wallet Information */}
       <Card>
         <CardHeader>
-          <CardTitle>Wallet Information</CardTitle>
+          <CardTitle>More Details</CardTitle>
         </CardHeader>
         <CardContent>
           <div className="grid grid-cols-2 gap-6">
@@ -401,6 +419,41 @@ export default function VendorDetailsPage() {
                 ₦{formatAmount(restaurant.walletbalance || 0)}
               </p>
             </div>
+          </div>
+        </CardContent>
+      </Card>
+
+      {/* Business Documents */}
+      <Card>
+        <CardHeader>
+          <CardTitle>Business Documents</CardTitle>
+        </CardHeader>
+        <CardContent>
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+            {[
+              { label: "Utility Bill", src: restaurant.utilityImage },
+              { label: "Restaurant Image", src: restaurant.restaurantImage },
+              { label: "CAC Document", src: restaurant.cacImage },
+            ].map(({ label, src }) => (
+              <div key={label} className="space-y-2">
+                <p className="text-sm text-muted-foreground">{label}</p>
+                {src ? (
+                  <a href={src} target="_blank" rel="noopener noreferrer">
+                    <img
+                      src={src}
+                      alt={label}
+                      className="w-full h-48 object-cover rounded-lg border hover:opacity-90 transition-opacity cursor-pointer"
+                    />
+                  </a>
+                ) : (
+                  <div className="w-full h-48 rounded-lg border bg-muted flex items-center justify-center">
+                    <p className="text-sm text-muted-foreground">
+                      No image uploaded
+                    </p>
+                  </div>
+                )}
+              </div>
+            ))}
           </div>
         </CardContent>
       </Card>

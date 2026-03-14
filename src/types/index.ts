@@ -695,6 +695,7 @@ export interface ProductOrder {
   createdAt?: Timestamp | Date;
 }
 
+
 export interface AppConfig {
   id?: string;
   app?: string; // "user" | "rider" etc.
@@ -703,6 +704,8 @@ export interface AppConfig {
   forceupdate?: boolean;
   isActive?: boolean;
   signupbonusamount?: number;
+  name?: string; // e.g. "General Configuration", "Signup Bonus Configuration"
+  
 }
 
 export * from "./export-rates";

@@ -38,7 +38,9 @@ export default function AppConfigPage() {
   const [saving, setSaving] = useState<string | null>(null);
 
   // Local state for editing
-  const [editValues, setEditValues] = useState<Record<string, Record<string, string | number | boolean>>>({});
+  const [editValues, setEditValues] = useState<
+    Record<string, Record<string, string | number | boolean>>
+  >({});
 
   useEffect(() => {
     loadConfigs();
@@ -51,7 +53,10 @@ export default function AppConfigPage() {
       setConfigs(data);
 
       // Initialize edit values
-      const initialValues: Record<string, Record<string, string | number | boolean>> = {};
+      const initialValues: Record<
+        string,
+        Record<string, string | number | boolean>
+      > = {};
       data.forEach((config) => {
         if (config.id) {
           initialValues[config.id] = {
@@ -74,7 +79,7 @@ export default function AppConfigPage() {
   const handleUpdateField = async (
     configId: string,
     field: string,
-    value: string | number | boolean
+    value: string | number | boolean,
   ) => {
     try {
       setSaving(`${configId}-${field}`);
@@ -82,9 +87,7 @@ export default function AppConfigPage() {
       toast.success(`${field} updated successfully`);
       // Update local state
       setConfigs((prev) =>
-        prev.map((c) =>
-          c.id === configId ? { ...c, [field]: value } : c
-        )
+        prev.map((c) => (c.id === configId ? { ...c, [field]: value } : c)),
       );
     } catch (error) {
       toast.error(`Failed to update ${field}`);
@@ -93,7 +96,10 @@ export default function AppConfigPage() {
         ...prev,
         [configId]: {
           ...prev[configId],
-          [field]: configs.find((c) => c.id === configId)?.[field as keyof AppConfig] || "",
+          [field]:
+            configs.find((c) => c.id === configId)?.[
+              field as keyof AppConfig
+            ] || "",
         },
       }));
     } finally {
@@ -104,7 +110,7 @@ export default function AppConfigPage() {
   const handleToggle = async (
     configId: string,
     field: string,
-    currentValue: boolean
+    currentValue: boolean,
   ) => {
     const newValue = !currentValue;
     // Optimistically update
@@ -118,7 +124,11 @@ export default function AppConfigPage() {
     await handleUpdateField(configId, field, newValue);
   };
 
-  const updateEditValue = (configId: string, field: string, value: string | number | boolean) => {
+  const updateEditValue = (
+    configId: string,
+    field: string,
+    value: string | number | boolean,
+  ) => {
     setEditValues((prev) => ({
       ...prev,
       [configId]: {
@@ -129,7 +139,11 @@ export default function AppConfigPage() {
   };
 
   // Only super and regular admins can access
-  if (!loading && user?.adminType !== "super" && user?.adminType !== "regular") {
+  if (
+    !loading &&
+    user?.adminType !== "super" &&
+    user?.adminType !== "regular"
+  ) {
     return <Navigate to="/dashboard" replace />;
   }
 
@@ -151,7 +165,9 @@ export default function AppConfigPage() {
     return (
       <div className="p-8 space-y-6">
         <div>
-          <h1 className="text-3xl font-bold tracking-tight">App Configuration</h1>
+          <h1 className="text-3xl font-bold tracking-tight">
+            App Configuration
+          </h1>
           <p className="text-muted-foreground">Manage application settings</p>
         </div>
         <div className="grid gap-4 md:grid-cols-2">
@@ -170,7 +186,9 @@ export default function AppConfigPage() {
       <div className="flex items-center gap-3">
         <IconSettings className="h-8 w-8 text-primary" />
         <div>
-          <h1 className="text-3xl font-bold tracking-tight">App Configuration</h1>
+          <h1 className="text-3xl font-bold tracking-tight">
+            App Configuration
+          </h1>
           <p className="text-muted-foreground">
             Manage application settings and configuration
           </p>
@@ -187,13 +205,16 @@ export default function AppConfigPage() {
                 <CardHeader>
                   <CardTitle className="flex items-center gap-2">
                     {getPlatformIcon(config.platform)}
-                    {config.app?.charAt(0).toUpperCase() + (config.app?.slice(1) || "")} App
+                    {config.app?.charAt(0).toUpperCase() +
+                      (config.app?.slice(1) || "")}{" "}
+                    App
                     <Badge variant="outline" className="ml-auto">
                       {config.platform}
                     </Badge>
                   </CardTitle>
                   <CardDescription>
-                    Version control for {config.platform} {config.app} application
+                    Version control for {config.platform} {config.app}{" "}
+                    application
                   </CardDescription>
                 </CardHeader>
                 <CardContent className="space-y-4">
@@ -203,9 +224,15 @@ export default function AppConfigPage() {
                     <div className="flex gap-2">
                       <Input
                         id={`appversion-${config.id}`}
-                        value={editValues[config.id!]?.appversion?.toString() || ""}
+                        value={
+                          editValues[config.id!]?.appversion?.toString() || ""
+                        }
                         onChange={(e) =>
-                          updateEditValue(config.id!, "appversion", e.target.value)
+                          updateEditValue(
+                            config.id!,
+                            "appversion",
+                            e.target.value,
+                          )
                         }
                         placeholder="e.g. 1.0.0"
                         disabled={isAdminViewOnly}
@@ -216,12 +243,14 @@ export default function AppConfigPage() {
                             handleUpdateField(
                               config.id!,
                               "appversion",
-                              editValues[config.id!]?.appversion || ""
+                              editValues[config.id!]?.appversion || "",
                             )
                           }
                           disabled={saving === `${config.id}-appversion`}
                         >
-                          {saving === `${config.id}-appversion` ? "Saving..." : "Save"}
+                          {saving === `${config.id}-appversion`
+                            ? "Saving..."
+                            : "Save"}
                         </Button>
                       )}
                     </div>
@@ -246,10 +275,12 @@ export default function AppConfigPage() {
                         handleToggle(
                           config.id!,
                           "forceupdate",
-                          !!editValues[config.id!]?.forceupdate
+                          !!editValues[config.id!]?.forceupdate,
                         )
                       }
-                      disabled={saving === `${config.id}-forceupdate` || isAdminViewOnly}
+                      disabled={
+                        saving === `${config.id}-forceupdate` || isAdminViewOnly
+                      }
                     />
                   </div>
                 </CardContent>
@@ -269,10 +300,12 @@ export default function AppConfigPage() {
                 <CardHeader>
                   <CardTitle className="flex items-center gap-2">
                     <IconSettings className="h-5 w-5" />
-                    General Configuration
+                    {config.id === "I1bfdpsvQwpH1Zpb1ypN"
+                      ? "Signup Bonus Configuration"
+                      : config.name}
                   </CardTitle>
                   <CardDescription>
-                    Global app settings and bonus configurations
+                    {/* Global app settings and bonus configurations */}
                   </CardDescription>
                 </CardHeader>
                 <CardContent>
@@ -297,10 +330,13 @@ export default function AppConfigPage() {
                             handleToggle(
                               config.id!,
                               "isActive",
-                              !!editValues[config.id!]?.isActive
+                              !!editValues[config.id!]?.isActive,
                             )
                           }
-                          disabled={saving === `${config.id}-isActive` || isAdminViewOnly}
+                          disabled={
+                            saving === `${config.id}-isActive` ||
+                            isAdminViewOnly
+                          }
                         />
                       </div>
                     )}
@@ -320,12 +356,14 @@ export default function AppConfigPage() {
                             id={`signupbonus-${config.id}`}
                             type="number"
                             min="0"
-                            value={editValues[config.id!]?.signupbonusamount || ""}
+                            value={
+                              editValues[config.id!]?.signupbonusamount || ""
+                            }
                             onChange={(e) =>
                               updateEditValue(
                                 config.id!,
                                 "signupbonusamount",
-                                parseFloat(e.target.value) || 0
+                                parseFloat(e.target.value) || 0,
                               )
                             }
                             placeholder="e.g. 500"
@@ -337,10 +375,13 @@ export default function AppConfigPage() {
                                 handleUpdateField(
                                   config.id!,
                                   "signupbonusamount",
-                                  editValues[config.id!]?.signupbonusamount || 0
+                                  editValues[config.id!]?.signupbonusamount ||
+                                    0,
                                 )
                               }
-                              disabled={saving === `${config.id}-signupbonusamount`}
+                              disabled={
+                                saving === `${config.id}-signupbonusamount`
+                              }
                             >
                               {saving === `${config.id}-signupbonusamount`
                                 ? "Saving..."
@@ -376,7 +417,9 @@ export default function AppConfigPage() {
                   <span className="font-medium">
                     {config.app && config.platform
                       ? `${config.app} (${config.platform})`
-                      : "General"}
+                      : config.signupbonusamount
+                        ? "Signup Bonus"
+                        : config.name}
                   </span>
                 </div>
                 {config.appversion && (
@@ -388,7 +431,9 @@ export default function AppConfigPage() {
                 {config.forceupdate !== undefined && (
                   <p className="text-sm">
                     <span className="text-muted-foreground">Force Update:</span>{" "}
-                    <Badge variant={config.forceupdate ? "default" : "secondary"}>
+                    <Badge
+                      variant={config.forceupdate ? "default" : "secondary"}
+                    >
                       {config.forceupdate ? "Enabled" : "Disabled"}
                     </Badge>
                   </p>

@@ -14,7 +14,6 @@ import { Switch } from "@/components/ui/switch";
 import { useCurrentUser } from "@/contexts/UserContext";
 import { productOrdersService } from "@/services/product-orders.service";
 import type { OrderItem, ProductOrder } from "@/types";
-import { OrderStatus } from "@/types";
 import { format } from "date-fns";
 import {
   ArrowLeft,
@@ -34,6 +33,15 @@ import {
 import { useEffect, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import { toast } from "sonner";
+
+const OrderStatus = {
+  Pending: 0,
+  Confirmed: 1,
+  Accepted: 2,
+  OnRoute: 3,
+  Completed: 4,
+  Cancelled: 5,
+} as const;
 
 export default function ProductOrderDetailsPage() {
   const { id } = useParams<{ id: string }>();
@@ -92,23 +100,25 @@ export default function ProductOrderDetailsPage() {
             Pending
           </Badge>
         );
-      case OrderStatus.Assigned:
+      case OrderStatus.Confirmed:
         return (
-          <Badge className="bg-blue-500 text-sm px-3 py-1">Assigned</Badge>
+          <Badge className="bg-blue-500 text-sm px-3 py-1">Confirmed</Badge>
         );
-      case OrderStatus.PickedUp:
+      case OrderStatus.Accepted:
         return (
-          <Badge className="bg-indigo-500 text-sm px-3 py-1">Picked Up</Badge>
+          <Badge className="bg-indigo-500 text-sm px-3 py-1">Accepted</Badge>
         );
-      case OrderStatus.OutForDelivery:
+      case OrderStatus.OnRoute:
         return (
-          <Badge className="bg-orange-500 text-sm px-3 py-1">
-            Out for Delivery
-          </Badge>
+          <Badge className="bg-orange-500 text-sm px-3 py-1">On Route</Badge>
         );
-      case OrderStatus.Delivered:
+      case OrderStatus.Completed:
         return (
-          <Badge className="bg-green-500 text-sm px-3 py-1">Delivered</Badge>
+          <Badge className="bg-green-500 text-sm px-3 py-1">Completed</Badge>
+        );
+      case OrderStatus.Cancelled:
+        return (
+          <Badge className="bg-red-500 text-sm px-3 py-1">Cancelled</Badge>
         );
       default:
         return (
@@ -130,41 +140,50 @@ export default function ProductOrderDetailsPage() {
           textClass: "text-amber-900 dark:text-amber-100",
           badgeVariant: "secondary" as const,
         };
-      case OrderStatus.Assigned:
+      case OrderStatus.Confirmed:
         return {
-          label: "Assigned",
+          label: "Confirmed",
           icon: CheckCircle,
           colorClass:
             "from-blue-50 to-blue-100 dark:from-blue-950 dark:to-blue-900 border-blue-200 dark:border-blue-800",
           textClass: "text-blue-900 dark:text-blue-100",
           badgeVariant: "default" as const,
         };
-      case OrderStatus.PickedUp:
+      case OrderStatus.Accepted:
         return {
-          label: "Picked Up",
-          icon: Truck,
+          label: "Accepted",
+          icon: CheckCircle,
           colorClass:
             "from-indigo-50 to-indigo-100 dark:from-indigo-950 dark:to-indigo-900 border-indigo-200 dark:border-indigo-800",
           textClass: "text-indigo-900 dark:text-indigo-100",
           badgeVariant: "default" as const,
         };
-      case OrderStatus.OutForDelivery:
+      case OrderStatus.OnRoute:
         return {
-          label: "Out for Delivery",
+          label: "On Route",
           icon: Truck,
           colorClass:
             "from-orange-50 to-orange-100 dark:from-orange-950 dark:to-orange-900 border-orange-200 dark:border-orange-800",
           textClass: "text-orange-900 dark:text-orange-100",
           badgeVariant: "default" as const,
         };
-      case OrderStatus.Delivered:
+      case OrderStatus.Completed:
         return {
-          label: "Delivered",
+          label: "Completed",
           icon: CheckCircle,
           colorClass:
             "from-green-50 to-green-100 dark:from-green-950 dark:to-green-900 border-green-200 dark:border-green-800",
           textClass: "text-green-900 dark:text-green-100",
           badgeVariant: "default" as const,
+        };
+      case OrderStatus.Cancelled:
+        return {
+          label: "Cancelled",
+          icon: AlertTriangle,
+          colorClass:
+            "from-red-50 to-red-100 dark:from-red-950 dark:to-red-900 border-red-200 dark:border-red-800",
+          textClass: "text-red-900 dark:text-red-100",
+          badgeVariant: "destructive" as const,
         };
       default:
         return {
@@ -430,9 +449,9 @@ export default function ProductOrderDetailsPage() {
         <div className="space-y-6">
           {/* Customer Info */}
           <Card>
-            <CardHeader className="pb-3">
+            <CardHeader className="">
               <CardTitle className="text-base flex items-center gap-2">
-                <User className="h-4 w-4" /> Customer Details
+                <User className="w-4" /> Customer Details
               </CardTitle>
             </CardHeader>
             <CardContent className="space-y-3">
@@ -549,8 +568,8 @@ export default function ProductOrderDetailsPage() {
                       {order.riderphonenumber || "N/A"}
                     </p>
                   </div>
-                  <Separator />
-                  <div className="flex items-center gap-2">
+                  {/* <Separator /> */}
+                  {/* <div className="flex items-center gap-2">
                     <Badge
                       variant={
                         order.riderPayoutProcessed ? "default" : "secondary"
@@ -561,7 +580,7 @@ export default function ProductOrderDetailsPage() {
                         ? "Payout Processed"
                         : "Payout Pending"}
                     </Badge>
-                  </div>
+                  </div> */}
                 </>
               ) : (
                 <div className="flex flex-col items-center justify-center p-6 bg-muted/30 rounded-lg border border-dashed">

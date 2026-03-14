@@ -14,11 +14,19 @@ import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { productOrdersService } from "@/services/product-orders.service";
 import type { ProductOrder } from "@/types";
-import { OrderStatus } from "@/types";
 import { toast } from "sonner";
 import { format } from "date-fns";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Search, Package } from "lucide-react";
+
+const EcomOrderStatus = {
+  Pending: 0,
+  Confirmed: 1,
+  Accepted: 2,
+  OnRoute: 3,
+  Completed: 4,
+  Cancelled: 5,
+} as const;
 
 export default function ProductOrdersPage() {
   const navigate = useNavigate();
@@ -56,17 +64,18 @@ export default function ProductOrdersPage() {
     // Filter by Tab (Status)
     if (currentTab !== "all") {
       const statusMap: Record<string, number> = {
-        pending: OrderStatus.Pending,
-        assigned: OrderStatus.Assigned,
-        picked_up: OrderStatus.PickedUp,
-        out_for_delivery: OrderStatus.OutForDelivery,
-        delivered: OrderStatus.Delivered,
+        pending: EcomOrderStatus.Pending,
+        confirmed: EcomOrderStatus.Confirmed,
+        accepted: EcomOrderStatus.Accepted,
+        on_route: EcomOrderStatus.OnRoute,
+        completed: EcomOrderStatus.Completed,
+        cancelled: EcomOrderStatus.Cancelled,
       };
 
       const targetStatus = statusMap[currentTab];
       if (targetStatus !== undefined) {
         filtered = filtered.filter(
-          (order) => order.orderstatus === targetStatus
+          (order) => order.orderstatus === targetStatus,
         );
       }
     }
@@ -78,7 +87,7 @@ export default function ProductOrdersPage() {
         (order) =>
           order.orderId?.toLowerCase().includes(lowercaseQuery) ||
           order.customerName?.toLowerCase().includes(lowercaseQuery) ||
-          order.customerPhoneNumber?.includes(searchQuery)
+          order.customerPhoneNumber?.includes(searchQuery),
       );
     }
 
@@ -87,34 +96,40 @@ export default function ProductOrdersPage() {
 
   const getStatusBadge = (status?: number) => {
     switch (status) {
-      case OrderStatus.Pending:
+      case EcomOrderStatus.Pending:
         return (
           <Badge variant="secondary" className="font-medium">
             Pending
           </Badge>
         );
-      case OrderStatus.Assigned:
+      case EcomOrderStatus.Confirmed:
         return (
           <Badge className="bg-blue-500 hover:bg-blue-600 font-medium">
-            Assigned
+            Confirmed
           </Badge>
         );
-      case OrderStatus.PickedUp:
+      case EcomOrderStatus.Accepted:
         return (
           <Badge className="bg-indigo-500 hover:bg-indigo-600 font-medium">
-            Picked Up
+            Accepted
           </Badge>
         );
-      case OrderStatus.OutForDelivery:
+      case EcomOrderStatus.OnRoute:
         return (
           <Badge className="bg-orange-500 hover:bg-orange-600 font-medium">
-            Out for Delivery
+            On Route
           </Badge>
         );
-      case OrderStatus.Delivered:
+      case EcomOrderStatus.Completed:
         return (
           <Badge className="bg-green-500 hover:bg-green-600 font-medium">
-            Delivered
+            Completed
+          </Badge>
+        );
+      case EcomOrderStatus.Cancelled:
+        return (
+          <Badge className="bg-red-500 hover:bg-red-600 font-medium">
+            Cancelled
           </Badge>
         );
       default:
@@ -161,10 +176,11 @@ export default function ProductOrdersPage() {
         <TabsList>
           <TabsTrigger value="all">All</TabsTrigger>
           <TabsTrigger value="pending">Pending</TabsTrigger>
-          <TabsTrigger value="assigned">Assigned</TabsTrigger>
-          <TabsTrigger value="picked_up">Picked Up</TabsTrigger>
-          <TabsTrigger value="out_for_delivery">Out for Delivery</TabsTrigger>
-          <TabsTrigger value="delivered">Delivered</TabsTrigger>
+          <TabsTrigger value="confirmed">Confirmed</TabsTrigger>
+          <TabsTrigger value="accepted">Accepted</TabsTrigger>
+          <TabsTrigger value="on_route">On Route</TabsTrigger>
+          <TabsTrigger value="completed">Completed</TabsTrigger>
+          <TabsTrigger value="cancelled">Cancelled</TabsTrigger>
         </TabsList>
 
         <TabsContent value={currentTab} className="space-y-4">

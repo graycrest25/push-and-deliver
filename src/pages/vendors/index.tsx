@@ -144,6 +144,21 @@ export default function VendorsPage() {
     0,
   );
 
+  const getStatusLabel = (status: VerificationStatus | undefined) => {
+    switch (status) {
+      case VerificationStatus.verified:
+        return "Verified";
+      case VerificationStatus.unverified:
+        return "Unverified";
+      case VerificationStatus.blocked:
+        return "Blocked";
+      case VerificationStatus.deleted:
+        return "Deleted";
+      default:
+        return "Unverified";
+    }
+  };
+
   if (loading) {
     return (
       <div className="p-8 space-y-6">
@@ -318,7 +333,7 @@ export default function VendorsPage() {
                                 : "secondary"
                           }
                         >
-                          {restaurant.verificationStatus || "unverified"}
+                          {getStatusLabel(restaurant.verificationStatus)}
                         </Badge>
                       </TableCell>
                       <TableCell>

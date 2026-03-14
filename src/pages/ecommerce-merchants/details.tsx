@@ -328,6 +328,37 @@ export default function EcommerceMerchantDetailsPage() {
                 />
               </div>
             )}
+            <div className="col-span-3">
+              <p className="text-sm text-muted-foreground mb-3">
+                Business Documents
+              </p>
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                {[
+                  { label: "Utility Bill", src: merchant.utilityImage },
+                  { label: "Restaurant Image", src: merchant.restaurantImage },
+                  { label: "CAC Document", src: merchant.cacImage },
+                ].map(({ label, src }) => (
+                  <div key={label} className="space-y-2">
+                    <p className="text-sm text-muted-foreground">{label}</p>
+                    {src ? (
+                      <a href={src} target="_blank" rel="noopener noreferrer">
+                        <img
+                          src={src}
+                          alt={label}
+                          className="w-full h-48 object-cover rounded-lg border hover:opacity-90 transition-opacity cursor-pointer"
+                        />
+                      </a>
+                    ) : (
+                      <div className="w-full h-48 rounded-lg border bg-muted flex items-center justify-center">
+                        <p className="text-sm text-muted-foreground">
+                          No image uploaded
+                        </p>
+                      </div>
+                    )}
+                  </div>
+                ))}
+              </div>
+            </div>
           </div>
         </CardContent>
       </Card>

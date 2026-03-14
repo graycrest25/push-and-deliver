@@ -19,7 +19,7 @@ export const productOrdersService = {
     try {
       const q = query(
         collection(db, COLLECTION_NAME),
-        where("ispaid", "==", false),
+        // where("ispaid", "==", false),
         orderBy("createdAt", "desc")
       );
       const snapshot = await getDocs(q);
