@@ -12,6 +12,7 @@ import {
   IconMapPin,
   IconMotorbike,
   IconPackage,
+  IconLink,
   IconPlane,
   IconReceipt,
   IconSettings,
@@ -79,6 +80,11 @@ const data = {
       title: "Coupons",
       url: "/coupons",
       icon: IconGiftCard,
+    },
+    {
+      title: "Generated Referrals",
+      url: "/generated",
+      icon: IconLink,
     },
     {
       title: "Support Tickets",

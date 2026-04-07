@@ -13,7 +13,7 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
-import { ArrowLeft } from "lucide-react";
+import { ArrowLeft, Pencil } from "lucide-react";
 import {
   Dialog,
   DialogContent,
@@ -37,7 +37,7 @@ import type { Rider, Transaction } from "@/types";
 import { toast } from "sonner";
 import { Skeleton } from "@/components/ui/skeleton";
 import { collection, query, orderBy, getDocs } from "firebase/firestore";
-import { db, storage } from "@/lib/firebase";
+import { db, storage, auth } from "@/lib/firebase";
 import {
   ref,
   deleteObject,
@@ -51,12 +51,9 @@ import { useCurrentUser } from "@/contexts/UserContext";
 import { ImageUploadCard } from "@/components/ImageUploadCard";
 import { MonoVerificationDialog } from "@/components/MonoVerificationDialog";
 import { CardDescription } from "@/components/ui/card";
-// import { ref,  } from "firebase/storage";
 
 function formatISOToReadable(isoString: string): string {
   const date = new Date(isoString);
-
-  // Get day with ordinal suffix (1st, 2nd, 3rd, etc.)
   const day = date.getDate();
   const ordinalSuffix = (day: number): string => {
     if (day > 3 && day < 21) return "th";
@@ -71,8 +68,6 @@ function formatISOToReadable(isoString: string): string {
         return "th";
     }
   };
-
-  // Get month name (short form)
   const months = [
     "Jan",
     "Feb",
@@ -88,10 +83,7 @@ function formatISOToReadable(isoString: string): string {
     "Dec",
   ];
   const month = months[date.getMonth()];
-
-  // Get year
   const year = date.getFullYear();
-
   return `${day}${ordinalSuffix(day)} ${month} ${year}`;
 }
 
@@ -126,6 +118,212 @@ const getVerificationBadgeVariant = (status: number | undefined) => {
   }
 };
 
+// ─── Edit Rider Profile Dialog ───────────────────────────────────────────────
+
+interface EditableFields {
+  name: string;
+  phoneNumber: string;
+  email: string;
+}
+
+interface EditRiderDialogProps {
+  rider: Rider;
+  onUpdateComplete: () => Promise<void>;
+}
+
+function EditRiderDialog({ rider, onUpdateComplete }: EditRiderDialogProps) {
+  const [open, setOpen] = useState(false);
+  const [updating, setUpdating] = useState(false);
+
+  const getOriginalValues = (): EditableFields => ({
+    name: rider.fullname || "",
+    phoneNumber: rider.phonenumber || "",
+    email: rider.email || "",
+  });
+
+  const [formValues, setFormValues] =
+    useState<EditableFields>(getOriginalValues());
+
+  const handleOpen = () => {
+    setFormValues(getOriginalValues());
+    setOpen(true);
+  };
+
+  const originalValues = getOriginalValues();
+
+  const getChangedFields = (): Partial<EditableFields> => {
+    const changed: Partial<EditableFields> = {};
+    (Object.keys(formValues) as Array<keyof EditableFields>).forEach((key) => {
+      const current = formValues[key].trim();
+      const original = originalValues[key].trim();
+      if (current !== original && current !== "") {
+        changed[key] = current;
+      }
+    });
+    return changed;
+  };
+
+  const changedFields = getChangedFields();
+  const hasChanges = Object.keys(changedFields).length > 0;
+
+  const handleUpdate = async () => {
+    if (!hasChanges) {
+      toast.info("No changes to save");
+      return;
+    }
+
+    const url = import.meta.env.VITE_RIDER_PROFILE_UPDATE_URL;
+
+    try {
+      setUpdating(true);
+
+      const token = await auth.currentUser?.getIdToken();
+      if (!token) throw new Error("Not authenticated");
+
+      const response = await fetch(url, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify({
+          uid: rider.id,
+          ...changedFields,
+        }),
+      });
+
+      if (!response.ok) {
+        const errData = await response.json().catch(() => ({}));
+        throw new Error(errData?.message || "Update failed");
+      }
+
+      toast.success("Rider profile updated successfully");
+      setOpen(false);
+      await onUpdateComplete();
+    } catch (error: any) {
+      console.error("Error updating rider:", error);
+      toast.error(error?.message || "Failed to update rider profile");
+    } finally {
+      setUpdating(false);
+    }
+  };
+
+  const fieldLabels: Record<keyof EditableFields, string> = {
+    name: "Full Name",
+    phoneNumber: "Phone Number",
+    email: "Email",
+  };
+
+  return (
+    <Dialog open={open} onOpenChange={setOpen}>
+      <DialogTrigger asChild>
+        <Button variant="outline" onClick={handleOpen}>
+          <Pencil className="h-4 w-4 mr-2" />
+          Edit Rider
+        </Button>
+      </DialogTrigger>
+
+      <DialogContent className="sm:max-w-md">
+        <DialogHeader>
+          <DialogTitle>Edit Rider Profile</DialogTitle>
+          <DialogDescription>
+            Only fields you change will be sent to the server.
+          </DialogDescription>
+        </DialogHeader>
+
+        <div className="grid gap-4 py-4">
+          <div className="grid gap-2">
+            <Label htmlFor="edit-name">Full Name</Label>
+            <Input
+              id="edit-name"
+              value={formValues.name}
+              onChange={(e) =>
+                setFormValues((prev) => ({ ...prev, name: e.target.value }))
+              }
+              placeholder="Enter full name"
+            />
+            {formValues.name.trim() !== originalValues.name.trim() && (
+              <p className="text-xs text-muted-foreground">
+                Changed from:{" "}
+                <span className="font-medium">
+                  {originalValues.name || "N/A"}
+                </span>
+              </p>
+            )}
+          </div>
+
+          <div className="grid gap-2">
+            <Label htmlFor="edit-phone">Phone Number</Label>
+            <Input
+              id="edit-phone"
+              value={formValues.phoneNumber}
+              onChange={(e) =>
+                setFormValues((prev) => ({
+                  ...prev,
+                  phoneNumber: e.target.value,
+                }))
+              }
+              placeholder="Enter phone number"
+            />
+            {formValues.phoneNumber.trim() !==
+              originalValues.phoneNumber.trim() && (
+              <p className="text-xs text-muted-foreground">
+                Changed from:{" "}
+                <span className="font-medium">
+                  {originalValues.phoneNumber || "N/A"}
+                </span>
+              </p>
+            )}
+          </div>
+
+          <div className="grid gap-2">
+            <Label htmlFor="edit-email">Email</Label>
+            <Input
+              id="edit-email"
+              type="email"
+              value={formValues.email}
+              onChange={(e) =>
+                setFormValues((prev) => ({ ...prev, email: e.target.value }))
+              }
+              placeholder="Enter email address"
+            />
+            {formValues.email.trim() !== originalValues.email.trim() && (
+              <p className="text-xs text-muted-foreground">
+                Changed from:{" "}
+                <span className="font-medium">
+                  {originalValues.email || "N/A"}
+                </span>
+              </p>
+            )}
+          </div>
+        </div>
+
+        {hasChanges && (
+          <div className="text-xs text-muted-foreground bg-muted px-3 py-2 rounded-md">
+            Will update:{" "}
+            <span className="font-medium">
+              {Object.keys(changedFields)
+                .map((k) => fieldLabels[k as keyof EditableFields])
+                .join(", ")}
+            </span>
+          </div>
+        )}
+
+        <DialogFooter>
+          <Button variant="outline" onClick={() => setOpen(false)}>
+            Cancel
+          </Button>
+          <Button onClick={handleUpdate} disabled={updating || !hasChanges}>
+            {updating ? "Saving..." : "Save Changes"}
+          </Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
+  );
+}
+
+// ─── Main Page ────────────────────────────────────────────────────────────────
+
 export default function RiderDetailsPage() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
@@ -134,6 +332,7 @@ export default function RiderDetailsPage() {
   const canUploadDocuments =
     currentAdmin?.adminType === "super" ||
     currentAdmin?.adminType === "verifier";
+
   const [rider, setRider] = useState<Rider | null>(null);
   const [transactions, setTransactions] = useState<Transaction[]>([]);
   const [loading, setLoading] = useState(true);
@@ -183,12 +382,9 @@ export default function RiderDetailsPage() {
 
     try {
       setUploadingProfileImage(true);
-
       const ext = file.name.split(".").pop() || "jpg";
       const filename = `profile_${Date.now()}.${ext}`;
-
       const storageRef = ref(storage, `riders/${rider.id}/profile/${filename}`);
-
       const uploadTask = uploadBytesResumable(storageRef, file);
 
       uploadTask.on(
@@ -201,12 +397,7 @@ export default function RiderDetailsPage() {
         },
         async () => {
           const downloadURL = await getDownloadURL(uploadTask.snapshot.ref);
-
-          // save to Firestore
-          await ridersService.updateRider(rider.id!, {
-            imageUrl: downloadURL,
-          });
-
+          await ridersService.updateRider(rider.id!, { imageUrl: downloadURL });
           toast.success("Profile image updated");
           await loadRiderData();
           setUploadingProfileImage(false);
@@ -230,13 +421,11 @@ export default function RiderDetailsPage() {
     try {
       setLoading(true);
       const riderData = await ridersService.getRiderById(id!);
-
       if (!riderData) {
         toast.error("Rider not found");
         navigate("/riders");
         return;
       }
-
       setRider(riderData);
     } catch (error) {
       console.error("Error loading rider:", error);
@@ -249,18 +438,14 @@ export default function RiderDetailsPage() {
   const loadRiderTransactions = async () => {
     try {
       setLoadingTransactions(true);
-
-      // Fetch from subcollection: Riders/{riderId}/Transactions
       const transactionsRef = collection(db, "Riders", id!, "Transactions");
       const q = query(transactionsRef, orderBy("time", "desc"));
       const querySnapshot = await getDocs(q);
-
       const txns = querySnapshot.docs.map((doc) => ({
         id: doc.id,
         ...doc.data(),
         time: doc.data().time?.toDate?.(),
       })) as Transaction[];
-
       setTransactions(txns);
     } catch (error) {
       console.error("Error loading transactions:", error);
@@ -282,23 +467,14 @@ export default function RiderDetailsPage() {
 
   const handleUpdateVerificationStatus = async () => {
     if (!rider?.id) return;
-
     try {
       setUpdating(true);
       const updateData: Partial<Rider> = {
         verificationStatus: newVerificationStatus,
       };
-
-      // Include vehicle verification fields if provided
-      if (newChassisNo) {
-        updateData.chassisNo = newChassisNo;
-      }
-      if (newEngineNo) {
-        updateData.engineNo = newEngineNo;
-      }
-      if (newStatusReport) {
-        updateData.statusReport = newStatusReport;
-      }
+      if (newChassisNo) updateData.chassisNo = newChassisNo;
+      if (newEngineNo) updateData.engineNo = newEngineNo;
+      if (newStatusReport) updateData.statusReport = newStatusReport;
 
       await ridersService.updateRider(rider.id, updateData);
       toast.success("Verification details updated successfully");
@@ -359,16 +535,10 @@ export default function RiderDetailsPage() {
     loadRiderData: () => Promise<void>,
   ) => {
     if (!rider?.id) return;
-
     try {
       setIsUpdating(true);
-
-      await ridersService.updateRider(rider.id, {
-        [field]: value,
-      });
-
+      await ridersService.updateRider(rider.id, { [field]: value });
       toast.success(`${String(field)} updated successfully`);
-
       setDialogOpen(false);
       await loadRiderData();
     } catch (error) {
@@ -405,9 +575,8 @@ export default function RiderDetailsPage() {
     );
   }
 
-  if (!rider) {
-    return null;
-  }
+  if (!rider) return null;
+
   const isCarOrBike = rider.vehicleType === 0 || rider.vehicleType === 2;
 
   return (
@@ -427,6 +596,13 @@ export default function RiderDetailsPage() {
             Complete information for {rider.fullname || "rider"}
           </p>
         </div>
+
+        {/* Edit Rider Button — only for super admins */}
+        {isSuperAdmin && (
+          <div className="ml-auto">
+            <EditRiderDialog rider={rider} onUpdateComplete={loadRiderData} />
+          </div>
+        )}
       </div>
 
       {/* Personal Information */}
@@ -440,9 +616,13 @@ export default function RiderDetailsPage() {
               <p className="text-sm text-muted-foreground">Full Name</p>
               <p className="font-medium">{rider.fullname || "N/A"}</p>
             </div>
-            <div>
+            <div className="w-full max-w-xs">
+              {" "}
+              {/* optional: limit container width */}
               <p className="text-sm text-muted-foreground">Email</p>
-              <p className="font-medium">{rider.email || "N/A"}</p>
+              <p className="font-medium truncate" title={rider.email}>
+                {rider.email || "N/A"}
+              </p>
             </div>
             <div>
               <p className="text-sm text-muted-foreground">Phone Number</p>
@@ -456,10 +636,8 @@ export default function RiderDetailsPage() {
             </div>
             <div>
               <p className="text-sm text-muted-foreground">State of origin</p>
-
               <div className="flex items-center gap-2">
                 <p className="font-medium">{rider.stateOfOrigin || "N/A"}</p>
-
                 {isSuperAdmin && (
                   <Button
                     variant="outline"
@@ -473,19 +651,16 @@ export default function RiderDetailsPage() {
                   </Button>
                 )}
               </div>
-
               <Dialog open={stateDialogOpen} onOpenChange={setStateDialogOpen}>
                 <DialogContent>
                   <DialogHeader>
                     <DialogTitle>Edit State of Origin</DialogTitle>
                   </DialogHeader>
-
                   <Input
                     value={newStateOfOrigin}
                     onChange={(e) => setNewStateOfOrigin(e.target.value)}
                     placeholder="Enter state of origin"
                   />
-
                   <DialogFooter>
                     <Button
                       variant="outline"
@@ -493,7 +668,6 @@ export default function RiderDetailsPage() {
                     >
                       Cancel
                     </Button>
-
                     <Button
                       disabled={isStateUpdating || !newStateOfOrigin}
                       onClick={() =>
@@ -516,10 +690,8 @@ export default function RiderDetailsPage() {
 
             <div>
               <p className="text-sm text-muted-foreground">Local Government</p>
-
               <div className="flex items-center gap-2">
                 <p className="font-medium">{rider.localGovt || "N/A"}</p>
-
                 {isSuperAdmin && (
                   <Button
                     variant="outline"
@@ -533,19 +705,16 @@ export default function RiderDetailsPage() {
                   </Button>
                 )}
               </div>
-
               <Dialog open={lgaDialogOpen} onOpenChange={setLgaDialogOpen}>
                 <DialogContent>
                   <DialogHeader>
                     <DialogTitle>Edit Local Government</DialogTitle>
                   </DialogHeader>
-
                   <Input
                     value={newLocalGovt}
                     onChange={(e) => setNewLocalGovt(e.target.value)}
                     placeholder="Enter local government"
                   />
-
                   <DialogFooter>
                     <Button
                       variant="outline"
@@ -553,7 +722,6 @@ export default function RiderDetailsPage() {
                     >
                       Cancel
                     </Button>
-
                     <Button
                       disabled={isLgaUpdating || !newLocalGovt}
                       onClick={() =>
@@ -594,10 +762,8 @@ export default function RiderDetailsPage() {
             </div>
             <div>
               <p className="text-sm text-muted-foreground">Home Address</p>
-
               <div className="flex items-center gap-2">
                 <p className="font-medium">{rider.homeAddress || "N/A"}</p>
-
                 {isSuperAdmin && (
                   <Button
                     variant="outline"
@@ -611,7 +777,6 @@ export default function RiderDetailsPage() {
                   </Button>
                 )}
               </div>
-
               <Dialog
                 open={addressDialogOpen}
                 onOpenChange={setAddressDialogOpen}
@@ -620,13 +785,11 @@ export default function RiderDetailsPage() {
                   <DialogHeader>
                     <DialogTitle>Edit Home Address</DialogTitle>
                   </DialogHeader>
-
                   <Input
                     value={newHomeAddress}
                     onChange={(e) => setNewHomeAddress(e.target.value)}
                     placeholder="Enter home address"
                   />
-
                   <DialogFooter>
                     <Button
                       variant="outline"
@@ -634,7 +797,6 @@ export default function RiderDetailsPage() {
                     >
                       Cancel
                     </Button>
-
                     <Button
                       disabled={isAddressUpdating || !newHomeAddress}
                       onClick={() =>
@@ -779,6 +941,7 @@ export default function RiderDetailsPage() {
                 </Dialog>
               </div>
             </div>
+
             <div>
               <p className="text-sm text-muted-foreground">Online Status</p>
               <Badge variant={rider.onlineStatus ? "default" : "secondary"}>
@@ -799,7 +962,6 @@ export default function RiderDetailsPage() {
             </div>
             <div className="flex flex-col items-start gap-2">
               <p className="text-sm text-muted-foreground">Image</p>
-
               <div className="relative group">
                 <div
                   style={{
@@ -812,7 +974,6 @@ export default function RiderDetailsPage() {
                     borderRadius: "100%",
                   }}
                 />
-
                 {isSuperAdmin && (
                   <>
                     <input
@@ -822,16 +983,15 @@ export default function RiderDetailsPage() {
                       className="hidden"
                       onChange={handleProfileImageChange}
                     />
-
                     <Button
                       size="sm"
                       variant="outline"
                       className="
-          absolute bottom-2 left-1/2 -translate-x-1/2
-          opacity-0 group-hover:opacity-100
-          transition-opacity duration-200
-          backdrop-blur-sm bg-white/80
-        "
+                        absolute bottom-2 left-1/2 -translate-x-1/2
+                        opacity-0 group-hover:opacity-100
+                        transition-opacity duration-200
+                        backdrop-blur-sm bg-white/80
+                      "
                       disabled={uploadingProfileImage}
                       onClick={() =>
                         document.getElementById("profileImageInput")?.click()
@@ -1005,7 +1165,7 @@ export default function RiderDetailsPage() {
         </CardContent>
       </Card>
 
-      {/* Verification Images - For Super Admin and Verifiers */}
+      {/* Verification Images */}
       {canUploadDocuments && (
         <div className="space-y-4">
           <h2 className="text-xl font-semibold">Verification Images</h2>
@@ -1040,16 +1200,11 @@ export default function RiderDetailsPage() {
               }}
               onDeleteComplete={async () => {
                 try {
-                  // Delete from Firebase Storage first
                   if (rider.carPictureUrl) {
                     const storageRef = ref(storage, rider.carPictureUrl);
                     await deleteObject(storageRef);
                   }
-
-                  // Then update Firestore to set URL to null
                   await ridersService.deleteCarPicture(rider.id!);
-
-                  // Update local state
                   setRider({ ...rider, carPictureUrl: null });
                   toast.success("Car picture deleted successfully");
                 } catch (error) {
@@ -1081,7 +1236,6 @@ export default function RiderDetailsPage() {
                 }}
                 onDeleteComplete={async () => {
                   try {
-                    // Delete from Firebase Storage first
                     if (rider.plateNumberPictureUrl) {
                       const storageRef = ref(
                         storage,
@@ -1089,11 +1243,7 @@ export default function RiderDetailsPage() {
                       );
                       await deleteObject(storageRef);
                     }
-
-                    // Then update Firestore to set URL to null
                     await ridersService.deletePlateNumberPicture(rider.id!);
-
-                    // Update local state
                     setRider({ ...rider, plateNumberPictureUrl: null });
                     toast.success("Plate number picture deleted successfully");
                   } catch (error) {
@@ -1140,7 +1290,6 @@ export default function RiderDetailsPage() {
               }}
               onDeleteComplete={async () => {
                 try {
-                  // Delete from Firebase Storage first
                   if (rider.driverLicensePictureUrl) {
                     const storageRef = ref(
                       storage,
@@ -1148,11 +1297,7 @@ export default function RiderDetailsPage() {
                     );
                     await deleteObject(storageRef);
                   }
-
-                  // Then update Firestore to set URL to null
                   await ridersService.deleteDriverLicensePicture(rider.id!);
-
-                  // Update local state
                   setRider({ ...rider, driverLicensePictureUrl: null });
                   toast.success("Driver's license deleted successfully");
                 } catch (error) {
@@ -1161,6 +1306,7 @@ export default function RiderDetailsPage() {
                 }
               }}
             />
+
             {isCarOrBike && (
               <ImageUploadCard
                 title="Vehicle License"
@@ -1183,16 +1329,11 @@ export default function RiderDetailsPage() {
                 }}
                 onDeleteComplete={async () => {
                   try {
-                    // Delete from Firebase Storage first
                     if (rider.licensePictureUrl) {
                       const storageRef = ref(storage, rider.licensePictureUrl);
                       await deleteObject(storageRef);
                     }
-
-                    // Then update Firestore to set URL to null
                     await ridersService.deleteVehicleLicensePicture(rider.id!);
-
-                    // Update local state
                     setRider({ ...rider, licensePictureUrl: null });
                     toast.success("Vehicle's license deleted successfully");
                   } catch (error) {
@@ -1206,7 +1347,7 @@ export default function RiderDetailsPage() {
         </div>
       )}
 
-      {/* Identity Verification - For Super Admin and Verifiers */}
+      {/* Identity Verification */}
       {canUploadDocuments && (
         <Card>
           <CardHeader>

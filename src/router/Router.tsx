@@ -37,6 +37,7 @@ import PublicRoute from "./PublicRoute";
 import SignInPage from "@/pages/Auth/sign-in";
 import SignUpPage from "@/pages/Auth/sign-up";
 import ReferralDetailsPage from "@/pages/referrals/details";
+import GeneratedReferrals from "@/pages/generated-referrals";
 
 function Router() {
   return (
@@ -149,6 +150,7 @@ function Router() {
                     path="*"
                     element={<Navigate to="/dashboard" replace />}
                   />
+                  <Route path="/generated" element={<GeneratedReferrals />} />
                 </Routes>
               </Layout>
             </ProtectedRoutes>
