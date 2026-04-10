@@ -201,7 +201,7 @@ function EditRiderDialog({ rider, onUpdateComplete }: EditRiderDialogProps) {
       setOpen(false);
       await onUpdateComplete();
     } catch (error: any) {
-      console.error("Error updating rider:", error);
+      console.error("Error updating rider: ", error);
       toast.error(error?.message || "Failed to update rider profile");
     } finally {
       setUpdating(false);
