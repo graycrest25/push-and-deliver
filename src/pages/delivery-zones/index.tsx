@@ -1,3 +1,5 @@
+import { TablePagination } from "@/components/table-pagination";
+import { useFirestorePagination } from "@/hooks/use-firestore-pagination";
 import { useState, useEffect, useMemo } from "react";
 import {
   Card,
@@ -16,18 +18,19 @@ import { StateAccordionItem } from "./components/state-accordion";
 import { IconMapPin, IconSearch } from "@tabler/icons-react";
 
 export default function DeliveryZonesPage() {
+  const pagination = useFirestorePagination();
   const [states, setStates] = useState<State[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState("");
 
   useEffect(() => {
     loadStates();
-  }, []);
+  }, [pagination.options]);
 
   const loadStates = async () => {
     try {
       setLoading(true);
-      const data = await deliveryZonesService.getAllStates();
+      const data = await deliveryZonesService.getAllStates(pagination.options);
       // Sort alphabetically
       data.sort((a, b) => a.name.localeCompare(b.name));
       setStates(data);
@@ -56,6 +59,7 @@ export default function DeliveryZonesPage() {
       {/* Header */}
       <div>
         <h1 className="text-3xl font-bold tracking-tight">Delivery Zones</h1>
+        <p className="text-sm text-muted-foreground">Search, filters, summaries, and exports apply to the current page.</p>
         <p className="text-muted-foreground mt-2">
           Manage delivery fees for States and LGAs
         </p>
@@ -69,7 +73,7 @@ export default function DeliveryZonesPage() {
             <div className="relative w-64">
               <IconSearch className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
               <Input
-                placeholder="Search states..."
+                placeholder="Search this page: states..."
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
                 className="pl-9"
@@ -93,7 +97,8 @@ export default function DeliveryZonesPage() {
               ))}
             </Accordion>
           )}
-        </CardContent>
+        <TablePagination pagination={pagination} loading={loading} />
+</CardContent>
       </Card>
     </div>
   );

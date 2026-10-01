@@ -1,4 +1,6 @@
-import { useState } from "react";
+import { useFirestorePagination } from "@/hooks/use-firestore-pagination";
+import { TablePagination } from "@/components/table-pagination";
+import { useState, useEffect } from "react";
 import {
   Accordion,
   AccordionContent,
@@ -27,6 +29,7 @@ interface StateAccordionItemProps {
 }
 
 export function StateAccordionItem({ state }: StateAccordionItemProps) {
+  const pagination = useFirestorePagination(state.id);
   const [lgas, setLgas] = useState<LGA[]>([]);
   const [loading, setLoading] = useState(false);
   const [loaded, setLoaded] = useState(false);
@@ -35,10 +38,9 @@ export function StateAccordionItem({ state }: StateAccordionItemProps) {
   const [savingId, setSavingId] = useState<string | null>(null);
 
   const fetchLGAs = async () => {
-    if (loaded) return;
     try {
       setLoading(true);
-      const data = await deliveryZonesService.getLGAsForState(state.id);
+      const data = await deliveryZonesService.getLGAsForState(state.id, pagination.options);
       setLgas(data);
       setLoaded(true);
     } catch (error) {
@@ -47,6 +49,8 @@ export function StateAccordionItem({ state }: StateAccordionItemProps) {
       setLoading(false);
     }
   };
+
+  useEffect(() => { if (loaded) void fetchLGAs(); }, [pagination.options, state.id]);
 
   const handleEdit = (lga: LGA) => {
     setEditingId(lga.id);
@@ -82,7 +86,7 @@ export function StateAccordionItem({ state }: StateAccordionItemProps) {
 
   return (
     <AccordionItem value={state.id}>
-      <AccordionTrigger onClick={fetchLGAs} className="hover:no-underline">
+      <AccordionTrigger onClick={() => { if (!loaded) void fetchLGAs(); }} className="hover:no-underline">
         <div className="flex items-center gap-2">
           <span className="font-semibold text-lg">{state.name}</span>
           <Badge variant="outline" className="ml-2 font-normal">
@@ -173,7 +177,7 @@ export function StateAccordionItem({ state }: StateAccordionItemProps) {
                     </TableRow>
                   ))}
                 </TableBody>
-              </Table>
+              </Table><TablePagination pagination={pagination} loading={loading} />
             </div>
           )}
         </div>

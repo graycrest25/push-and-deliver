@@ -1,3 +1,5 @@
+import { useFirestorePagination } from "@/hooks/use-firestore-pagination";
+import { TablePagination } from "@/components/table-pagination";
 "use client";
 
 import { useState, useEffect, useRef } from "react";
@@ -33,11 +35,15 @@ const formatWhatsAppTime = (date: Date) => {
 };
 
 export default function SupportTicketsPage() {
+  const ticketPagination = useFirestorePagination();
+  const [loadingTickets, setLoadingTickets] = useState(true);
+  const [loadingMessages, setLoadingMessages] = useState(true);
   const { user } = useCurrentUser();
   const [tickets, setTickets] = useState<SupportTicket[]>([]);
   const [selectedTicket, setSelectedTicket] = useState<SupportTicket | null>(
     null
   );
+  const messagePagination = useFirestorePagination(selectedTicket?.id ?? "");
   const formRef = useRef<HTMLFormElement>(null);
   const [messages, setMessages] = useState<TicketMessage[]>([]);
   const [newMessage, setNewMessage] = useState("");
@@ -47,30 +53,39 @@ export default function SupportTicketsPage() {
 
   // Subscribe to tickets
   useEffect(() => {
+    setLoadingTickets(true);
     const unsubscribe = supportService.getSupportTickets((data) => {
       setTickets(data);
+      setLoadingTickets(false);
+    }, ticketPagination.options, (error) => {
+      setLoadingTickets(false);
+      toast.error(error.message);
     });
     return () => unsubscribe();
-  }, []);
+  }, [ticketPagination.options]);
 
   // Subscribe to messages when a ticket is selected
   useEffect(() => {
     if (!selectedTicket?.id) return;
 
+    setLoadingMessages(true);
     const unsubscribe = supportService.getTicketMessages(
       selectedTicket.id,
       (data) => {
         setMessages(data);
+        setLoadingMessages(false);
         // Scroll to bottom on new messages
         setTimeout(() => {
           if (scrollRef.current) {
             scrollRef.current.scrollIntoView({ behavior: "smooth" });
           }
         }, 100);
-      }
+      },
+      messagePagination.options,
+      (error) => { setLoadingMessages(false); toast.error(error.message); },
     );
     return () => unsubscribe();
-  }, [selectedTicket?.id]);
+  }, [selectedTicket?.id, messagePagination.options]);
 
   const handleSendMessage = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -190,6 +205,7 @@ export default function SupportTicketsPage() {
             )}
           </div>
         </ScrollArea>
+        <TablePagination pagination={ticketPagination} loading={loadingTickets} />
       </div>
 
       {/* Right Main Area - Chat Interface with Grid Layout */}
@@ -243,6 +259,7 @@ export default function SupportTicketsPage() {
             {/* Messages Area - Scrollable */}
             <ScrollArea className="px-4 overflow-y-auto">
               <div className="flex flex-col gap-4 max-w-3xl mx-auto">
+                <TablePagination pagination={messagePagination} loading={loadingMessages} />
                 {messages.map((msg, index) => {
                   const isUser = msg.senderId === selectedTicket.userId;
                   const isFirst = index === 0;

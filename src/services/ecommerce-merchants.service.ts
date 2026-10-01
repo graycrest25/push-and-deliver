@@ -1,3 +1,4 @@
+import { getPaginatedDocs, type PaginationOptions } from "@/lib/firestore-pagination";
 // E-commerce Merchants Service - Read and Update
 import {
   collection,
@@ -22,14 +23,20 @@ import type {
 const COLLECTION_NAME = "EcommerceMerchants";
 
 export const ecommerceMerchantsService = {
+  async getVariantForColor(merchantId: string, productId: string, color: string): Promise<ProductVariant | null> {
+    const variants = collection(db, COLLECTION_NAME, merchantId, "Products", productId, "Variants");
+    const snapshot = await getDocs(query(variants, where("colorList", "array-contains", color), limit(1)));
+    const variant = snapshot.docs[0];
+    return variant ? { id: variant.id, ...variant.data(), createdAt: variant.data().createdAt?.toDate?.() } as ProductVariant : null;
+  },
   // Read all merchants
-  async getAllMerchants(): Promise<EcommerceMerchant[]> {
+  async getAllMerchants(pagination: PaginationOptions = {}): Promise<EcommerceMerchant[]> {
     try {
       const q = query(
         collection(db, COLLECTION_NAME),
         orderBy("createdAt", "desc")
       );
-      const querySnapshot = await getDocs(q);
+      const querySnapshot = await getPaginatedDocs(q, pagination);
 
       return querySnapshot.docs.map((doc) => ({
         id: doc.id,
@@ -44,14 +51,14 @@ export const ecommerceMerchantsService = {
   },
 
   // Read verified merchants
-  async getVerifiedMerchants(): Promise<EcommerceMerchant[]> {
+  async getVerifiedMerchants(pagination: PaginationOptions = {}): Promise<EcommerceMerchant[]> {
     try {
       const q = query(
         collection(db, COLLECTION_NAME),
         where("verificationStatus", "==", 1),
         orderBy("createdAt", "desc")
       );
-      const querySnapshot = await getDocs(q);
+      const querySnapshot = await getPaginatedDocs(q, pagination);
 
       return querySnapshot.docs.map((doc) => ({
         id: doc.id,
@@ -66,14 +73,14 @@ export const ecommerceMerchantsService = {
   },
 
   // Read unverified merchants
-  async getUnverifiedMerchants(): Promise<EcommerceMerchant[]> {
+  async getUnverifiedMerchants(pagination: PaginationOptions = {}): Promise<EcommerceMerchant[]> {
     try {
       const q = query(
         collection(db, COLLECTION_NAME),
         where("verificationStatus", "==", 0),
         orderBy("createdAt", "desc")
       );
-      const querySnapshot = await getDocs(q);
+      const querySnapshot = await getPaginatedDocs(q, pagination);
 
       return querySnapshot.docs.map((doc) => ({
         id: doc.id,
@@ -127,7 +134,7 @@ export const ecommerceMerchantsService = {
   },
 
   // Get merchant products
-  async getMerchantProducts(merchantId: string): Promise<Product[]> {
+  async getMerchantProducts(merchantId: string, pagination: PaginationOptions = {}): Promise<Product[]> {
     try {
       const productsRef = collection(
         db,
@@ -136,7 +143,7 @@ export const ecommerceMerchantsService = {
         "Products"
       );
       const q = query(productsRef, orderBy("createdAt", "desc"));
-      const querySnapshot = await getDocs(q);
+      const querySnapshot = await getPaginatedDocs(q, pagination);
 
       return querySnapshot.docs.map((doc) => ({
         id: doc.id,
@@ -182,7 +189,7 @@ export const ecommerceMerchantsService = {
   // Get product variants
   async getProductVariants(
     merchantId: string,
-    productId: string
+    productId: string, pagination: PaginationOptions = {}
   ): Promise<ProductVariant[]> {
     try {
       const variantsRef = collection(
@@ -194,7 +201,7 @@ export const ecommerceMerchantsService = {
         "Variants"
       );
       const q = query(variantsRef, orderBy("createdAt", "desc"));
-      const querySnapshot = await getDocs(q);
+      const querySnapshot = await getPaginatedDocs(q, pagination);
 
       return querySnapshot.docs.map((doc) => ({
         id: doc.id,
@@ -208,7 +215,7 @@ export const ecommerceMerchantsService = {
   },
 
   // Get merchant transactions
-  async getMerchantTransactions(merchantId: string): Promise<Transaction[]> {
+  async getMerchantTransactions(merchantId: string, pagination: PaginationOptions = {}): Promise<Transaction[]> {
     try {
       const transactionsRef = collection(
         db,
@@ -217,7 +224,7 @@ export const ecommerceMerchantsService = {
         "Transactions"
       );
       const q = query(transactionsRef, orderBy("time", "desc"));
-      const querySnapshot = await getDocs(q);
+      const querySnapshot = await getPaginatedDocs(q, pagination);
 
       return querySnapshot.docs.map((doc) => ({
         id: doc.id,

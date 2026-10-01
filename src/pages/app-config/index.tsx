@@ -1,3 +1,5 @@
+import { TablePagination } from "@/components/table-pagination";
+import { useFirestorePagination } from "@/hooks/use-firestore-pagination";
 "use client";
 
 import { useState, useEffect } from "react";
@@ -29,6 +31,7 @@ import {
 } from "@tabler/icons-react";
 
 export default function AppConfigPage() {
+  const pagination = useFirestorePagination();
   const { user } = useCurrentUser();
   const isAdminViewOnly =
     user?.adminType === "customercare" || user?.adminType === "verifier";
@@ -44,12 +47,12 @@ export default function AppConfigPage() {
 
   useEffect(() => {
     loadConfigs();
-  }, []);
+  }, [pagination.options]);
 
   const loadConfigs = async () => {
     try {
       setLoading(true);
-      const data = await appConfigService.getAllConfigs();
+      const data = await appConfigService.getAllConfigs(pagination.options);
       setConfigs(data);
 
       // Initialize edit values
@@ -459,6 +462,7 @@ export default function AppConfigPage() {
           </div>
         </CardContent>
       </Card>
+      <TablePagination pagination={pagination} loading={loading} />
     </div>
   );
 }

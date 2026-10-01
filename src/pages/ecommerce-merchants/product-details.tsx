@@ -1,3 +1,5 @@
+import { useFirestorePagination } from "@/hooks/use-firestore-pagination";
+import { TablePagination } from "@/components/table-pagination";
 import { useState, useEffect } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -16,6 +18,7 @@ import "swiper/css/pagination";
 
 export default function ProductDetailsPage() {
   const { id, productId } = useParams<{ id: string; productId: string }>();
+  const pagination = useFirestorePagination(`${id}:${productId}`);
   const navigate = useNavigate();
   const [product, setProduct] = useState<Product | null>(null);
   const [selectedColor, setSelectedColor] = useState<string | null>(null);
@@ -59,13 +62,8 @@ export default function ProductDetailsPage() {
           setSelectedColor(firstColor);
           await loadVariantForColor(firstColor);
         } else {
-          // Name-based variants: fetch all variants, don't auto-select (show base product by default)
-          const variants = await ecommerceMerchantsService.getProductVariants(
-            id!,
-            productId!
-          );
-          setAllVariants(variants);
-          // selectedVariant stays null, showing base product by default
+          // Name-based variants are loaded by the paginated query below.
+
         }
       }
     } catch (error) {
@@ -76,20 +74,23 @@ export default function ProductDetailsPage() {
     }
   };
 
+  useEffect(() => {
+    if (!id || !productId || !product?.hasVariants || product.colorList?.length) return;
+    let active = true;
+    setLoadingVariant(true);
+    ecommerceMerchantsService.getProductVariants(id, productId, pagination.options)
+      .then((variants) => { if (active) setAllVariants(variants); })
+      .catch((error) => { if (active) toast.error(error.message || "Failed to load variants"); })
+      .finally(() => { if (active) setLoadingVariant(false); });
+    return () => { active = false; };
+  }, [id, productId, product, pagination.options]);
+
   const loadVariantForColor = async (color: string) => {
     if (!id || !productId) return;
 
     try {
       setLoadingVariant(true);
-      const variants = await ecommerceMerchantsService.getProductVariants(
-        id,
-        productId
-      );
-
-      // Find variant that has this color in its colorList
-      const matchingVariant = variants.find(
-        (v) => v.colorList && v.colorList.length > 0 && v.colorList[0] === color
-      );
+      const matchingVariant = await ecommerceMerchantsService.getVariantForColor(id, productId, color);
 
       if (matchingVariant) {
         console.log("✅ Found variant for color:", color, matchingVariant);
@@ -325,6 +326,7 @@ export default function ProductDetailsPage() {
                     </Button>
                   ))}
                 </div>
+                <TablePagination pagination={pagination} loading={loadingVariant} />
               </CardContent>
             </Card>
           )}

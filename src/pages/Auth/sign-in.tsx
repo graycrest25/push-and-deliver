@@ -1,12 +1,10 @@
+import { adminHome } from "@/lib/admin-access";
 import { useState } from "react";
-import { Link, useNavigate } from "react-router-dom";
+import { useNavigate } from "react-router-dom";
 import {
-  signInWithEmailAndPassword,
-  signInWithPopup,
-  GoogleAuthProvider,
-} from "firebase/auth";
-import { auth, db } from "@/lib/firebase";
-import { doc, getDoc, setDoc, serverTimestamp } from "firebase/firestore";
+  loginAdminWithEmailAndPassword,
+  loginAdminWithGoogle,
+} from "@/services/admin-auth.service";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -14,7 +12,6 @@ import {
   Card,
   CardContent,
   CardDescription,
-  CardFooter,
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
@@ -32,12 +29,11 @@ export default function SignInPage() {
     setLoading(true);
 
     try {
-      await signInWithEmailAndPassword(auth, email, password);
+      const result = await loginAdminWithEmailAndPassword(email.trim(), password);
       toast.success("Signed in successfully");
-      navigate("/dashboard");
-    } catch (error: any) {
-      console.error("Error signing in:", error);
-      toast.error(error.message || "Failed to sign in");
+      navigate(adminHome(result.customClaims.adminType));
+    } catch (error: unknown) {
+      toast.error(error instanceof Error ? error.message : "Failed to sign in");
     } finally {
       setLoading(false);
     }
@@ -46,36 +42,12 @@ export default function SignInPage() {
   const handleGoogleSignIn = async () => {
     setLoading(true);
     try {
-      const provider = new GoogleAuthProvider();
-      const result = await signInWithPopup(auth, provider);
-      const user = result.user;
-
-      // Check if user exists in Firestore, if not create them
-      const userRef = doc(db, "Users", user.uid);
-      const userSnap = await getDoc(userRef);
-
-      if (!userSnap.exists()) {
-        await setDoc(userRef, {
-          email: user.email,
-          username: user.displayName,
-          imageURL: user.photoURL,
-          id: user.uid,
-          createdAt: serverTimestamp(),
-          updatedAt: serverTimestamp(),
-          isAdmin: false, // Default to false
-          adminType: "regular", // Default to regular
-          walletbalance: 0,
-          rewardpoints: 0,
-          referralsCount: 0,
-          deviceName: "Web",
-        });
-      }
+      const result = await loginAdminWithGoogle();
 
       toast.success("Signed in with Google successfully");
-      navigate("/dashboard");
-    } catch (error: any) {
-      console.error("Error signing in with Google:", error);
-      toast.error(error.message || "Failed to sign in with Google");
+      navigate(adminHome(result.customClaims.adminType));
+    } catch (error: unknown) {
+      toast.error(error instanceof Error ? error.message : "Failed to sign in with Google");
     } finally {
       setLoading(false);
     }

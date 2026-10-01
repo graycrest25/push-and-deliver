@@ -5,7 +5,10 @@
   "scripts": {
     "dev": "vite",
     "build": "vite build",
-    "preview": "vite preview"
+    "preview": "vite preview",
+    "test:pagination": "node scripts/test-pagination.mjs",
+    "test:admin-management": "node scripts/test-admin-management.mjs",
+    "test:admin-list": "node scripts/test-admin-list.mjs"
   },
   "dependencies": {
     "@clerk/clerk-react": "^5.55.0",

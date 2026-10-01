@@ -1,3 +1,5 @@
+import { useFirestorePagination } from "@/hooks/use-firestore-pagination";
+import { TablePagination } from "@/components/table-pagination";
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import {
@@ -32,6 +34,7 @@ import {
 } from "@tabler/icons-react";
 
 export default function RestaurantOrdersPage() {
+  const pagination = useFirestorePagination();
   const navigate = useNavigate();
   const [orders, setOrders] = useState<RestaurantOrder[]>([]);
   const [loading, setLoading] = useState(true);
@@ -39,12 +42,12 @@ export default function RestaurantOrdersPage() {
 
   useEffect(() => {
     loadOrders();
-  }, []);
+  }, [pagination.options]);
 
   const loadOrders = async () => {
     try {
       setLoading(true);
-      const data = await restaurantOrdersService.getAllOrders();
+      const data = await restaurantOrdersService.getAllOrders(pagination.options);
       setOrders(data);
     } catch (error) {
       console.error("Error loading orders:", error);
@@ -76,6 +79,7 @@ export default function RestaurantOrdersPage() {
       {/* Header */}
       <div>
         <h1 className="text-3xl font-bold tracking-tight">Restaurant Orders</h1>
+        <p className="text-sm text-muted-foreground">Search, filters, summaries, and exports apply to the current page.</p>
         <p className="text-muted-foreground mt-2">
           Manage and track all restaurant orders from customers
         </p>
@@ -153,7 +157,7 @@ export default function RestaurantOrdersPage() {
             <div className="relative w-64">
               <IconSearch className="absolute left-2 top-2.5 h-4 w-4 text-muted-foreground" />
               <Input
-                placeholder="Search by customer name..."
+                placeholder="Search this page: by customer name..."
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
                 className="pl-8"
@@ -162,7 +166,7 @@ export default function RestaurantOrdersPage() {
           </div>
         </CardHeader>
         <CardContent>
-          <Table>
+          <><Table>
             <TableHeader>
               <TableRow>
                 <TableHead>Customer Name</TableHead>
@@ -256,7 +260,7 @@ export default function RestaurantOrdersPage() {
                 ))
               )}
             </TableBody>
-          </Table>
+          </Table><TablePagination pagination={pagination} loading={loading} /></>
         </CardContent>
       </Card>
     </div>

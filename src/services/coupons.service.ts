@@ -1,7 +1,7 @@
+import { getPaginatedDocs, type PaginationOptions } from "@/lib/firestore-pagination";
 import {
   collection,
   doc,
-  getDocs,
   getDoc,
   addDoc,
   updateDoc,
@@ -40,13 +40,13 @@ export const couponsService = {
   },
 
   // Read all coupons
-  async getAllCoupons(): Promise<Coupon[]> {
+  async getAllCoupons(pagination: PaginationOptions = {}): Promise<Coupon[]> {
     try {
       const q = query(
         collection(db, COLLECTION_NAME),
         orderBy("createdAt", "desc")
       );
-      const querySnapshot = await getDocs(q);
+      const querySnapshot = await getPaginatedDocs(q, pagination);
 
       return querySnapshot.docs.map((doc) => ({
         id: doc.id,
@@ -60,14 +60,14 @@ export const couponsService = {
   },
 
   // Read active coupons only
-  async getActiveCoupons(): Promise<Coupon[]> {
+  async getActiveCoupons(pagination: PaginationOptions = {}): Promise<Coupon[]> {
     try {
       const q = query(
         collection(db, COLLECTION_NAME),
         where("isActive", "==", true),
         orderBy("createdAt", "desc")
       );
-      const querySnapshot = await getDocs(q);
+      const querySnapshot = await getPaginatedDocs(q, pagination);
 
       return querySnapshot.docs.map((doc) => ({
         id: doc.id,

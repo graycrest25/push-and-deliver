@@ -1,3 +1,5 @@
+import { useFirestorePagination } from "@/hooks/use-firestore-pagination";
+import { TablePagination } from "@/components/table-pagination";
 "use client";
 
 import { useEffect, useState } from "react";
@@ -19,6 +21,7 @@ import {
 import { toast } from "sonner";
 import { Copy } from "lucide-react";
 import { auth } from "@/lib/firebase";
+import { endpoints } from "@/lib/endpoint";
 import {
   Dialog,
   DialogContent,
@@ -44,7 +47,7 @@ const createReferral = async (name: string) => {
   try {
     const token = await getToken();
 
-    const res = await fetch(import.meta.env.VITE_REFERRAL_URL, {
+    const res = await fetch(endpoints.createprefilllink, {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
@@ -66,6 +69,7 @@ const createReferral = async (name: string) => {
 };
 
 export default function GeneratedReferralsPage() {
+  const pagination = useFirestorePagination();
   const [referrals, setReferrals] = useState<GeneratedReferral[]>([]);
   const [loading, setLoading] = useState(true);
   const [open, setOpen] = useState(false);
@@ -126,12 +130,12 @@ export default function GeneratedReferralsPage() {
 
   useEffect(() => {
     loadReferrals();
-  }, []);
+  }, [pagination.options]);
 
   const loadReferrals = async () => {
     try {
       setLoading(true);
-      const data = await generatedReferralsService.getAllGeneratedReferrals();
+      const data = await generatedReferralsService.getAllGeneratedReferrals(pagination.options);
       setReferrals(data);
     } catch (error) {
       console.error(error);
@@ -211,7 +215,7 @@ export default function GeneratedReferralsPage() {
 
       {/* Table */}
       <div className="border rounded-lg overflow-hidden bg-white">
-        <Table>
+        <><Table>
           <TableHeader>
             <TableRow className="bg-muted/50">
               <TableHead>Name</TableHead>
@@ -330,7 +334,7 @@ export default function GeneratedReferralsPage() {
               ))
             )}
           </TableBody>
-        </Table>
+        </Table><TablePagination pagination={pagination} loading={loading} /></>
       </div>
     </div>
   );

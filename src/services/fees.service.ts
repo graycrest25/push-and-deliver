@@ -1,8 +1,8 @@
+import { getPaginatedDocs, type PaginationOptions } from "@/lib/firestore-pagination";
 // Fees Service - Full CRUD operations
 import {
   collection,
   doc,
-  getDocs,
   getDoc,
   addDoc,
   updateDoc,
@@ -43,9 +43,9 @@ export const feesService = {
   },
 
   // Read all fees
-  async getAllFees(): Promise<Fee[]> {
+  async getAllFees(pagination: PaginationOptions = {}): Promise<Fee[]> {
     try {
-      const querySnapshot = await getDocs(collection(db, COLLECTION_NAME));
+      const querySnapshot = await getPaginatedDocs(collection(db, COLLECTION_NAME), pagination);
 
       return querySnapshot.docs.map(doc => ({
         id: doc.id,
@@ -60,14 +60,14 @@ export const feesService = {
   },
 
   // Read active fees only
-  async getActiveFees(): Promise<Fee[]> {
+  async getActiveFees(pagination: PaginationOptions = {}): Promise<Fee[]> {
     try {
       const q = query(
         collection(db, COLLECTION_NAME),
         where('status', '==', 'active'),
         orderBy('createdAt', 'desc')
       );
-      const querySnapshot = await getDocs(q);
+      const querySnapshot = await getPaginatedDocs(q, pagination);
 
       return querySnapshot.docs.map(doc => ({
         id: doc.id,

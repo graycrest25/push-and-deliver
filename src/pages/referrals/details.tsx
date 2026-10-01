@@ -1,4 +1,6 @@
-// app/referrals/[referrerId]/page.tsx
+import { useFirestorePagination } from "@/hooks/use-firestore-pagination";
+import { TablePagination } from "@/components/table-pagination";
+// app/referrals/[referrerId, pagination.options]/page.tsx
 "use client";
 
 import { useState, useEffect } from "react";
@@ -36,6 +38,7 @@ export default function ReferralDetailsPage() {
   const params = useParams();
   // const router = useRouter();
   const referrerId = params.id as string;
+  const pagination = useFirestorePagination(referrerId);
   const navigate = useNavigate();
 
   const [referrals, setReferrals] = useState<Referral[]>([]);
@@ -55,21 +58,12 @@ export default function ReferralDetailsPage() {
   const loadData = async () => {
     try {
       setLoading(true);
-      const [allReferrals, allUsers] = await Promise.all([
-        referralsService.getAllReferrals(),
-        usersService.getAllUsers(),
+      const [referralsData, referrer] = await Promise.all([
+        referralsService.getReferralsByReferrerId(referrerId, pagination.options),
+        usersService.getUserById(referrerId),
       ]);
-
-      // Filter referrals by this referrerId
-      const referrerReferrals = allReferrals.filter(
-        (ref) => ref.referrerUid === referrerId,
-      );
-
-      setReferrals(referrerReferrals);
-
-      // Get referrer info
-      const referrer = allUsers.find((user) => user.id === referrerId);
-      setReferrerInfo(referrer || null);
+      setReferrals(referralsData);
+      setReferrerInfo(referrer);
     } catch (error) {
       console.error("Error loading referral details:", error);
       toast.error("Failed to load referral details");
@@ -148,6 +142,7 @@ export default function ReferralDetailsPage() {
           <h1 className="text-3xl font-bold tracking-tight">
             Referral Details
           </h1>
+        <p className="text-sm text-muted-foreground">Search, filters, summaries, and exports apply to the current page.</p>
           <p className="text-muted-foreground">
             {referrerInfo?.username || "Unknown Referrer"} (
             {referrerInfo?.email || referrerId})
@@ -169,7 +164,7 @@ export default function ReferralDetailsPage() {
             <div className="relative flex-1 min-w-[250px]">
               <Search className="absolute left-2 top-3 h-4 w-4 text-muted-foreground" />
               <Input
-                placeholder="Search by email or UID..."
+                placeholder="Search this page: by email or UID..."
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
                 className="pl-8"
@@ -280,7 +275,7 @@ export default function ReferralDetailsPage() {
                   ))
                 )}
               </TableBody>
-            </Table>
+            </Table><TablePagination pagination={pagination} loading={loading} />
           </div>
         </CardContent>
       </Card>

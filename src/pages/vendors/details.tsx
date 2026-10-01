@@ -1,3 +1,6 @@
+import { useFirestorePagination } from "@/hooks/use-firestore-pagination";
+import { TablePagination } from "@/components/table-pagination";
+import { getPaginatedDocs } from "@/lib/firestore-pagination";
 "use client";
 
 import { useState, useEffect } from "react";
@@ -35,7 +38,7 @@ import { restaurantsService } from "@/services/restaurants.service";
 import type { Restaurant, Transaction } from "@/types";
 import { toast } from "sonner";
 import { Skeleton } from "@/components/ui/skeleton";
-import { collection, query, orderBy, getDocs } from "firebase/firestore";
+import { collection, query, orderBy } from "firebase/firestore";
 import { db } from "@/lib/firebase";
 import { getStatusLabel, getStatusBadgeVariant } from "@/lib/status-utils";
 import { VerificationStatus } from "@/types";
@@ -78,6 +81,7 @@ const getVerificationBadgeVariant = (status: string | undefined) => {
 
 export default function VendorDetailsPage() {
   const { id } = useParams<{ id: string }>();
+  const pagination = useFirestorePagination(id ?? "");
   const navigate = useNavigate();
   const [restaurant, setRestaurant] = useState<Restaurant | null>(null);
   const [transactions, setTransactions] = useState<Transaction[]>([]);
@@ -95,7 +99,7 @@ export default function VendorDetailsPage() {
       loadRestaurantData();
       loadRestaurantTransactions();
     }
-  }, [id]);
+  }, [id, pagination.options]);
 
   const loadRestaurantData = async () => {
     try {
@@ -129,7 +133,7 @@ export default function VendorDetailsPage() {
         "Transactions",
       );
       const q = query(transactionsRef, orderBy("time", "desc"));
-      const querySnapshot = await getDocs(q);
+      const querySnapshot = await getPaginatedDocs(q, pagination.options);
 
       const txns = querySnapshot.docs.map((doc) => ({
         id: doc.id,
@@ -476,7 +480,7 @@ export default function VendorDetailsPage() {
             </p>
           ) : (
             <div className="border rounded-lg overflow-hidden">
-              <Table>
+              <><Table>
                 <TableHeader>
                   <TableRow className="bg-muted/50">
                     <TableHead>Date</TableHead>
@@ -525,7 +529,7 @@ export default function VendorDetailsPage() {
                     </TableRow>
                   ))}
                 </TableBody>
-              </Table>
+              </Table><TablePagination pagination={pagination} loading={loadingTransactions} /></>
             </div>
           )}
         </CardContent>

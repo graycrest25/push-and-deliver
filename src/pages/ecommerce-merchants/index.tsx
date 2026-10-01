@@ -1,3 +1,5 @@
+import { useFirestorePagination } from "@/hooks/use-firestore-pagination";
+import { TablePagination } from "@/components/table-pagination";
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import {
@@ -54,6 +56,7 @@ const truncateText = (text: string | undefined, maxLength: number = 30) => {
 };
 
 export default function EcommerceMerchantsPage() {
+  const pagination = useFirestorePagination();
   const navigate = useNavigate();
   const [merchants, setMerchants] = useState<EcommerceMerchant[]>([]);
   const [filteredMerchants, setFilteredMerchants] = useState<
@@ -68,7 +71,7 @@ export default function EcommerceMerchantsPage() {
 
   useEffect(() => {
     loadMerchants();
-  }, []);
+  }, [pagination.options]);
 
   useEffect(() => {
     filterMerchants();
@@ -77,7 +80,7 @@ export default function EcommerceMerchantsPage() {
   const loadMerchants = async () => {
     try {
       setLoading(true);
-      const data = await ecommerceMerchantsService.getAllMerchants();
+      const data = await ecommerceMerchantsService.getAllMerchants(pagination.options);
       setMerchants(data);
 
       // Check which merchants have transactions
@@ -157,6 +160,7 @@ export default function EcommerceMerchantsPage() {
         <h1 className="text-3xl font-bold tracking-tight">
           E-commerce Merchants
         </h1>
+        <p className="text-sm text-muted-foreground">Search, filters, summaries, and exports apply to the current page.</p>
         <p className="text-muted-foreground">
           Manage merchant accounts and verification status
         </p>
@@ -185,7 +189,7 @@ export default function EcommerceMerchantsPage() {
               <div className="relative w-80">
                 <Search className="absolute left-2 top-2.5 h-4 w-4 text-muted-foreground" />
                 <Input
-                  placeholder="Search by name, email, or phone..."
+                  placeholder="Search this page: by name, email, or phone..."
                   value={searchQuery}
                   onChange={(e) => setSearchQuery(e.target.value)}
                   className="pl-8"
@@ -195,7 +199,7 @@ export default function EcommerceMerchantsPage() {
 
             <TabsContent value={activeTab} className="space-y-4">
               <div className="border rounded-lg overflow-hidden">
-                <Table>
+                <><Table>
                   <TableHeader>
                     <TableRow className="bg-muted/50">
                       <TableHead>Name</TableHead>
@@ -288,7 +292,7 @@ export default function EcommerceMerchantsPage() {
                       ))
                     )}
                   </TableBody>
-                </Table>
+                </Table><TablePagination pagination={pagination} loading={loading} /></>
               </div>
             </TabsContent>
           </Tabs>

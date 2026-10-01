@@ -1,6 +1,6 @@
+import { getPaginatedDocs, type PaginationOptions } from "@/lib/firestore-pagination";
 import {
   collection,
-  getDocs,
   query,
   orderBy,
   deleteDoc,
@@ -21,14 +21,14 @@ export type GeneratedReferral = {
 const COLLECTION_NAME = "GeneratedReferrals";
 
 export const generatedReferralsService = {
-  async getAllGeneratedReferrals(): Promise<GeneratedReferral[]> {
+  async getAllGeneratedReferrals(pagination: PaginationOptions = {}): Promise<GeneratedReferral[]> {
     try {
       const q = query(
         collection(db, COLLECTION_NAME),
         orderBy("createdAt", "desc")
       );
 
-      const querySnapshot = await getDocs(q);
+      const querySnapshot = await getPaginatedDocs(q, pagination);
 
       return querySnapshot.docs.map((doc) => ({
         id: doc.id,

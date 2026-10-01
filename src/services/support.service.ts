@@ -2,7 +2,6 @@ import {
   collection,
   query,
   orderBy,
-  onSnapshot,
   runTransaction,
   Timestamp,
   doc,
@@ -10,6 +9,7 @@ import {
   updateDoc,
 } from "firebase/firestore";
 import { db } from "@/lib/firebase";
+import { subscribePaginatedDocs, type PaginationOptions } from "@/lib/firestore-pagination";
 import type { SupportTicket, TicketMessage } from "@/types";
 
 const COLLECTION_NAME = "SupportTickets";
@@ -17,13 +17,13 @@ const MESSAGES_SUBCOLLECTION = "Messages";
 
 export const supportService = {
   // Get all support tickets
-  getSupportTickets: (callback: (tickets: SupportTicket[]) => void) => {
+  getSupportTickets: (callback: (tickets: SupportTicket[]) => void, pagination: PaginationOptions = {}, onError: (error: Error) => void = console.error) => {
     const q = query(
       collection(db, COLLECTION_NAME),
       orderBy("updatedAt", "desc")
     );
 
-    return onSnapshot(q, (snapshot) => {
+    return subscribePaginatedDocs(q, pagination, (snapshot) => {
       const tickets = snapshot.docs.map((doc) => ({
         id: doc.id,
         ...doc.data(),
@@ -31,28 +31,30 @@ export const supportService = {
         updatedAt: doc.data().updatedAt?.toDate(),
       })) as SupportTicket[];
       callback(tickets);
-    });
+    }, onError);
   },
 
   // Get messages for a specific ticket
   getTicketMessages: (
     ticketId: string,
-    callback: (messages: TicketMessage[]) => void
+    callback: (messages: TicketMessage[]) => void,
+    pagination: PaginationOptions = {},
+    onError: (error: Error) => void = console.error,
   ) => {
     const q = query(
       collection(db, COLLECTION_NAME, ticketId, MESSAGES_SUBCOLLECTION),
-      orderBy("timestamp", "asc")
+      orderBy("timestamp", "desc")
     );
 
-    return onSnapshot(q, (snapshot) => {
+    return subscribePaginatedDocs(q, pagination, (snapshot) => {
       const messages = snapshot.docs.map((doc) => ({
         id: doc.id,
         ...doc.data(),
         createdAt: doc.data().createdAt?.toDate(),
         timestamp: doc.data().timestamp?.toDate(),
       })) as TicketMessage[];
-      callback(messages);
-    });
+      callback(messages.reverse());
+    }, onError);
   },
 
   // Send a support message via Cloud Function

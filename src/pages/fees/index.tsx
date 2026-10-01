@@ -1,3 +1,5 @@
+import { useFirestorePagination } from "@/hooks/use-firestore-pagination";
+import { TablePagination } from "@/components/table-pagination";
 "use client";
 
 import { useState, useEffect } from "react";
@@ -61,6 +63,7 @@ const formatFeeValue = (value: number, feeType?: FeeType) => {
 };
 
 export default function FeesPage() {
+  const pagination = useFirestorePagination();
   const [fees, setFees] = useState<Fee[]>([]);
   const [loading, setLoading] = useState(true);
   const [editingFee, setEditingFee] = useState<Fee | null>(null);
@@ -77,12 +80,12 @@ export default function FeesPage() {
 
   useEffect(() => {
     loadFees();
-  }, []);
+  }, [pagination.options]);
 
   const loadFees = async () => {
     try {
       setLoading(true);
-      const data = await feesService.getAllFees();
+      const data = await feesService.getAllFees(pagination.options);
       setFees(data);
     } catch (error) {
       console.error("Error loading fees:", error);
@@ -216,7 +219,7 @@ export default function FeesPage() {
         </CardHeader>
         <CardContent>
           <div className="border rounded-lg overflow-hidden">
-            <Table>
+            <><Table>
               <TableHeader>
                 <TableRow className="bg-muted/50">
                   <TableHead>Name</TableHead>
@@ -476,7 +479,7 @@ export default function FeesPage() {
                   ))
                 )}
               </TableBody>
-            </Table>
+            </Table><TablePagination pagination={pagination} loading={loading} /></>
           </div>
         </CardContent>
       </Card>

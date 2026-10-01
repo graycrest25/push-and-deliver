@@ -1,10 +1,10 @@
+import { getPaginatedDocs, type PaginationOptions } from "@/lib/firestore-pagination";
 import { db } from "@/lib/firebase";
 import type { RideHaulingOrder } from "@/types";
 import {
   collection,
   doc,
   getDoc,
-  getDocs,
   orderBy,
   query,
   updateDoc,
@@ -14,13 +14,13 @@ const COLLECTION_NAME = "RideHaulingOrders";
 
 export const rideHailingService = {
   // Get all ride hailing orders
-  async getAllOrders(): Promise<RideHaulingOrder[]> {
+  async getAllOrders(pagination: PaginationOptions = {}): Promise<RideHaulingOrder[]> {
     try {
       const q = query(
         collection(db, COLLECTION_NAME),
         orderBy("createdAt", "desc")
       );
-      const snapshot = await getDocs(q);
+      const snapshot = await getPaginatedDocs(q, pagination);
 
       return snapshot.docs.map((doc) => ({
         id: doc.id,

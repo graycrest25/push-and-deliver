@@ -1,6 +1,6 @@
+import { getPaginatedDocs, type PaginationOptions } from "@/lib/firestore-pagination";
 import {
   collection,
-  getDocs,
   getDoc,
   doc,
   query,
@@ -15,14 +15,14 @@ const COLLECTION_NAME = "ProductOrders";
 
 export const productOrdersService = {
   // Get all unpaid orders
-  async getAllOrders(): Promise<ProductOrder[]> {
+  async getAllOrders(pagination: PaginationOptions = {}): Promise<ProductOrder[]> {
     try {
       const q = query(
         collection(db, COLLECTION_NAME),
         // where("ispaid", "==", false),
         orderBy("createdAt", "desc")
       );
-      const snapshot = await getDocs(q);
+      const snapshot = await getPaginatedDocs(q, pagination);
 
       return snapshot.docs.map((doc) => ({
         id: doc.id,
@@ -65,7 +65,7 @@ export const productOrdersService = {
   },
 
   // Get unpaid orders by status
-  async getOrdersByStatus(status: number): Promise<ProductOrder[]> {
+  async getOrdersByStatus(status: number, pagination: PaginationOptions = {}): Promise<ProductOrder[]> {
     try {
       const q = query(
         collection(db, COLLECTION_NAME),
@@ -73,7 +73,7 @@ export const productOrdersService = {
         where("orderstatus", "==", status),
         orderBy("createdAt", "desc")
       );
-      const snapshot = await getDocs(q);
+      const snapshot = await getPaginatedDocs(q, pagination);
 
       return snapshot.docs.map((doc) => ({
         id: doc.id,

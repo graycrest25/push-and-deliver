@@ -51,7 +51,7 @@ src/
 
 **Authentication Flow**:
 - Entry point is `main.tsx` which wraps the app in `ClerkProvider`
-- Environment variable `VITE_CLERK_PUBLISHABLE_KEY` is required in `.env`
+- Environment variable `CLERK_PUBLISHABLE_KEY` is required in `.env`
 - Router (`router/Router.tsx`) handles route protection with Clerk's `SignedIn` and `SignedOut` components
 - Unauthenticated users are redirected to `/sign-in`
 

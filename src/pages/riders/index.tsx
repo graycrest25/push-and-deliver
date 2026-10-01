@@ -1,3 +1,5 @@
+import { useFirestorePagination } from "@/hooks/use-firestore-pagination";
+import { TablePagination } from "@/components/table-pagination";
 "use client";
 
 import { useState, useEffect } from "react";
@@ -87,6 +89,7 @@ const getStatusBadgeVariant = (status: string | undefined) => {
 };
 
 export default function RidersPage() {
+  const pagination = useFirestorePagination();
   const navigate = useNavigate();
   const [riders, setRiders] = useState<Rider[]>([]);
   const [loading, setLoading] = useState(true);
@@ -97,12 +100,12 @@ export default function RidersPage() {
 
   useEffect(() => {
     loadRiders();
-  }, []);
+  }, [pagination.options]);
 
   const loadRiders = async () => {
     try {
       setLoading(true);
-      const data = await ridersService.getAllRiders();
+      const data = await ridersService.getAllRiders(pagination.options);
       setRiders(data);
     } catch (error) {
       console.error("Error loading riders:", error);
@@ -286,6 +289,7 @@ export default function RidersPage() {
       <div className="p-8 space-y-6">
         <div>
           <h1 className="text-3xl font-bold tracking-tight">Riders</h1>
+        <p className="text-sm text-muted-foreground">Search, filters, summaries, and exports apply to the current page.</p>
           <p className="text-muted-foreground">Manage delivery riders</p>
         </div>
         <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
@@ -518,7 +522,7 @@ export default function RidersPage() {
             <div className="relative flex-1">
               <Search className="absolute left-2 top-3 h-4 w-4 text-muted-foreground" />
               <Input
-                placeholder="Search by name, email, or phone..."
+                placeholder="Search this page: by name, email, or phone..."
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
                 className="pl-8"
@@ -585,7 +589,7 @@ export default function RidersPage() {
 
           {/* Table */}
           <div className="border rounded-lg overflow-hidden">
-            <Table>
+            <><Table>
               <TableHeader>
                 <TableRow className="bg-muted/50">
                   <TableHead>Name</TableHead>
@@ -660,7 +664,7 @@ export default function RidersPage() {
                   ))
                 )}
               </TableBody>
-            </Table>
+            </Table><TablePagination pagination={pagination} loading={loading} /></>
           </div>
         </CardContent>
       </Card>

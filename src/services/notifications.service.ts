@@ -1,8 +1,8 @@
+import { getPaginatedDocs, type PaginationOptions } from "@/lib/firestore-pagination";
 // Notifications Service - Full CRUD operations
 import {
   collection,
   doc,
-  getDocs,
   getDoc,
   addDoc,
   updateDoc,
@@ -43,10 +43,10 @@ export const notificationsService = {
   },
 
   // Read all notifications
-  async getAllNotifications(): Promise<Notification[]> {
+  async getAllNotifications(pagination: PaginationOptions = {}): Promise<Notification[]> {
     try {
       const q = query(collection(db, COLLECTION_NAME), orderBy('createdAt', 'desc'));
-      const querySnapshot = await getDocs(q);
+      const querySnapshot = await getPaginatedDocs(q, pagination);
 
       return querySnapshot.docs.map(doc => ({
         id: doc.id,
@@ -62,14 +62,14 @@ export const notificationsService = {
   },
 
   // Read notifications by status
-  async getNotificationsByStatus(status: 'draft' | 'scheduled' | 'sent'): Promise<Notification[]> {
+  async getNotificationsByStatus(status: 'draft' | 'scheduled' | 'sent', pagination: PaginationOptions = {}): Promise<Notification[]> {
     try {
       const q = query(
         collection(db, COLLECTION_NAME),
         where('status', '==', status),
         orderBy('createdAt', 'desc')
       );
-      const querySnapshot = await getDocs(q);
+      const querySnapshot = await getPaginatedDocs(q, pagination);
 
       return querySnapshot.docs.map(doc => ({
         id: doc.id,
@@ -85,14 +85,14 @@ export const notificationsService = {
   },
 
   // Read notifications by target audience
-  async getNotificationsByAudience(targetAudience: 'all' | 'users' | 'riders' | 'vendors'): Promise<Notification[]> {
+  async getNotificationsByAudience(targetAudience: 'all' | 'users' | 'riders' | 'vendors', pagination: PaginationOptions = {}): Promise<Notification[]> {
     try {
       const q = query(
         collection(db, COLLECTION_NAME),
         where('targetAudience', '==', targetAudience),
         orderBy('createdAt', 'desc')
       );
-      const querySnapshot = await getDocs(q);
+      const querySnapshot = await getPaginatedDocs(q, pagination);
 
       return querySnapshot.docs.map(doc => ({
         id: doc.id,

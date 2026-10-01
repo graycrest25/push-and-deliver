@@ -1,3 +1,5 @@
+import { useFirestorePagination } from "@/hooks/use-firestore-pagination";
+import { TablePagination } from "@/components/table-pagination";
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import {
@@ -44,6 +46,7 @@ const formatAmount = (amount: number) => {
 };
 
 export default function ShipmentOrdersPage() {
+  const pagination = useFirestorePagination();
   const navigate = useNavigate();
   const [orders, setOrders] = useState<ShipmentOrder[]>([]);
   const [loading, setLoading] = useState(true);
@@ -53,12 +56,12 @@ export default function ShipmentOrdersPage() {
 
   useEffect(() => {
     loadOrders();
-  }, []);
+  }, [pagination.options]);
 
   const loadOrders = async () => {
     try {
       setLoading(true);
-      const data = await shipmentOrdersService.getAllOrders();
+      const data = await shipmentOrdersService.getAllOrders(pagination.options);
       setOrders(data);
     } catch (error) {
       console.error("Error loading orders:", error);
@@ -171,6 +174,7 @@ export default function ShipmentOrdersPage() {
       {/* Header */}
       <div>
         <h1 className="text-3xl font-bold tracking-tight">Shipment Orders</h1>
+        <p className="text-sm text-muted-foreground">Search, filters, summaries, and exports apply to the current page.</p>
         <p className="text-muted-foreground mt-2">
           Manage and track all international shipment orders
         </p>
@@ -282,7 +286,7 @@ export default function ShipmentOrdersPage() {
               <div className="relative w-64">
                 <IconSearch className="absolute left-2 top-2.5 h-4 w-4 text-muted-foreground" />
                 <Input
-                  placeholder="Search by Shipment ID..."
+                  placeholder="Search this page: by Shipment ID..."
                   value={searchQuery}
                   onChange={(e) => setSearchQuery(e.target.value)}
                   className="pl-8"
@@ -331,7 +335,7 @@ export default function ShipmentOrdersPage() {
           </div>
         </CardHeader>
         <CardContent>
-          <Table>
+          <><Table>
             <TableHeader>
               <TableRow>
                 <TableHead>Shipment ID</TableHead>
@@ -441,7 +445,7 @@ export default function ShipmentOrdersPage() {
                 ))
               )}
             </TableBody>
-          </Table>
+          </Table><TablePagination pagination={pagination} loading={loading} /></>
         </CardContent>
       </Card>
     </div>

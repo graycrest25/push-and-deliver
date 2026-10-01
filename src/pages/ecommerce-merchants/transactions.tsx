@@ -1,3 +1,5 @@
+import { useFirestorePagination } from "@/hooks/use-firestore-pagination";
+import { TablePagination } from "@/components/table-pagination";
 import { useState, useEffect } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -27,6 +29,7 @@ const formatAmount = (amount: number) => {
 
 export default function MerchantTransactionsPage() {
   const { id } = useParams<{ id: string }>();
+  const pagination = useFirestorePagination(id ?? "");
   const navigate = useNavigate();
   const [transactions, setTransactions] = useState<Transaction[]>([]);
   const [loading, setLoading] = useState(true);
@@ -35,12 +38,12 @@ export default function MerchantTransactionsPage() {
     if (id) {
       loadTransactions();
     }
-  }, [id]);
+  }, [id, pagination.options]);
 
   const loadTransactions = async () => {
     try {
       setLoading(true);
-      const data = await ecommerceMerchantsService.getMerchantTransactions(id!);
+      const data = await ecommerceMerchantsService.getMerchantTransactions(id!, pagination.options);
       setTransactions(data);
     } catch (error) {
       console.error("Error loading transactions:", error);
@@ -92,7 +95,7 @@ export default function MerchantTransactionsPage() {
             </p>
           ) : (
             <div className="border rounded-lg overflow-hidden">
-              <Table>
+              <><Table>
                 <TableHeader>
                   <TableRow className="bg-muted/50">
                     <TableHead>Date</TableHead>
@@ -141,7 +144,7 @@ export default function MerchantTransactionsPage() {
                     </TableRow>
                   ))}
                 </TableBody>
-              </Table>
+              </Table><TablePagination pagination={pagination} loading={loading} /></>
             </div>
           )}
         </CardContent>

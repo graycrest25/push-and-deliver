@@ -3,6 +3,7 @@ import Unauthorized from "@/components/Unauthorized";
 import { useCurrentUser } from "@/contexts/UserContext";
 import React from "react";
 import { Navigate, useLocation } from "react-router-dom";
+import { adminHome, canAccessAdminScreen } from "@/lib/admin-access";
 
 const ProtectedRoutes = ({ children }: { children: React.ReactNode }) => {
   const { user, loading, isAdmin } = useCurrentUser();
@@ -20,16 +21,8 @@ const ProtectedRoutes = ({ children }: { children: React.ReactNode }) => {
     return <Unauthorized />;
   }
 
-  // Define allowed routes for verifiers
-  const verifierAllowedRoutes = ["/riders"];
-
-  if (user.adminType === "verifier") {
-    // If verifier is trying to access an allowed route, let them through
-    if (location.pathname.startsWith("/riders")) {
-      return <div>{children}</div>;
-    }
-    // Otherwise, redirect to riders page
-    return <Navigate to="/riders" replace />;
+  if (!canAccessAdminScreen(user.adminType, location.pathname)) {
+    return <Navigate to={adminHome(user.adminType)} replace />;
   }
 
   return <div>{children}</div>;

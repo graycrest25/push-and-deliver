@@ -1,8 +1,8 @@
+import { getPaginatedDocs, type PaginationOptions } from "@/lib/firestore-pagination";
 // Withdrawals Service - Read and Update status
 import {
   collection,
   doc,
-  getDocs,
   getDoc,
   updateDoc,
   query,
@@ -18,9 +18,9 @@ const COLLECTION_NAME = 'Withdrawals';
 
 export const withdrawalsService = {
   // Read all withdrawals
-  async getAllWithdrawals(): Promise<Withdrawal[]> {
+  async getAllWithdrawals(pagination: PaginationOptions = {}): Promise<Withdrawal[]> {
     try {
-      const querySnapshot = await getDocs(collection(db, COLLECTION_NAME));
+      const querySnapshot = await getPaginatedDocs(collection(db, COLLECTION_NAME), pagination);
 
       return querySnapshot.docs.map(doc => ({
         id: doc.id,
@@ -34,13 +34,13 @@ export const withdrawalsService = {
   },
 
   // Read withdrawals by status
-  async getWithdrawalsByStatus(status: WithdrawalStatus): Promise<Withdrawal[]> {
+  async getWithdrawalsByStatus(status: WithdrawalStatus, pagination: PaginationOptions = {}): Promise<Withdrawal[]> {
     try {
       const q = query(
         collection(db, COLLECTION_NAME),
         where('status', '==', status)
       );
-      const querySnapshot = await getDocs(q);
+      const querySnapshot = await getPaginatedDocs(q, pagination);
 
       return querySnapshot.docs.map(doc => ({
         id: doc.id,
@@ -54,18 +54,18 @@ export const withdrawalsService = {
   },
 
   // Read pending withdrawals
-  async getPendingWithdrawals(): Promise<Withdrawal[]> {
-    return this.getWithdrawalsByStatus(WithdrawalStatus.Pending);
+  async getPendingWithdrawals(pagination: PaginationOptions = {}): Promise<Withdrawal[]> {
+    return this.getWithdrawalsByStatus(WithdrawalStatus.Pending, pagination);
   },
 
   // Read withdrawals by user type
-  async getWithdrawalsByUserType(userType: string): Promise<Withdrawal[]> {
+  async getWithdrawalsByUserType(userType: string, pagination: PaginationOptions = {}): Promise<Withdrawal[]> {
     try {
       const q = query(
         collection(db, COLLECTION_NAME),
         where('userType', '==', userType)
       );
-      const querySnapshot = await getDocs(q);
+      const querySnapshot = await getPaginatedDocs(q, pagination);
 
       return querySnapshot.docs.map(doc => ({
         id: doc.id,

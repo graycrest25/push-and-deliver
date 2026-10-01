@@ -1,7 +1,7 @@
+import { getPaginatedDocs, type PaginationOptions } from "@/lib/firestore-pagination";
 import {
   collection,
   doc,
-  getDocs,
   getDoc,
   updateDoc,
 } from "firebase/firestore";
@@ -12,9 +12,9 @@ const COLLECTION_NAME = "AppConfig";
 
 export const appConfigService = {
   // Get all app configurations
-  async getAllConfigs(): Promise<AppConfig[]> {
+  async getAllConfigs(pagination: PaginationOptions = {}): Promise<AppConfig[]> {
     try {
-      const querySnapshot = await getDocs(collection(db, COLLECTION_NAME));
+      const querySnapshot = await getPaginatedDocs(collection(db, COLLECTION_NAME), pagination);
       return querySnapshot.docs.map((doc) => ({
         id: doc.id,
         ...doc.data(),

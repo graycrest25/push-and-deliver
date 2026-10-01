@@ -1,3 +1,5 @@
+import { useFirestorePagination } from "@/hooks/use-firestore-pagination";
+import { TablePagination } from "@/components/table-pagination";
 import { useState, useEffect } from "react";
 import {
   Dialog,
@@ -45,6 +47,8 @@ interface TransactModalProps {
 }
 
 export function TransactModal({ open, onOpenChange }: TransactModalProps) {
+  const userPagination = useFirestorePagination();
+  const riderPagination = useFirestorePagination();
   const { user: currentAdmin, refetchUser } = useCurrentUser();
   const [transactionMode, setTransactionMode] = useState<"credit" | "debit">(
     "credit",
@@ -68,7 +72,7 @@ export function TransactModal({ open, onOpenChange }: TransactModalProps) {
     if (open) {
       loadData();
     }
-  }, [open]);
+  }, [open, userPagination.options, riderPagination.options]);
 
   useEffect(() => {
     // Auto-fill narration for riders
@@ -83,8 +87,8 @@ export function TransactModal({ open, onOpenChange }: TransactModalProps) {
     try {
       setLoadingData(true);
       const [usersData, ridersData] = await Promise.all([
-        usersService.getAllUsers(),
-        ridersService.getAllRiders(),
+        usersService.getAllUsers(userPagination.options),
+        ridersService.getAllRiders(riderPagination.options),
       ]);
       setUsers(usersData);
       setRiders(ridersData);
@@ -292,6 +296,7 @@ export function TransactModal({ open, onOpenChange }: TransactModalProps) {
                         ))}
                       </CommandGroup>
                     </Command>
+                    <TablePagination pagination={userPagination} loading={loadingData} />
                   </PopoverContent>
                 </Popover>
               </div>
@@ -365,6 +370,7 @@ export function TransactModal({ open, onOpenChange }: TransactModalProps) {
                         ))}
                       </CommandGroup>
                     </Command>
+                    <TablePagination pagination={riderPagination} loading={loadingData} />
                   </PopoverContent>
                 </Popover>
               </div>

@@ -1,8 +1,8 @@
+import { getPaginatedDocs, type PaginationOptions } from "@/lib/firestore-pagination";
 // Vendors Service - Read and Update (verify & block)
 import {
   collection,
   doc,
-  getDocs,
   getDoc,
   updateDoc,
   query,
@@ -17,10 +17,10 @@ const COLLECTION_NAME = 'Restaurants';
 
 export const vendorsService = {
   // Read all vendors
-  async getAllVendors(): Promise<Vendor[]> {
+  async getAllVendors(pagination: PaginationOptions = {}): Promise<Vendor[]> {
     try {
       const q = query(collection(db, COLLECTION_NAME), orderBy('createdAt', 'desc'));
-      const querySnapshot = await getDocs(q);
+      const querySnapshot = await getPaginatedDocs(q, pagination);
 
       return querySnapshot.docs.map(doc => ({
         id: doc.id,
@@ -34,14 +34,14 @@ export const vendorsService = {
   },
 
   // Read active vendors
-  async getActiveVendors(): Promise<Vendor[]> {
+  async getActiveVendors(pagination: PaginationOptions = {}): Promise<Vendor[]> {
     try {
       const q = query(
         collection(db, COLLECTION_NAME),
         where('status', '==', 'active'),
         orderBy('createdAt', 'desc')
       );
-      const querySnapshot = await getDocs(q);
+      const querySnapshot = await getPaginatedDocs(q, pagination);
 
       return querySnapshot.docs.map(doc => ({
         id: doc.id,
@@ -55,14 +55,14 @@ export const vendorsService = {
   },
 
   // Read pending verification vendors
-  async getPendingVendors(): Promise<Vendor[]> {
+  async getPendingVendors(pagination: PaginationOptions = {}): Promise<Vendor[]> {
     try {
       const q = query(
         collection(db, COLLECTION_NAME),
         where('verified', '==', false),
         orderBy('createdAt', 'desc')
       );
-      const querySnapshot = await getDocs(q);
+      const querySnapshot = await getPaginatedDocs(q, pagination);
 
       return querySnapshot.docs.map(doc => ({
         id: doc.id,
@@ -76,14 +76,14 @@ export const vendorsService = {
   },
 
   // Read blocked vendors
-  async getBlockedVendors(): Promise<Vendor[]> {
+  async getBlockedVendors(pagination: PaginationOptions = {}): Promise<Vendor[]> {
     try {
       const q = query(
         collection(db, COLLECTION_NAME),
         where('status', '==', 'blocked'),
         orderBy('createdAt', 'desc')
       );
-      const querySnapshot = await getDocs(q);
+      const querySnapshot = await getPaginatedDocs(q, pagination);
 
       return querySnapshot.docs.map(doc => ({
         id: doc.id,

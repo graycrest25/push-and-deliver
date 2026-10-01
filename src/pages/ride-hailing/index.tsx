@@ -1,3 +1,5 @@
+import { useFirestorePagination } from "@/hooks/use-firestore-pagination";
+import { TablePagination } from "@/components/table-pagination";
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import {
@@ -40,6 +42,7 @@ const formatAmount = (amount: number) => {
 };
 
 export default function RideHailingPage() {
+  const pagination = useFirestorePagination();
   const navigate = useNavigate();
   const [orders, setOrders] = useState<RideHaulingOrder[]>([]);
   const [loading, setLoading] = useState(true);
@@ -48,12 +51,12 @@ export default function RideHailingPage() {
 
   useEffect(() => {
     loadOrders();
-  }, []);
+  }, [pagination.options]);
 
   const loadOrders = async () => {
     try {
       setLoading(true);
-      const data = await rideHailingService.getAllOrders();
+      const data = await rideHailingService.getAllOrders(pagination.options);
       setOrders(data);
     } catch (error) {
       console.error("Error loading orders:", error);
@@ -163,6 +166,7 @@ export default function RideHailingPage() {
         <h1 className="text-3xl font-bold tracking-tight">
           Ride Hailing Orders
         </h1>
+        <p className="text-sm text-muted-foreground">Search, filters, summaries, and exports apply to the current page.</p>
         <p className="text-muted-foreground mt-2">
           Manage and track all ride hailing requests
         </p>
@@ -274,7 +278,7 @@ export default function RideHailingPage() {
               <div className="relative w-64">
                 <IconSearch className="absolute left-2 top-2.5 h-4 w-4 text-muted-foreground" />
                 <Input
-                  placeholder="Search by Order ID..."
+                  placeholder="Search this page: by Order ID..."
                   value={searchQuery}
                   onChange={(e) => setSearchQuery(e.target.value)}
                   className="pl-8"
@@ -297,7 +301,7 @@ export default function RideHailingPage() {
           </div>
         </CardHeader>
         <CardContent>
-          <Table>
+          <><Table>
             <TableHeader>
               <TableRow>
                 <TableHead>Order ID</TableHead>
@@ -397,7 +401,7 @@ export default function RideHailingPage() {
                 ))
               )}
             </TableBody>
-          </Table>
+          </Table><TablePagination pagination={pagination} loading={loading} /></>
         </CardContent>
       </Card>
     </div>

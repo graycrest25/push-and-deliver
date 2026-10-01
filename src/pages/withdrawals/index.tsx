@@ -1,3 +1,5 @@
+import { useFirestorePagination } from "@/hooks/use-firestore-pagination";
+import { TablePagination } from "@/components/table-pagination";
 "use client";
 
 import { useState, useEffect } from "react";
@@ -127,6 +129,7 @@ const userTypeChartConfig = {
 } satisfies ChartConfig;
 
 export default function WithdrawalsPage() {
+  const pagination = useFirestorePagination();
   const [withdrawals, setWithdrawals] = useState<Withdrawal[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState("");
@@ -140,12 +143,12 @@ export default function WithdrawalsPage() {
 
   useEffect(() => {
     loadWithdrawals();
-  }, []);
+  }, [pagination.options]);
 
   const loadWithdrawals = async () => {
     try {
       setLoading(true);
-      const data = await withdrawalsService.getAllWithdrawals();
+      const data = await withdrawalsService.getAllWithdrawals(pagination.options);
       console.log(data);
       setWithdrawals(data);
     } catch (error) {
@@ -299,6 +302,7 @@ export default function WithdrawalsPage() {
       <div className="p-8 space-y-6">
         <div>
           <h1 className="text-3xl font-bold tracking-tight">Withdrawals</h1>
+        <p className="text-sm text-muted-foreground">Search, filters, summaries, and exports apply to the current page.</p>
           <p className="text-muted-foreground">Manage withdrawal requests</p>
         </div>
         <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
@@ -512,7 +516,7 @@ export default function WithdrawalsPage() {
             <div className="relative flex-1">
               <Search className="absolute left-2 top-3 h-4 w-4 text-muted-foreground" />
               <Input
-                placeholder="Search by account name, bank, or user ID..."
+                placeholder="Search this page: by account name, bank, or user ID..."
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
                 className="pl-8"
@@ -576,7 +580,7 @@ export default function WithdrawalsPage() {
 
           {/* Table */}
           <div className="border rounded-lg overflow-hidden">
-            <Table>
+            <><Table>
               <TableHeader>
                 <TableRow className="bg-muted/50">
                   <TableHead>Account Name</TableHead>
@@ -724,7 +728,7 @@ export default function WithdrawalsPage() {
                   ))
                 )}
               </TableBody>
-            </Table>
+            </Table><TablePagination pagination={pagination} loading={loading} /></>
           </div>
         </CardContent>
       </Card>

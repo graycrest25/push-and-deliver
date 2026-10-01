@@ -1,6 +1,10 @@
+import { useFirestorePagination } from "@/hooks/use-firestore-pagination";
+import { TablePagination } from "@/components/table-pagination";
+import { getPaginatedDocs } from "@/lib/firestore-pagination";
 "use client";
 
 import { useState, useEffect } from "react";
+import { endpoints } from "@/lib/endpoint";
 import { useParams, useNavigate } from "react-router-dom";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -36,7 +40,7 @@ import { ridersService } from "@/services/riders.service";
 import type { Rider, Transaction } from "@/types";
 import { toast } from "sonner";
 import { Skeleton } from "@/components/ui/skeleton";
-import { collection, query, orderBy, getDocs } from "firebase/firestore";
+import { collection, query, orderBy } from "firebase/firestore";
 import { db, storage, auth } from "@/lib/firebase";
 import {
   ref,
@@ -172,7 +176,7 @@ function EditRiderDialog({ rider, onUpdateComplete }: EditRiderDialogProps) {
       return;
     }
 
-    const url = import.meta.env.VITE_RIDER_PROFILE_UPDATE_URL;
+    const url = endpoints.updateriderprofileV2;
 
     try {
       setUpdating(true);
@@ -326,6 +330,7 @@ function EditRiderDialog({ rider, onUpdateComplete }: EditRiderDialogProps) {
 
 export default function RiderDetailsPage() {
   const { id } = useParams<{ id: string }>();
+  const pagination = useFirestorePagination(id ?? "");
   const navigate = useNavigate();
   const { user: currentAdmin } = useCurrentUser();
   const isSuperAdmin = currentAdmin?.adminType === "super";
@@ -415,7 +420,7 @@ export default function RiderDetailsPage() {
       loadRiderData();
       loadRiderTransactions();
     }
-  }, [id]);
+  }, [id, pagination.options]);
 
   const loadRiderData = async () => {
     try {
@@ -440,7 +445,7 @@ export default function RiderDetailsPage() {
       setLoadingTransactions(true);
       const transactionsRef = collection(db, "Riders", id!, "Transactions");
       const q = query(transactionsRef, orderBy("time", "desc"));
-      const querySnapshot = await getDocs(q);
+      const querySnapshot = await getPaginatedDocs(q, pagination.options);
       const txns = querySnapshot.docs.map((doc) => ({
         id: doc.id,
         ...doc.data(),
@@ -1442,7 +1447,7 @@ export default function RiderDetailsPage() {
             </p>
           ) : (
             <div className="border rounded-lg overflow-hidden">
-              <Table>
+              <><Table>
                 <TableHeader>
                   <TableRow className="bg-muted/50">
                     <TableHead>Date</TableHead>
@@ -1500,7 +1505,7 @@ export default function RiderDetailsPage() {
                     </TableRow>
                   ))}
                 </TableBody>
-              </Table>
+              </Table><TablePagination pagination={pagination} loading={loadingTransactions} /></>
             </div>
           )}
         </CardContent>

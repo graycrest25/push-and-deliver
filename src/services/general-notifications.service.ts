@@ -1,7 +1,7 @@
+import { getPaginatedDocs, type PaginationOptions } from "@/lib/firestore-pagination";
 import {
   collection,
   doc,
-  getDocs,
   addDoc,
   deleteDoc,
   query,
@@ -38,13 +38,13 @@ export const generalNotificationsService = {
   },
 
   // Read all general notifications
-  async getAllNotifications(): Promise<GeneralNotification[]> {
+  async getAllNotifications(pagination: PaginationOptions = {}): Promise<GeneralNotification[]> {
     try {
       const q = query(
         collection(db, COLLECTION_NAME),
         orderBy("createdAt", "desc")
       );
-      const querySnapshot = await getDocs(q);
+      const querySnapshot = await getPaginatedDocs(q, pagination);
 
       return querySnapshot.docs.map((doc) => ({
         id: doc.id,

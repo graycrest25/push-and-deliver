@@ -1,7 +1,7 @@
 // Analytics Service - Dashboard metrics and statistics
 import {
   collection,
-  getDocs,
+  getCountFromServer,
   query,
   where,
   Timestamp
@@ -21,21 +21,21 @@ export const analyticsService = {
   }> {
     try {
       const [users, riders, restaurants, fees, referrals, withdrawals] = await Promise.all([
-        getDocs(collection(db, 'Users')),
-        getDocs(collection(db, 'Riders')),
-        getDocs(collection(db, 'Restaurants')),
-        getDocs(collection(db, 'Fees')),
-        getDocs(collection(db, 'Referrals')),
-        getDocs(collection(db, 'Withdrawals')),
+        getCountFromServer(collection(db, 'Users')),
+        getCountFromServer(collection(db, 'Riders')),
+        getCountFromServer(collection(db, 'Restaurants')),
+        getCountFromServer(collection(db, 'Fees')),
+        getCountFromServer(collection(db, 'Referrals')),
+        getCountFromServer(collection(db, 'Withdrawals')),
       ]);
 
       return {
-        totalUsers: users.size,
-        totalRiders: riders.size,
-        totalRestaurants: restaurants.size,
-        totalFees: fees.size,
-        totalReferrals: referrals.size,
-        totalWithdrawals: withdrawals.size,
+        totalUsers: users.data().count,
+        totalRiders: riders.data().count,
+        totalRestaurants: restaurants.data().count,
+        totalFees: fees.data().count,
+        totalReferrals: referrals.data().count,
+        totalWithdrawals: withdrawals.data().count,
       };
     } catch (error) {
       console.error('Error fetching total counts:', error);
@@ -50,13 +50,13 @@ export const analyticsService = {
   }> {
     try {
       const [riders, restaurants] = await Promise.all([
-        getDocs(query(collection(db, 'Riders'), where('verificationStatus', '==', VerificationStatus.verified))),
-        getDocs(query(collection(db, 'Restaurants'), where('verificationStatus', '==', VerificationStatus.verified))),
+        getCountFromServer(query(collection(db, 'Riders'), where('verificationStatus', '==', VerificationStatus.verified))),
+        getCountFromServer(query(collection(db, 'Restaurants'), where('verificationStatus', '==', VerificationStatus.verified))),
       ]);
 
       return {
-        verifiedRiders: riders.size,
-        verifiedRestaurants: restaurants.size,
+        verifiedRiders: riders.data().count,
+        verifiedRestaurants: restaurants.data().count,
       };
     } catch (error) {
       console.error('Error fetching verified counts:', error);
@@ -71,13 +71,13 @@ export const analyticsService = {
   }> {
     try {
       const [riders, restaurants] = await Promise.all([
-        getDocs(query(collection(db, 'Riders'), where('verificationStatus', '==', VerificationStatus.unverified))),
-        getDocs(query(collection(db, 'Restaurants'), where('verificationStatus', '==', VerificationStatus.unverified))),
+        getCountFromServer(query(collection(db, 'Riders'), where('verificationStatus', '==', VerificationStatus.unverified))),
+        getCountFromServer(query(collection(db, 'Restaurants'), where('verificationStatus', '==', VerificationStatus.unverified))),
       ]);
 
       return {
-        pendingRiders: riders.size,
-        pendingRestaurants: restaurants.size,
+        pendingRiders: riders.data().count,
+        pendingRestaurants: restaurants.data().count,
       };
     } catch (error) {
       console.error('Error fetching pending counts:', error);
@@ -92,13 +92,13 @@ export const analyticsService = {
   }> {
     try {
       const [riders, restaurants] = await Promise.all([
-        getDocs(query(collection(db, 'Riders'), where('verificationStatus', '==', VerificationStatus.blocked))),
-        getDocs(query(collection(db, 'Restaurants'), where('verificationStatus', '==', VerificationStatus.blocked))),
+        getCountFromServer(query(collection(db, 'Riders'), where('verificationStatus', '==', VerificationStatus.blocked))),
+        getCountFromServer(query(collection(db, 'Restaurants'), where('verificationStatus', '==', VerificationStatus.blocked))),
       ]);
 
       return {
-        blockedRiders: riders.size,
-        blockedRestaurants: restaurants.size,
+        blockedRiders: riders.data().count,
+        blockedRestaurants: restaurants.data().count,
       };
     } catch (error) {
       console.error('Error fetching blocked counts:', error);
@@ -111,10 +111,10 @@ export const analyticsService = {
     totalReferrals: number;
   }> {
     try {
-      const all = await getDocs(collection(db, 'Referrals'));
+      const all = await getCountFromServer(collection(db, 'Referrals'));
 
       return {
-        totalReferrals: all.size,
+        totalReferrals: all.data().count,
       };
     } catch (error) {
       console.error('Error fetching referral stats:', error);
@@ -132,19 +132,19 @@ export const analyticsService = {
   }> {
     try {
       const [all, successful, pending, failed, reversed] = await Promise.all([
-        getDocs(collection(db, 'Withdrawals')),
-        getDocs(query(collection(db, 'Withdrawals'), where('status', '==', WithdrawalStatus.Successful))),
-        getDocs(query(collection(db, 'Withdrawals'), where('status', '==', WithdrawalStatus.Pending))),
-        getDocs(query(collection(db, 'Withdrawals'), where('status', '==', WithdrawalStatus.Failed))),
-        getDocs(query(collection(db, 'Withdrawals'), where('status', '==', WithdrawalStatus.Reversed))),
+        getCountFromServer(collection(db, 'Withdrawals')),
+        getCountFromServer(query(collection(db, 'Withdrawals'), where('status', '==', WithdrawalStatus.Successful))),
+        getCountFromServer(query(collection(db, 'Withdrawals'), where('status', '==', WithdrawalStatus.Pending))),
+        getCountFromServer(query(collection(db, 'Withdrawals'), where('status', '==', WithdrawalStatus.Failed))),
+        getCountFromServer(query(collection(db, 'Withdrawals'), where('status', '==', WithdrawalStatus.Reversed))),
       ]);
 
       return {
-        totalWithdrawals: all.size,
-        successfulWithdrawals: successful.size,
-        pendingWithdrawals: pending.size,
-        failedWithdrawals: failed.size,
-        reversedWithdrawals: reversed.size,
+        totalWithdrawals: all.data().count,
+        successfulWithdrawals: successful.data().count,
+        pendingWithdrawals: pending.data().count,
+        failedWithdrawals: failed.data().count,
+        reversedWithdrawals: reversed.data().count,
       };
     } catch (error) {
       console.error('Error fetching withdrawal stats:', error);
@@ -164,15 +164,15 @@ export const analyticsService = {
       const cutoffTimestamp = Timestamp.fromDate(cutoffDate);
 
       const [users, riders, restaurants] = await Promise.all([
-        getDocs(query(collection(db, 'Users'), where('createdAt', '>=', cutoffTimestamp))),
-        getDocs(query(collection(db, 'Riders'), where('createdAt', '>=', cutoffTimestamp))),
-        getDocs(query(collection(db, 'Restaurants'), where('createdAt', '>=', cutoffTimestamp))),
+        getCountFromServer(query(collection(db, 'Users'), where('createdAt', '>=', cutoffTimestamp))),
+        getCountFromServer(query(collection(db, 'Riders'), where('createdAt', '>=', cutoffTimestamp))),
+        getCountFromServer(query(collection(db, 'Restaurants'), where('createdAt', '>=', cutoffTimestamp))),
       ]);
 
       return {
-        newUsers: users.size,
-        newRiders: riders.size,
-        newRestaurants: restaurants.size,
+        newUsers: users.data().count,
+        newRiders: riders.data().count,
+        newRestaurants: restaurants.data().count,
       };
     } catch (error) {
       console.error('Error fetching new registrations:', error);
@@ -183,10 +183,10 @@ export const analyticsService = {
   // Get online riders count
   async getOnlineRidersCount(): Promise<number> {
     try {
-      const querySnapshot = await getDocs(
+      const querySnapshot = await getCountFromServer(
         query(collection(db, 'Riders'), where('onlineStatus', '==', true))
       );
-      return querySnapshot.size;
+      return querySnapshot.data().count;
     } catch (error) {
       console.error('Error fetching online riders count:', error);
       throw error;
@@ -196,10 +196,10 @@ export const analyticsService = {
   // Get open restaurants count
   async getOpenRestaurantsCount(): Promise<number> {
     try {
-      const querySnapshot = await getDocs(
+      const querySnapshot = await getCountFromServer(
         query(collection(db, 'Restaurants'), where('isOpen', '==', true))
       );
-      return querySnapshot.size;
+      return querySnapshot.data().count;
     } catch (error) {
       console.error('Error fetching open restaurants count:', error);
       throw error;

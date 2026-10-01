@@ -1,3 +1,5 @@
+import { useFirestorePagination } from "@/hooks/use-firestore-pagination";
+import { TablePagination } from "@/components/table-pagination";
 "use client";
 
 import { useState, useEffect } from "react";
@@ -33,6 +35,7 @@ import { startOfDay, endOfDay, isWithinInterval } from "date-fns";
 import { useNavigate } from "react-router-dom";
 
 export default function ReferralsPage() {
+  const pagination = useFirestorePagination();
   const [referrals, setReferrals] = useState<Referral[]>([]);
   const [users, setUsers] = useState<Map<string, User>>(new Map());
   const [loading, setLoading] = useState(true);
@@ -42,28 +45,17 @@ export default function ReferralsPage() {
 
   useEffect(() => {
     loadData();
-  }, []);
+  }, [pagination.options]);
 
   const loadData = async () => {
     try {
       setLoading(true);
-      const [referralsData, usersData] = await Promise.all([
-        referralsService.getAllReferrals(),
-        usersService.getAllUsers(),
-      ]);
-
-      console.log("Referrals data loaded:", referralsData.length, "referrals");
-      console.log("Users data loaded:", usersData.length, "users");
-
+      const referralsData = await referralsService.getAllReferrals(pagination.options);
+      const ids = [...new Set(referralsData.map((ref) => ref.referrerUid).filter(Boolean))];
+      const usersData = await Promise.all(ids.map((id) => usersService.getUserById(id!)));
       setReferrals(referralsData);
-
-      // Create a map of users by ID for quick lookup
       const usersMap = new Map<string, User>();
-      usersData.forEach((user) => {
-        if (user.id) {
-          usersMap.set(user.id, user);
-        }
-      });
+      usersData.forEach((user) => { if (user?.id) usersMap.set(user.id, user); });
       setUsers(usersMap);
     } catch (error) {
       console.error("Error loading data:", error);
@@ -164,6 +156,7 @@ export default function ReferralsPage() {
       <div className="p-8 space-y-6">
         <div>
           <h1 className="text-3xl font-bold tracking-tight">Referrals</h1>
+        <p className="text-sm text-muted-foreground">Search, filters, summaries, and exports apply to the current page.</p>
           <p className="text-muted-foreground">Track user referrals</p>
         </div>
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
@@ -240,7 +233,7 @@ export default function ReferralsPage() {
             <div className="relative flex-1 min-w-[250px]">
               <Search className="absolute left-2 top-3 h-4 w-4 text-muted-foreground" />
               <Input
-                placeholder="Search by name or user ID..."
+                placeholder="Search this page: by name or user ID..."
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
                 className="pl-8"
@@ -308,7 +301,7 @@ export default function ReferralsPage() {
 
           {/* Table */}
           <div className="border rounded-lg overflow-hidden">
-            <Table>
+            <><Table>
               <TableHeader>
                 <TableRow className="bg-muted/50">
                   <TableHead>Referrer Name</TableHead>
@@ -380,7 +373,7 @@ export default function ReferralsPage() {
                   ))
                 )}
               </TableBody>
-            </Table>
+            </Table><TablePagination pagination={pagination} loading={loading} /></>
           </div>
         </CardContent>
       </Card>

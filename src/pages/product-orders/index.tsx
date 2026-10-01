@@ -1,3 +1,5 @@
+import { useFirestorePagination } from "@/hooks/use-firestore-pagination";
+import { TablePagination } from "@/components/table-pagination";
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import {
@@ -29,6 +31,7 @@ const EcomOrderStatus = {
 } as const;
 
 export default function ProductOrdersPage() {
+  const pagination = useFirestorePagination();
   const navigate = useNavigate();
   const [orders, setOrders] = useState<ProductOrder[]>([]);
   const [filteredOrders, setFilteredOrders] = useState<ProductOrder[]>([]);
@@ -38,7 +41,7 @@ export default function ProductOrdersPage() {
 
   useEffect(() => {
     loadOrders();
-  }, []);
+  }, [pagination.options]);
 
   useEffect(() => {
     filterOrders();
@@ -47,7 +50,7 @@ export default function ProductOrdersPage() {
   const loadOrders = async () => {
     try {
       setLoading(true);
-      const data = await productOrdersService.getAllOrders();
+      const data = await productOrdersService.getAllOrders(pagination.options);
       setOrders(data);
       setFilteredOrders(data);
     } catch (error) {
@@ -150,6 +153,7 @@ export default function ProductOrdersPage() {
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-3xl font-bold tracking-tight">Product Orders</h1>
+        <p className="text-sm text-muted-foreground">Search, filters, summaries, and exports apply to the current page.</p>
           <p className="text-muted-foreground">
             View and manage unpaid orders from E-commerce Merchants
           </p>
@@ -160,7 +164,7 @@ export default function ProductOrdersPage() {
         <div className="relative flex-1 max-w-sm">
           <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
           <Input
-            placeholder="Search by Order ID, Customer Name..."
+            placeholder="Search this page: by Order ID, Customer Name..."
             className="pl-8"
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
@@ -211,7 +215,7 @@ export default function ProductOrdersPage() {
                 </div>
               ) : (
                 <div className="overflow-x-auto">
-                  <Table>
+                  <><Table>
                     <TableHeader>
                       <TableRow className="hover:bg-transparent">
                         <TableHead className="font-semibold">
@@ -286,7 +290,7 @@ export default function ProductOrdersPage() {
                         </TableRow>
                       ))}
                     </TableBody>
-                  </Table>
+                  </Table><TablePagination pagination={pagination} loading={loading} /></>
                 </div>
               )}
             </CardContent>

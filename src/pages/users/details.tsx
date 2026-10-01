@@ -1,3 +1,6 @@
+import { useFirestorePagination } from "@/hooks/use-firestore-pagination";
+import { TablePagination } from "@/components/table-pagination";
+import { getPaginatedDocs } from "@/lib/firestore-pagination";
 "use client";
 
 import { useState, useEffect } from "react";
@@ -19,7 +22,7 @@ import { referralsService } from "@/services/referrals.service";
 import type { User, Transaction } from "@/types";
 import { toast } from "sonner";
 import { Skeleton } from "@/components/ui/skeleton";
-import { collection, query, orderBy, getDocs } from "firebase/firestore";
+import { collection, query, orderBy } from "firebase/firestore";
 import { db } from "@/lib/firebase";
 import { getStatusLabel, getStatusBadgeVariant } from "@/lib/status-utils";
 import { cn } from "@/lib/utils";
@@ -33,6 +36,7 @@ const formatAmount = (amount: number) => {
 
 export default function UserDetailsPage() {
   const { id } = useParams<{ id: string }>();
+  const pagination = useFirestorePagination(id ?? "");
   const navigate = useNavigate();
   const [user, setUser] = useState<User | null>(null);
   const [referralCount, setReferralCount] = useState(0);
@@ -45,14 +49,14 @@ export default function UserDetailsPage() {
       loadUserData();
       loadUserTransactions();
     }
-  }, [id]);
+  }, [id, pagination.options]);
 
   const loadUserData = async () => {
     try {
       setLoading(true);
       const [userData, referralsData] = await Promise.all([
         usersService.getUserById(id!),
-        referralsService.getAllReferrals(),
+        referralsService.getReferralCountByReferrerId(id!),
       ]);
 
       if (!userData) {
@@ -63,11 +67,7 @@ export default function UserDetailsPage() {
 
       setUser(userData);
 
-      // Count referrals for this user
-      const count = referralsData.filter(
-        (ref) => ref.referrerUid === id
-      ).length;
-      setReferralCount(count);
+      setReferralCount(referralsData);
     } catch (error) {
       console.error("Error loading user:", error);
       toast.error("Failed to load user data");
@@ -83,7 +83,7 @@ export default function UserDetailsPage() {
       // Fetch from subcollection: Users/{userId}/Transactions
       const transactionsRef = collection(db, "Users", id!, "Transactions");
       const q = query(transactionsRef, orderBy("time", "desc"));
-      const querySnapshot = await getDocs(q);
+      const querySnapshot = await getPaginatedDocs(q, pagination.options);
 
       const txns = querySnapshot.docs.map((doc) => ({
         id: doc.id,
@@ -234,7 +234,7 @@ export default function UserDetailsPage() {
             </p>
           ) : (
             <div className="border rounded-lg overflow-hidden">
-              <Table>
+              <><Table>
                 <TableHeader>
                   <TableRow className="bg-muted/50">
                     <TableHead>Date</TableHead>
@@ -292,7 +292,7 @@ export default function UserDetailsPage() {
                     </TableRow>
                   ))}
                 </TableBody>
-              </Table>
+              </Table><TablePagination pagination={pagination} loading={loadingTransactions} /></>
             </div>
           )}
         </CardContent>

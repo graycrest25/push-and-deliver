@@ -1,3 +1,5 @@
+import { useFirestorePagination } from "@/hooks/use-firestore-pagination";
+import { TablePagination } from "@/components/table-pagination";
 "use client";
 
 import { useState, useEffect } from "react";
@@ -48,6 +50,7 @@ const formatAmount = (amount: number) => {
 };
 
 export default function VendorsPage() {
+  const pagination = useFirestorePagination();
   const navigate = useNavigate();
   const [restaurants, setRestaurants] = useState<Restaurant[]>([]);
   const [loading, setLoading] = useState(true);
@@ -57,12 +60,12 @@ export default function VendorsPage() {
 
   useEffect(() => {
     loadRestaurants();
-  }, []);
+  }, [pagination.options]);
 
   const loadRestaurants = async () => {
     try {
       setLoading(true);
-      const data = await restaurantsService.getAllRestaurants();
+      const data = await restaurantsService.getAllRestaurants(pagination.options);
       setRestaurants(data);
     } catch (error) {
       console.error("Error loading restaurants:", error);
@@ -164,6 +167,7 @@ export default function VendorsPage() {
       <div className="p-8 space-y-6">
         <div>
           <h1 className="text-3xl font-bold tracking-tight">Restaurants</h1>
+        <p className="text-sm text-muted-foreground">Search, filters, summaries, and exports apply to the current page.</p>
           <p className="text-muted-foreground">Manage restaurants</p>
         </div>
         <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
@@ -252,7 +256,7 @@ export default function VendorsPage() {
             <div className="relative flex-1">
               <Search className="absolute left-2 top-3 h-4 w-4 text-muted-foreground" />
               <Input
-                placeholder="Search by name, email, or phone..."
+                placeholder="Search this page: by name, email, or phone..."
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
                 className="pl-8"
@@ -279,7 +283,7 @@ export default function VendorsPage() {
 
           {/* Table */}
           <div className="border rounded-lg overflow-hidden">
-            <Table>
+            <><Table>
               <TableHeader>
                 <TableRow className="bg-muted/50">
                   <TableHead>Name</TableHead>
@@ -380,7 +384,7 @@ export default function VendorsPage() {
                   ))
                 )}
               </TableBody>
-            </Table>
+            </Table><TablePagination pagination={pagination} loading={loading} /></>
           </div>
         </CardContent>
       </Card>

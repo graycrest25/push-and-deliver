@@ -1,8 +1,8 @@
+import { getPaginatedDocs, type PaginationOptions } from "@/lib/firestore-pagination";
 // Riders Service - Read and Update (verify & block)
 import {
   collection,
   doc,
-  getDocs,
   getDoc,
   updateDoc,
   query,
@@ -18,13 +18,13 @@ const COLLECTION_NAME = "Riders";
 
 export const ridersService = {
   // Read all riders
-  async getAllRiders(): Promise<Rider[]> {
+  async getAllRiders(pagination: PaginationOptions = {}): Promise<Rider[]> {
     try {
       const q = query(
         collection(db, COLLECTION_NAME),
         orderBy("createdAt", "desc"),
       );
-      const querySnapshot = await getDocs(q);
+      const querySnapshot = await getPaginatedDocs(q, pagination);
 
       return querySnapshot.docs.map((doc) => ({
         id: doc.id,
@@ -39,14 +39,14 @@ export const ridersService = {
   },
 
   // Read verified riders
-  async getVerifiedRiders(): Promise<Rider[]> {
+  async getVerifiedRiders(pagination: PaginationOptions = {}): Promise<Rider[]> {
     try {
       const q = query(
         collection(db, COLLECTION_NAME),
         where("verificationStatus", "==", VerificationStatus.verified),
         orderBy("createdAt", "desc"),
       );
-      const querySnapshot = await getDocs(q);
+      const querySnapshot = await getPaginatedDocs(q, pagination);
 
       return querySnapshot.docs.map((doc) => ({
         id: doc.id,
@@ -61,14 +61,14 @@ export const ridersService = {
   },
 
   // Read unverified/pending riders
-  async getPendingRiders(): Promise<Rider[]> {
+  async getPendingRiders(pagination: PaginationOptions = {}): Promise<Rider[]> {
     try {
       const q = query(
         collection(db, COLLECTION_NAME),
         where("verificationStatus", "==", VerificationStatus.unverified),
         orderBy("createdAt", "desc"),
       );
-      const querySnapshot = await getDocs(q);
+      const querySnapshot = await getPaginatedDocs(q, pagination);
 
       return querySnapshot.docs.map((doc) => ({
         id: doc.id,
@@ -83,14 +83,14 @@ export const ridersService = {
   },
 
   // Read blocked riders
-  async getBlockedRiders(): Promise<Rider[]> {
+  async getBlockedRiders(pagination: PaginationOptions = {}): Promise<Rider[]> {
     try {
       const q = query(
         collection(db, COLLECTION_NAME),
         where("verificationStatus", "==", VerificationStatus.blocked),
         orderBy("createdAt", "desc"),
       );
-      const querySnapshot = await getDocs(q);
+      const querySnapshot = await getPaginatedDocs(q, pagination);
 
       return querySnapshot.docs.map((doc) => ({
         id: doc.id,

@@ -1,3 +1,5 @@
+import { useFirestorePagination } from "@/hooks/use-firestore-pagination";
+import { TablePagination } from "@/components/table-pagination";
 "use client";
 
 import { useState, useEffect } from "react";
@@ -45,6 +47,7 @@ import { MoreHorizontal, Plus } from "lucide-react";
 import { useCurrentUser } from "@/contexts/UserContext";
 
 export default function CouponsPage() {
+  const pagination = useFirestorePagination();
   const { user } = useCurrentUser();
   const isAdminViewOnly = user?.adminType === "customercare";
 
@@ -64,12 +67,12 @@ export default function CouponsPage() {
 
   useEffect(() => {
     loadCoupons();
-  }, []);
+  }, [pagination.options]);
 
   const loadCoupons = async () => {
     try {
       setLoading(true);
-      const data = await couponsService.getAllCoupons();
+      const data = await couponsService.getAllCoupons(pagination.options);
       setCoupons(data);
     } catch (error) {
       console.error("Error loading coupons:", error);
@@ -240,7 +243,7 @@ export default function CouponsPage() {
         </CardHeader>
         <CardContent>
           <div className="border rounded-lg overflow-hidden">
-            <Table>
+            <><Table>
               <TableHeader>
                 <TableRow className="bg-muted/50">
                   <TableHead>Coupon ID</TableHead>
@@ -317,7 +320,7 @@ export default function CouponsPage() {
                   ))
                 )}
               </TableBody>
-            </Table>
+            </Table><TablePagination pagination={pagination} loading={loading} /></>
           </div>
         </CardContent>
       </Card>

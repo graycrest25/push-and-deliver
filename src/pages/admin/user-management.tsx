@@ -1,5 +1,12 @@
+import { AdminAccountsList } from "./admin-accounts-list";
+import { useFirestorePagination } from "@/hooks/use-firestore-pagination";
+import { TablePagination } from "@/components/table-pagination";
 import { useState, useEffect } from "react";
 import { usersService } from "@/services/users.service";
+import {
+  manageAdminStatus,
+  type AdminStatus,
+} from "@/services/admin-management.service";
 import type { User } from "@/types";
 import { toast } from "sonner";
 import {
@@ -17,91 +24,92 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { Button } from "@/components/ui/button";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Input } from "@/components/ui/input";
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-  DialogTrigger,
-} from "@/components/ui/dialog";
-import {
-  IconTrash,
-  IconSearch,
-  IconUserCircle,
-  IconChevronLeft,
-  IconChevronRight,
-} from "@tabler/icons-react";
-import { Badge } from "@/components/ui/badge";
+import { IconSearch, IconUserCircle } from "@tabler/icons-react";
 import { useCurrentUser } from "@/contexts/UserContext";
 import { Navigate } from "react-router-dom";
 import { Skeleton } from "@/components/ui/skeleton";
 
 export default function UserManagementPage() {
-  const { user: currentUser, isAdmin, loading: authLoading } = useCurrentUser();
+  const pagination = useFirestorePagination();
+  const { user: currentUser, loading: authLoading } = useCurrentUser();
   const [users, setUsers] = useState<User[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState("");
-  const [userToDelete, setUserToDelete] = useState<string | null>(null);
-
-  // Pagination states
-  const [currentPage, setCurrentPage] = useState(1);
-  const [rowsPerPage, setRowsPerPage] = useState(10);
+  const [activeTab, setActiveTab] = useState("users");
+  const [updatingUid, setUpdatingUid] = useState<string | null>(null);
 
   useEffect(() => {
-    loadUsers();
-  }, []);
+    if (
+      authLoading ||
+      currentUser?.adminType !== "super" ||
+      activeTab !== "users"
+    )
+      return;
+    let active = true;
+    setLoading(true);
+    usersService
+      .getAllUsers(pagination.options)
+      .then((data) => {
+        if (active) setUsers(data);
+      })
+      .catch((error) => {
+        if (active)
+          toast.error(
+            error instanceof Error ? error.message : "Failed to load users",
+          );
+      })
+      .finally(() => {
+        if (active) setLoading(false);
+      });
+    return () => {
+      active = false;
+    };
+  }, [
+    pagination.options,
+    activeTab,
+    authLoading,
+    currentUser?.id,
+    currentUser?.adminType,
+  ]);
 
-  // Reset to first page when search changes
-  useEffect(() => {
-    setCurrentPage(1);
-  }, [searchTerm]);
-
-  const loadUsers = async () => {
+  const updateUserRole = async (uid: string, value: string) => {
+    if (updatingUid) return null;
+    const adminType = (value === "remove" ? "" : value) as AdminStatus;
+    setUpdatingUid(uid);
     try {
-      setLoading(true);
-      const data = await usersService.getAllUsers();
-      setUsers(data);
-    } catch (error) {
-      toast.error("Failed to load users");
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const updateUserRole = async (userId: string, value: string) => {
-    try {
-      let updates: Partial<User> = {};
-      if (value === "user") {
-        updates = { isAdmin: false, adminType: "" };
+      const result = await manageAdminStatus(uid, adminType);
+      setUsers((previous) =>
+        previous.map((user) =>
+          user.id === uid
+            ? { ...user, isAdmin: result.isAdmin, adminType: result.adminType }
+            : user,
+        ),
+      );
+      if (result.sessionRefreshRequired) {
+        toast.warning(
+          "Admin access updated. Sign in again to refresh your session.",
+        );
       } else {
-        updates = {
-          isAdmin: true,
-          adminType: value as "super" | "regular" | "customercare" | "verifier",
-        };
+        toast.success(
+          result.isAdmin ? "Admin access updated" : "Admin access removed",
+          {
+            description:
+              "The affected account receives new claims when its session refreshes or it signs in again.",
+          },
+        );
       }
-
-      await usersService.updateUser(userId, updates);
-
-      setUsers(users.map((u) => (u.id === userId ? { ...u, ...updates } : u)));
-      toast.success("User role updated");
+      return result;
     } catch (error) {
-      toast.error("Failed to update user role");
-    }
-  };
-
-  const handleDeleteUser = async () => {
-    if (!userToDelete) return;
-    try {
-      await usersService.deleteUser(userToDelete);
-      setUsers(users.filter((u) => u.id !== userToDelete));
-      toast.success("User deleted successfully");
-      setUserToDelete(null);
-    } catch (error) {
-      toast.error("Failed to delete user");
+      toast.error(
+        error instanceof Error
+          ? error.message
+          : "Failed to update admin access",
+      );
+      return null;
+    } finally {
+      setUpdatingUid(null);
     }
   };
 
@@ -113,130 +121,120 @@ export default function UserManagementPage() {
       </div>
     );
   }
-
-  // Access check: Must be authenticated and a super admin
   if (!currentUser || currentUser.adminType !== "super") {
-    // If not super admin, redirect to dashboard (auth handled by wrapper usually, but this is double check)
-    // Actually, protected routes only checks isAdmin. Regular admins might reach here if they guess URL.
     return <Navigate to="/dashboard" replace />;
   }
 
   const filteredUsers = users.filter(
-    (u) =>
-      u.username?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      u.email?.toLowerCase().includes(searchTerm.toLowerCase())
-  );
-
-  // Calculate pagination
-  const totalPages = Math.ceil(filteredUsers.length / rowsPerPage);
-  const startIndex = (currentPage - 1) * rowsPerPage;
-  const paginatedUsers = filteredUsers.slice(
-    startIndex,
-    startIndex + rowsPerPage
+    (user) =>
+      !searchTerm ||
+      user.username?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      user.email?.toLowerCase().includes(searchTerm.toLowerCase()),
   );
 
   return (
-    <div className="p-8 space-y-6">
+    <div className="p-4 space-y-6 sm:p-8">
       <div>
         <h1 className="text-3xl font-bold tracking-tight">User Management</h1>
-        <p className="text-muted-foreground">Manage admin access and users</p>
+        <p className="text-muted-foreground">
+          Manage users and their admin access
+        </p>
       </div>
-
-      <div className="flex items-center gap-2">
-        <IconSearch className="h-5 w-5 text-muted-foreground" />
-        <Input
-          placeholder="Search users by name or email..."
-          value={searchTerm}
-          onChange={(e) => setSearchTerm(e.target.value)}
-          className="max-w-sm"
-        />
-      </div>
-
-      <div className="space-y-4">
-        <div className="border rounded-md bg-white dark:bg-zinc-950">
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead className="pl-12">User</TableHead>
-                <TableHead>Email</TableHead>
-                <TableHead>Current Role</TableHead>
-                <TableHead>Actions</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {loading ? (
-                Array.from({ length: 5 }).map((_, i) => (
-                  <TableRow key={i}>
-                    <TableCell>
-                      <Skeleton className="h-6 w-32" />
-                    </TableCell>
-                    <TableCell>
-                      <Skeleton className="h-6 w-48" />
-                    </TableCell>
-                    <TableCell>
-                      <Skeleton className="h-6 w-24" />
-                    </TableCell>
-                    <TableCell>
-                      <Skeleton className="h-8 w-24" />
+      <Tabs value={activeTab} onValueChange={setActiveTab}>
+        <TabsList>
+          <TabsTrigger value="users" disabled={Boolean(updatingUid)}>
+            Users
+          </TabsTrigger>
+          <TabsTrigger value="admins" disabled={Boolean(updatingUid)}>
+            Admin Accounts
+          </TabsTrigger>
+        </TabsList>
+        <TabsContent value="users" className="space-y-4 pt-4">
+          <div className="flex items-center gap-2">
+            <IconSearch className="h-5 w-5 shrink-0 text-muted-foreground" />
+            <Input
+              placeholder="Search this page by name or email..."
+              value={searchTerm}
+              onChange={(event) => setSearchTerm(event.target.value)}
+              className="max-w-sm"
+            />
+          </div>
+          <div className="border rounded-md bg-background">
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead>User</TableHead>
+                  <TableHead>Email</TableHead>
+                  <TableHead>Actions</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {loading ? (
+                  Array.from({ length: 5 }).map((_, index) => (
+                    <TableRow key={index}>
+                      <TableCell>
+                        <Skeleton className="h-6 w-32" />
+                      </TableCell>
+                      <TableCell>
+                        <Skeleton className="h-6 w-48" />
+                      </TableCell>
+                      <TableCell>
+                        <Skeleton className="h-8 w-44" />
+                      </TableCell>
+                    </TableRow>
+                  ))
+                ) : filteredUsers.length === 0 ? (
+                  <TableRow>
+                    <TableCell
+                      colSpan={3}
+                      className="text-center text-muted-foreground py-8"
+                    >
+                      No users found
                     </TableCell>
                   </TableRow>
-                ))
-              ) : paginatedUsers.length === 0 ? (
-                <TableRow>
-                  <TableCell
-                    colSpan={4}
-                    className="text-center text-muted-foreground py-8"
-                  >
-                    No users found
-                  </TableCell>
-                </TableRow>
-              ) : (
-                paginatedUsers.map((user) => (
-                  <TableRow key={user.id}>
-                    <TableCell className="font-medium">
-                      <div className="flex items-center gap-2">
-                        {user?.imageURL ? (
-                          <img
-                            src={user.imageURL}
-                            alt=""
-                            className="w-8 h-8 rounded-full object-cover"
-                          />
-                        ) : (
-                          <IconUserCircle className="size-8 text-neutral-300" />
-                        )}
-                        <span>{user.username || "No Name"}</span>
-                      </div>
-                    </TableCell>
-                    <TableCell>{user.email}</TableCell>
-                    <TableCell>
-                      {user.isAdmin ? (
-                        <Badge
-                          variant={
-                            user.adminType === "super" ? "default" : "secondary"
+                ) : (
+                  filteredUsers.map((user) => (
+                    <TableRow key={user.id}>
+                      <TableCell className="font-medium">
+                        <div className="flex items-center gap-2">
+                          {user.imageURL ? (
+                            <img
+                              src={user.imageURL}
+                              alt=""
+                              className="w-8 h-8 rounded-full object-cover"
+                            />
+                          ) : (
+                            <IconUserCircle className="size-8 text-muted-foreground" />
+                          )}
+                          <span>{user.username || "No Name"}</span>
+                        </div>
+                      </TableCell>
+                      <TableCell>{user.email}</TableCell>
+                      <TableCell>
+                        <Select
+                          value=""
+                          onValueChange={(value) =>
+                            void updateUserRole(user.id!, value)
+                          }
+                          disabled={
+                            !user.id ||
+                            user.id === currentUser.id ||
+                            Boolean(updatingUid)
                           }
                         >
-                          {user.adminType?.toUpperCase() || "ADMIN"}
-                        </Badge>
-                      ) : (
-                        <span className="text-muted-foreground text-sm">
-                          User
-                        </span>
-                      )}
-                    </TableCell>
-                    <TableCell>
-                      <div className="flex items-center gap-2">
-                        <Select
-                          defaultValue={user.isAdmin ? user.adminType : "user"}
-                          onValueChange={(val) => updateUserRole(user.id!, val)}
-                          disabled={user.id === currentUser.id} // Prevent changing own role potentially
-                        >
-                          <SelectTrigger className="w-[180px]">
-                            <SelectValue placeholder="Select Role" />
+                          <SelectTrigger
+                            className="w-48"
+                            aria-label={`Set admin access for ${user.email || user.username || user.id}`}
+                          >
+                            <SelectValue
+                              placeholder={
+                                updatingUid === user.id
+                                  ? "Updating access..."
+                                  : "Set admin access"
+                              }
+                            />
                           </SelectTrigger>
                           <SelectContent>
-                            <SelectItem value="user">
-                              User (No Admin Access)
-                            </SelectItem>
                             <SelectItem value="super">Super Admin</SelectItem>
                             <SelectItem value="regular">
                               Regular Admin
@@ -244,118 +242,32 @@ export default function UserManagementPage() {
                             <SelectItem value="customercare">
                               Customer Care
                             </SelectItem>
-                            <SelectItem value="verifier">
-                              Verifier
+                            <SelectItem value="verifier">Verifier</SelectItem>
+                            <SelectItem value="remove">
+                              Remove admin access
                             </SelectItem>
                           </SelectContent>
                         </Select>
-
-                        {/* <Dialog
-                          open={userToDelete === user.id}
-                          onOpenChange={(open) =>
-                            !open && setUserToDelete(null)
-                          }
-                        >
-                          <DialogTrigger asChild>
-                            <Button
-                              variant="ghost"
-                              size="icon"
-                              className="text-destructive hover:text-destructive hover:bg-destructive/10"
-                              onClick={() => setUserToDelete(user.id!)}
-                              disabled={user.id === currentUser.id}
-                            >
-                              <IconTrash className="h-4 w-4" />
-                            </Button>
-                          </DialogTrigger>
-                          <DialogContent>
-                            <DialogHeader>
-                              <DialogTitle>Delete User?</DialogTitle>
-                              <DialogDescription>
-                                This action cannot be undone. This will
-                                permanently delete the user account for{" "}
-                                <strong>{user.email}</strong>.
-                              </DialogDescription>
-                            </DialogHeader>
-                            <DialogFooter>
-                              <Button
-                                variant="outline"
-                                onClick={() => setUserToDelete(null)}
-                              >
-                                Cancel
-                              </Button>
-                              <Button
-                                variant="destructive"
-                                onClick={handleDeleteUser}
-                              >
-                                Delete
-                              </Button>
-                            </DialogFooter>
-                          </DialogContent>
-                        </Dialog> */}
-                      </div>
-                    </TableCell>
-                  </TableRow>
-                ))
-              )}
-            </TableBody>
-          </Table>
-        </div>
-
-        {/* Pagination Controls */}
-        <div className="flex items-center justify-between px-2">
-          <div className="flex items-center space-x-2">
-            <p className="text-sm font-medium text-muted-foreground">
-              Rows per page
-            </p>
-            <Select
-              value={`${rowsPerPage}`}
-              onValueChange={(value) => {
-                setRowsPerPage(Number(value));
-                setCurrentPage(1);
-              }}
-            >
-              <SelectTrigger className="h-8 w-[70px]">
-                <SelectValue placeholder={rowsPerPage} />
-              </SelectTrigger>
-              <SelectContent side="top">
-                {[5, 10, 20, 30, 40, 50].map((pageSize) => (
-                  <SelectItem key={pageSize} value={`${pageSize}`}>
-                    {pageSize}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
+                      </TableCell>
+                    </TableRow>
+                  ))
+                )}
+              </TableBody>
+            </Table>
           </div>
-
-          <div className="flex items-center space-x-2">
-            <div className="flex w-[100px] items-center justify-center text-sm font-medium text-muted-foreground">
-              Page {currentPage} of {Math.max(totalPages, 1)}
-            </div>
-            <div className="flex items-center space-x-2">
-              <Button
-                variant="outline"
-                className="h-8 w-8 p-0"
-                onClick={() => setCurrentPage((p) => Math.max(1, p - 1))}
-                disabled={currentPage === 1}
-              >
-                <span className="sr-only">Go to previous page</span>
-                <IconChevronLeft className="h-4 w-4" />
-              </Button>
-              <Button
-                variant="outline"
-                className="h-8 w-8 p-0"
-                onClick={() =>
-                  setCurrentPage((p) => Math.min(totalPages, p + 1))
-                }
-                disabled={currentPage === totalPages || totalPages === 0}
-              >
-                <span className="sr-only">Go to next page</span>
-                <IconChevronRight className="h-4 w-4" />
-              </Button>
-            </div>
-          </div>
-        </div>
-      </div>
+          <TablePagination
+            pagination={pagination}
+            loading={loading || Boolean(updatingUid)}
+          />
+        </TabsContent>
+        <TabsContent value="admins" className="pt-4">
+          <AdminAccountsList
+            currentUid={currentUser.id!}
+            updatingUid={updatingUid}
+            onRoleChange={updateUserRole}
+          />
+        </TabsContent>
+      </Tabs>
     </div>
   );
 }

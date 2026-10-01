@@ -1,7 +1,7 @@
 // Mono API Integration Service for NIN/BVN Verification
 // Note: For production, consider proxying these calls through a backend for security
 
-const MONO_SECRET_KEY = import.meta.env.VITE_MONO_SECRET_KEY;
+const MONO_SECRET_KEY = import.meta.env.MONO_SECRET_KEY;
 const MONO_API_BASE = "https://api.withmono.com/v1";
 
 export interface MonoVerificationResponse {
@@ -39,7 +39,7 @@ export const monoVerificationService = {
     if (!MONO_SECRET_KEY) {
       return {
         success: false,
-        message: "Mono API key not configured. Please add VITE_MONO_SECRET_KEY to your environment.",
+        message: "Mono API key not configured. Please add MONO_SECRET_KEY to your environment.",
       };
     }
 
@@ -95,7 +95,7 @@ export const monoVerificationService = {
     if (!MONO_SECRET_KEY) {
       return {
         success: false,
-        message: "Mono API key not configured. Please add VITE_MONO_SECRET_KEY to your environment.",
+        message: "Mono API key not configured. Please add MONO_SECRET_KEY to your environment.",
       };
     }
 

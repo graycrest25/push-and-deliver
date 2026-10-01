@@ -1,8 +1,10 @@
+import { getPaginatedDocs, type PaginationOptions } from "@/lib/firestore-pagination";
 // Users Service - Read only
 import {
   collection,
   doc,
   getDocs,
+  getCountFromServer,
   getDoc,
   query,
   where,
@@ -18,13 +20,13 @@ const COLLECTION_NAME = "Users";
 
 export const usersService = {
   // Read all users
-  async getAllUsers(): Promise<User[]> {
+  async getAllUsers(pagination: PaginationOptions = {}): Promise<User[]> {
     try {
       const q = query(
         collection(db, COLLECTION_NAME),
         orderBy("createdAt", "desc")
       );
-      const querySnapshot = await getDocs(q);
+      const querySnapshot = await getPaginatedDocs(q, pagination);
 
       return querySnapshot.docs.map((doc) => ({
         id: doc.id,
@@ -63,8 +65,8 @@ export const usersService = {
   // Get total user count
   async getTotalUserCount(): Promise<number> {
     try {
-      const querySnapshot = await getDocs(collection(db, COLLECTION_NAME));
-      return querySnapshot.size;
+      const querySnapshot = await getCountFromServer(collection(db, COLLECTION_NAME));
+      return querySnapshot.data().count;
     } catch (error) {
       console.error("Error fetching user count:", error);
       throw error;
@@ -72,36 +74,19 @@ export const usersService = {
   },
 
   // Get recent users
-  async getRecentUsers(limitCount: number = 10): Promise<User[]> {
-    try {
-      const q = query(
-        collection(db, COLLECTION_NAME),
-        orderBy("createdAt", "desc"),
-        limit(limitCount)
-      );
-      const querySnapshot = await getDocs(q);
-
-      return querySnapshot.docs.map((doc) => ({
-        id: doc.id,
-        ...doc.data(),
-        createdAt: doc.data().createdAt?.toDate?.(),
-        updatedAt: doc.data().updatedAt?.toDate?.(),
-      })) as User[];
-    } catch (error) {
-      console.error("Error fetching recent users:", error);
-      throw error;
-    }
+  async getRecentUsers(pagination: PaginationOptions = {}): Promise<User[]> {
+    return this.getAllUsers(pagination);
   },
 
   // Get users with referrals
-  async getUsersWithReferrals(): Promise<User[]> {
+  async getUsersWithReferrals(pagination: PaginationOptions = {}): Promise<User[]> {
     try {
       const q = query(
         collection(db, COLLECTION_NAME),
         where("referralsCount", ">", 0),
         orderBy("referralsCount", "desc")
       );
-      const querySnapshot = await getDocs(q);
+      const querySnapshot = await getPaginatedDocs(q, pagination);
 
       return querySnapshot.docs.map((doc) => ({
         id: doc.id,

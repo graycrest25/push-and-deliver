@@ -1,3 +1,5 @@
+import { useFirestorePagination } from "@/hooks/use-firestore-pagination";
+import { TablePagination } from "@/components/table-pagination";
 import { useState, useEffect } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import {
@@ -25,6 +27,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 
 export default function MerchantProductsPage() {
   const { id } = useParams<{ id: string }>();
+  const pagination = useFirestorePagination(id ?? "");
   const navigate = useNavigate();
   const [products, setProducts] = useState<Product[]>([]);
   const [loading, setLoading] = useState(true);
@@ -33,12 +36,12 @@ export default function MerchantProductsPage() {
     if (id) {
       loadProducts();
     }
-  }, [id]);
+  }, [id, pagination.options]);
 
   const loadProducts = async () => {
     try {
       setLoading(true);
-      const data = await ecommerceMerchantsService.getMerchantProducts(id!);
+      const data = await ecommerceMerchantsService.getMerchantProducts(id!, pagination.options);
       setProducts(data);
     } catch (error) {
       console.error("Error loading products:", error);
@@ -88,7 +91,7 @@ export default function MerchantProductsPage() {
         </CardHeader>
         <CardContent>
           <div className="border rounded-lg overflow-hidden">
-            <Table>
+            <><Table>
               <TableHeader>
                 <TableRow className="bg-muted/50">
                   <TableHead>Image</TableHead>
@@ -148,7 +151,7 @@ export default function MerchantProductsPage() {
                   ))
                 )}
               </TableBody>
-            </Table>
+            </Table><TablePagination pagination={pagination} loading={loading} /></>
           </div>
         </CardContent>
       </Card>

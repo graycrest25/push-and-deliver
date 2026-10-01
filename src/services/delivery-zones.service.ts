@@ -1,4 +1,5 @@
-import { collection, doc, getDocs, updateDoc } from "firebase/firestore";
+import { getPaginatedDocs, type PaginationOptions } from "@/lib/firestore-pagination";
+import { collection, doc, updateDoc } from "firebase/firestore";
 import { db } from "@/lib/firebase";
 import type { State, LGA } from "@/types";
 
@@ -6,9 +7,9 @@ const STATES_COLLECTION = "States";
 const LGAS_COLLECTION = "LGAs";
 
 export const deliveryZonesService = {
-  async getAllStates(): Promise<State[]> {
+  async getAllStates(pagination: PaginationOptions = {}): Promise<State[]> {
     try {
-      const querySnapshot = await getDocs(collection(db, STATES_COLLECTION));
+      const querySnapshot = await getPaginatedDocs(collection(db, STATES_COLLECTION), pagination);
       return querySnapshot.docs.map((doc) => ({
         id: doc.id,
         name: doc.data().name || doc.id,
@@ -19,7 +20,7 @@ export const deliveryZonesService = {
     }
   },
 
-  async getLGAsForState(stateId: string): Promise<LGA[]> {
+  async getLGAsForState(stateId: string, pagination: PaginationOptions = {}): Promise<LGA[]> {
     try {
       const lgaCollectionRef = collection(
         db,
@@ -27,7 +28,7 @@ export const deliveryZonesService = {
         stateId,
         LGAS_COLLECTION
       );
-      const querySnapshot = await getDocs(lgaCollectionRef);
+      const querySnapshot = await getPaginatedDocs(lgaCollectionRef, pagination);
       return querySnapshot.docs.map((doc) => ({
         id: doc.id,
         name: doc.data().name || doc.id,

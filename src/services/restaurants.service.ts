@@ -1,8 +1,8 @@
+import { getPaginatedDocs, type PaginationOptions } from "@/lib/firestore-pagination";
 // Restaurants Service - Read and Update (verify & block)
 import {
   collection,
   doc,
-  getDocs,
   getDoc,
   updateDoc,
   query,
@@ -18,9 +18,9 @@ const COLLECTION_NAME = 'Restaurants';
 
 export const restaurantsService = {
   // Read all restaurants
-  async getAllRestaurants(): Promise<Restaurant[]> {
+  async getAllRestaurants(pagination: PaginationOptions = {}): Promise<Restaurant[]> {
     try {
-      const querySnapshot = await getDocs(collection(db, COLLECTION_NAME));
+      const querySnapshot = await getPaginatedDocs(collection(db, COLLECTION_NAME), pagination);
 
       return querySnapshot.docs.map(doc => ({
         id: doc.id,
@@ -33,13 +33,13 @@ export const restaurantsService = {
   },
 
   // Read verified restaurants
-  async getVerifiedRestaurants(): Promise<Restaurant[]> {
+  async getVerifiedRestaurants(pagination: PaginationOptions = {}): Promise<Restaurant[]> {
     try {
       const q = query(
         collection(db, COLLECTION_NAME),
         where('verificationStatus', '==', VerificationStatus.verified)
       );
-      const querySnapshot = await getDocs(q);
+      const querySnapshot = await getPaginatedDocs(q, pagination);
 
       return querySnapshot.docs.map(doc => ({
         id: doc.id,
@@ -52,13 +52,13 @@ export const restaurantsService = {
   },
 
   // Read pending verification restaurants
-  async getPendingRestaurants(): Promise<Restaurant[]> {
+  async getPendingRestaurants(pagination: PaginationOptions = {}): Promise<Restaurant[]> {
     try {
       const q = query(
         collection(db, COLLECTION_NAME),
         where('verificationStatus', '==', VerificationStatus.unverified)
       );
-      const querySnapshot = await getDocs(q);
+      const querySnapshot = await getPaginatedDocs(q, pagination);
 
       return querySnapshot.docs.map(doc => ({
         id: doc.id,
@@ -71,13 +71,13 @@ export const restaurantsService = {
   },
 
   // Read blocked restaurants
-  async getBlockedRestaurants(): Promise<Restaurant[]> {
+  async getBlockedRestaurants(pagination: PaginationOptions = {}): Promise<Restaurant[]> {
     try {
       const q = query(
         collection(db, COLLECTION_NAME),
         where('verificationStatus', '==', VerificationStatus.blocked)
       );
-      const querySnapshot = await getDocs(q);
+      const querySnapshot = await getPaginatedDocs(q, pagination);
 
       return querySnapshot.docs.map(doc => ({
         id: doc.id,

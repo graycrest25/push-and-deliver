@@ -1,3 +1,5 @@
+import { useFirestorePagination } from "@/hooks/use-firestore-pagination";
+import { TablePagination } from "@/components/table-pagination";
 "use client";
 
 import { useState, useEffect } from "react";
@@ -66,6 +68,7 @@ const USER_TYPE_COLORS: Record<GeneralNotification["userType"], string> = {
 };
 
 export default function GeneralNotificationsPage() {
+  const pagination = useFirestorePagination();
   const { user } = useCurrentUser();
   const isAdminViewOnly =
     user?.adminType === "customercare" || user?.adminType === "verifier";
@@ -83,12 +86,12 @@ export default function GeneralNotificationsPage() {
 
   useEffect(() => {
     loadNotifications();
-  }, []);
+  }, [pagination.options]);
 
   const loadNotifications = async () => {
     try {
       setLoading(true);
-      const data = await generalNotificationsService.getAllNotifications();
+      const data = await generalNotificationsService.getAllNotifications(pagination.options);
       setNotifications(data);
     } catch (error) {
       console.error("Error loading notifications:", error);
@@ -337,7 +340,7 @@ export default function GeneralNotificationsPage() {
         </CardHeader>
         <CardContent>
           <div className="border rounded-lg overflow-hidden">
-            <Table>
+            <><Table>
               <TableHeader>
                 <TableRow className="bg-muted/50">
                   <TableHead>Title</TableHead>
@@ -418,7 +421,7 @@ export default function GeneralNotificationsPage() {
                   ))
                 )}
               </TableBody>
-            </Table>
+            </Table><TablePagination pagination={pagination} loading={loading} /></>
           </div>
         </CardContent>
       </Card>
