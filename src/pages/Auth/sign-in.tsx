@@ -16,24 +16,35 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import { toast } from "sonner";
-import { IconBrandGoogle } from "@tabler/icons-react";
+import { AuthFrame } from "@/components/auth-frame";
+import { IconEye, IconEyeOff, IconBrandGoogle } from "@tabler/icons-react";
 
 export default function SignInPage() {
   const navigate = useNavigate();
   const [loading, setLoading] = useState(false);
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  const [showPassword, setShowPassword] = useState(false);
+  const [error, setError] = useState("");
 
   const handleEmailSignIn = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
+    setError("");
 
     try {
-      const result = await loginAdminWithEmailAndPassword(email.trim(), password);
+      const result = await loginAdminWithEmailAndPassword(
+        email.trim(),
+        password,
+      );
       toast.success("Signed in successfully");
       navigate(adminHome(result.customClaims.adminType));
     } catch (error: unknown) {
-      toast.error(error instanceof Error ? error.message : "Failed to sign in");
+      setError(
+        error instanceof Error
+          ? error.message
+          : "Failed to sign in. Please try again.",
+      );
     } finally {
       setLoading(false);
     }
@@ -41,27 +52,30 @@ export default function SignInPage() {
 
   const handleGoogleSignIn = async () => {
     setLoading(true);
+    setError("");
     try {
       const result = await loginAdminWithGoogle();
 
       toast.success("Signed in with Google successfully");
       navigate(adminHome(result.customClaims.adminType));
     } catch (error: unknown) {
-      toast.error(error instanceof Error ? error.message : "Failed to sign in with Google");
+      setError(
+        error instanceof Error
+          ? error.message
+          : "Failed to sign in with Google. Please try again.",
+      );
     } finally {
       setLoading(false);
     }
   };
 
   return (
-    <div className="flex min-h-screen items-center justify-center bg-gray-50 dark:bg-gray-900 p-4">
-      <Card className="w-full max-w-md">
+    <AuthFrame>
+      <Card className="auth-form-card">
         <CardHeader className="space-y-1">
-          <CardTitle className="text-2xl font-bold text-center">
-            Sign In
-          </CardTitle>
-          <CardDescription className="text-center">
-            Enter your email and password to access your account
+          <CardTitle className="text-3xl font-bold">Welcome back</CardTitle>
+          <CardDescription className="text-sm">
+            Sign in to your admin workspace to get started.
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
@@ -71,7 +85,9 @@ export default function SignInPage() {
               <Input
                 id="email"
                 type="email"
-                placeholder="m@example.com"
+                placeholder="you@company.com"
+                autoComplete="username"
+                disabled={loading}
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
                 required
@@ -79,15 +95,39 @@ export default function SignInPage() {
             </div>
             <div className="space-y-2">
               <Label htmlFor="password">Password</Label>
-              <Input
-                id="password"
-                type="password"
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-                required
-              />
+              <div className="relative">
+                <Input
+                  id="password"
+                  type={showPassword ? "text" : "password"}
+                  autoComplete="current-password"
+                  disabled={loading}
+                  className="pr-12"
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                  required
+                />
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="icon"
+                  className="absolute right-1 top-0.5"
+                  aria-label={showPassword ? "Hide password" : "Show password"}
+                  aria-pressed={showPassword}
+                  onClick={() => setShowPassword((value) => !value)}
+                >
+                  {showPassword ? <IconEyeOff /> : <IconEye />}
+                </Button>
+              </div>
             </div>
-            <Button type="submit" className="w-full" disabled={loading}>
+            {error && (
+              <p
+                role="alert"
+                className="rounded-lg border border-destructive/30 bg-destructive/5 p-3 text-sm text-destructive"
+              >
+                {error}
+              </p>
+            )}
+            <Button type="submit" className="w-full h-11" disabled={loading}>
               {loading ? "Signing in..." : "Sign In"}
             </Button>
           </form>
@@ -96,9 +136,9 @@ export default function SignInPage() {
             <div className="absolute inset-0 flex items-center">
               <span className="w-full border-t" />
             </div>
-            <div className="relative flex justify-center text-xs uppercase">
+            <div className="relative flex justify-center text-xs">
               <span className="bg-background px-2 text-muted-foreground">
-                Or continue with
+                or
               </span>
             </div>
           </div>
@@ -106,23 +146,15 @@ export default function SignInPage() {
           <Button
             variant="outline"
             type="button"
-            className="w-full"
+            className="w-full h-11"
             onClick={handleGoogleSignIn}
             disabled={loading}
           >
             <IconBrandGoogle className="mr-2 h-4 w-4" />
-            Google
+            Continue with Google
           </Button>
         </CardContent>
-        {/* <CardFooter className="flex justify-center">
-          <div className="text-sm text-muted-foreground">
-            Don't have an account?{" "}
-            <Link to="/sign-up" className="text-primary hover:underline">
-              Sign up
-            </Link>
-          </div>
-        </CardFooter> */}
       </Card>
-    </div>
+    </AuthFrame>
   );
 }

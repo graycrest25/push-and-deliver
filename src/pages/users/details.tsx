@@ -102,7 +102,7 @@ export default function UserDetailsPage() {
 
   if (loading) {
     return (
-      <div className="p-8 space-y-6">
+      <div className="space-y-6">
         <Skeleton className="h-8 w-48" />
         <div className="grid gap-6">
           <Skeleton className="h-64 w-full" />
@@ -118,7 +118,7 @@ export default function UserDetailsPage() {
   }
 
   return (
-    <div className="p-8 space-y-6">
+    <div className="space-y-6">
       {/* Header with Back Button */}
       <div className="flex items-center gap-4">
         <Button
@@ -186,7 +186,7 @@ export default function UserDetailsPage() {
               <p className="text-sm text-muted-foreground">Wallet Balance</p>
               <p
                 className="text-2xl font-bold"
-                style={{ color: "hsl(150, 35%, 42%)" }}
+                style={{ color: "var(--success)" }}
               >
                 ₦{formatAmount(user.walletbalance || 0)}
               </p>
@@ -195,7 +195,7 @@ export default function UserDetailsPage() {
               <p className="text-sm text-muted-foreground">Reward Points</p>
               <p
                 className="text-2xl font-bold"
-                style={{ color: "hsl(270, 35%, 45%)" }}
+                style={{ color: "var(--primary)" }}
               >
                 {user.rewardpoints || 0}
               </p>

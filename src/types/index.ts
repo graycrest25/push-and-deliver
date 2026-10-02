@@ -18,10 +18,10 @@ export type VerificationStatus =
   (typeof VerificationStatus)[keyof typeof VerificationStatus];
 
 export const WithdrawalStatus = {
-  Successful: "Successful",
-  Pending: "Pending",
-  Failed: "Failed",
-  Reversed: "Reversed",
+  Successful: 0,
+  Pending: 1,
+  Failed: 2,
+  Reversed: 3,
 } as const;
 export type WithdrawalStatus =
   (typeof WithdrawalStatus)[keyof typeof WithdrawalStatus];
@@ -168,15 +168,17 @@ export interface Restaurant {
 
 export interface Withdrawal {
   id?: string;
-  amount?: number;
-  bankname?: string;
-  accountnumber?: number;
-  accountname?: string;
-  status?: WithdrawalStatus;
-  userID?: string;
-  userType?: string;
-  transactionID?: string;
-  createdAt?: Timestamp | Date;
+  amount?: number | null;
+  bankname?: string | null;
+  accountnumber?: number | string | null;
+  accountname?: string | null;
+  status?: WithdrawalStatus | number | string | null;
+  userID?: string | null;
+  userType?: number | string | null;
+  transactionID?: string | null;
+  createdAt?: Timestamp | Date | null;
+  updatedAt?: Timestamp | Date | null;
+  syncedAt?: Timestamp | Date | null;
 }
 
 export interface Transaction {

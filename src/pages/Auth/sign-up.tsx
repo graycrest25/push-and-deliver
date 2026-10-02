@@ -1,3 +1,4 @@
+import { AuthFrame } from "@/components/auth-frame";
 import { useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { createUserWithEmailAndPassword, updateProfile } from "firebase/auth";
@@ -32,7 +33,7 @@ export default function SignUpPage() {
       const userCredential = await createUserWithEmailAndPassword(
         auth,
         email,
-        password
+        password,
       );
       const user = userCredential.user;
 
@@ -73,8 +74,8 @@ export default function SignUpPage() {
   };
 
   return (
-    <div className="flex min-h-screen items-center justify-center bg-gray-50 dark:bg-gray-900 p-4">
-      <Card className="w-full max-w-md">
+    <AuthFrame>
+      <Card className="auth-form-card">
         <CardHeader className="space-y-1">
           <CardTitle className="text-2xl font-bold text-center">
             Sign Up
@@ -101,6 +102,7 @@ export default function SignUpPage() {
               <Input
                 id="email"
                 type="email"
+                autoComplete="email"
                 placeholder="m@example.com"
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
@@ -112,6 +114,7 @@ export default function SignUpPage() {
               <Input
                 id="password"
                 type="password"
+                autoComplete="new-password"
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
                 required
@@ -132,6 +135,6 @@ export default function SignUpPage() {
           </div>
         </CardFooter>
       </Card>
-    </div>
+    </AuthFrame>
   );
 }

@@ -196,7 +196,7 @@ export default function ShipmentOrdersPage() {
         </div>
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-          <Card className="border-l-4 border-l-[hsl(220,40%,45%)] bg-gradient-to-br from-slate-50 to-white dark:from-slate-900/20 dark:to-background">
+          <Card className="metric-card">
             <CardHeader className="pb-2">
               <CardTitle className="text-sm font-medium text-muted-foreground">
                 Total Shipments
@@ -205,7 +205,7 @@ export default function ShipmentOrdersPage() {
             <CardContent>
               <div
                 className="text-3xl font-bold"
-                style={{ color: "hsl(220, 40%, 45%)" }}
+                style={{ color: "var(--primary)" }}
               >
                 {totalShipments}
               </div>
@@ -215,7 +215,7 @@ export default function ShipmentOrdersPage() {
             </CardContent>
           </Card>
 
-          <Card className="border-l-4 border-l-[hsl(30,50%,48%)] bg-gradient-to-br from-amber-50 to-white dark:from-amber-900/20 dark:to-background">
+          <Card className="metric-card">
             <CardHeader className="pb-2">
               <CardTitle className="text-sm font-medium text-muted-foreground">
                 Active Shipments
@@ -224,7 +224,7 @@ export default function ShipmentOrdersPage() {
             <CardContent>
               <div
                 className="text-3xl font-bold"
-                style={{ color: "hsl(30, 50%, 48%)" }}
+                style={{ color: "var(--warning)" }}
               >
                 {activeShipments}
               </div>
@@ -234,7 +234,7 @@ export default function ShipmentOrdersPage() {
             </CardContent>
           </Card>
 
-          <Card className="border-l-4 border-l-[hsl(150,35%,42%)] bg-gradient-to-br from-emerald-50 to-white dark:from-emerald-900/20 dark:to-background">
+          <Card className="metric-card">
             <CardHeader className="pb-2">
               <CardTitle className="text-sm font-medium text-muted-foreground">
                 Delivered Shipments
@@ -243,7 +243,7 @@ export default function ShipmentOrdersPage() {
             <CardContent>
               <div
                 className="text-3xl font-bold"
-                style={{ color: "hsl(150, 35%, 42%)" }}
+                style={{ color: "var(--success)" }}
               >
                 {deliveredShipments}
               </div>
@@ -253,7 +253,7 @@ export default function ShipmentOrdersPage() {
             </CardContent>
           </Card>
 
-          <Card className="border-l-4 border-l-[#e7000b] bg-gradient-to-br from-purple-50 to-white dark:from-[#e7000b]/20 dark:to-background">
+          <Card className="metric-card">
             <CardHeader className="pb-2">
               <CardTitle className="text-sm font-medium text-muted-foreground">
                 Cancelled Shipments

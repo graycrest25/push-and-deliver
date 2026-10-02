@@ -135,63 +135,56 @@ export default function ProductOrderDetailsPage() {
         return {
           label: "Pending",
           icon: Clock,
-          colorClass:
-            "from-amber-50 to-amber-100 dark:from-amber-950 dark:to-amber-900 border-amber-200 dark:border-amber-800",
-          textClass: "text-amber-900 dark:text-amber-100",
+          colorClass: "state-panel state-warning",
+          textClass: "text-inherit",
           badgeVariant: "secondary" as const,
         };
       case OrderStatus.Confirmed:
         return {
           label: "Confirmed",
           icon: CheckCircle,
-          colorClass:
-            "from-blue-50 to-blue-100 dark:from-blue-950 dark:to-blue-900 border-blue-200 dark:border-blue-800",
-          textClass: "text-blue-900 dark:text-blue-100",
+          colorClass: "state-panel state-info",
+          textClass: "text-inherit",
           badgeVariant: "default" as const,
         };
       case OrderStatus.Accepted:
         return {
           label: "Accepted",
           icon: CheckCircle,
-          colorClass:
-            "from-indigo-50 to-indigo-100 dark:from-indigo-950 dark:to-indigo-900 border-indigo-200 dark:border-indigo-800",
-          textClass: "text-indigo-900 dark:text-indigo-100",
+          colorClass: "state-panel state-info",
+          textClass: "text-inherit",
           badgeVariant: "default" as const,
         };
       case OrderStatus.OnRoute:
         return {
           label: "On Route",
           icon: Truck,
-          colorClass:
-            "from-orange-50 to-orange-100 dark:from-orange-950 dark:to-orange-900 border-orange-200 dark:border-orange-800",
-          textClass: "text-orange-900 dark:text-orange-100",
+          colorClass: "state-panel state-warning",
+          textClass: "text-inherit",
           badgeVariant: "default" as const,
         };
       case OrderStatus.Completed:
         return {
           label: "Completed",
           icon: CheckCircle,
-          colorClass:
-            "from-green-50 to-green-100 dark:from-green-950 dark:to-green-900 border-green-200 dark:border-green-800",
-          textClass: "text-green-900 dark:text-green-100",
+          colorClass: "state-panel state-success",
+          textClass: "text-inherit",
           badgeVariant: "default" as const,
         };
       case OrderStatus.Cancelled:
         return {
           label: "Cancelled",
           icon: AlertTriangle,
-          colorClass:
-            "from-red-50 to-red-100 dark:from-red-950 dark:to-red-900 border-red-200 dark:border-red-800",
-          textClass: "text-red-900 dark:text-red-100",
+          colorClass: "state-panel state-error",
+          textClass: "text-inherit",
           badgeVariant: "destructive" as const,
         };
       default:
         return {
           label: "Unknown",
           icon: AlertTriangle,
-          colorClass:
-            "from-gray-50 to-gray-100 dark:from-gray-950 dark:to-gray-900 border-gray-200 dark:border-gray-800",
-          textClass: "text-gray-900 dark:text-gray-100",
+          colorClass: "state-panel state-neutral",
+          textClass: "text-inherit",
           badgeVariant: "outline" as const,
         };
     }
@@ -265,7 +258,7 @@ export default function ProductOrderDetailsPage() {
           const StatusIcon = statusInfo.icon;
 
           return (
-            <Card className={`bg-gradient-to-br ${statusInfo.colorClass}`}>
+            <Card className={statusInfo.colorClass}>
               <CardHeader className="pb-3">
                 <CardTitle
                   className={`text-sm font-medium ${statusInfo.textClass}`}
@@ -289,15 +282,15 @@ export default function ProductOrderDetailsPage() {
         })()}
 
         {/* Payment Status Card */}
-        <Card className="bg-gradient-to-br from-green-50 to-green-100 dark:from-green-950 dark:to-green-900 border-green-200 dark:border-green-800">
+        <Card className="status-panel">
           <CardHeader className="pb-3">
-            <CardTitle className="text-sm font-medium text-green-900 dark:text-green-100">
+            <CardTitle className="text-sm font-medium text-secondary-foreground">
               Payment Status
             </CardTitle>
           </CardHeader>
           <CardContent>
             <div className="flex items-center justify-between">
-              <span className="text-sm font-medium text-green-900 dark:text-green-100">
+              <span className="text-sm font-medium text-secondary-foreground">
                 {order.ispaid ? "Paid" : "Unpaid"}
               </span>
               {canEditPayment && (
@@ -321,17 +314,17 @@ export default function ProductOrderDetailsPage() {
         </Card>
 
         {/* Total Amount Card */}
-        <Card className="bg-gradient-to-br from-purple-50 to-purple-100 dark:from-purple-950 dark:to-purple-900 border-purple-200 dark:border-purple-800">
+        <Card className="status-panel">
           <CardHeader className="pb-3">
-            <CardTitle className="text-sm font-medium text-purple-900 dark:text-purple-100">
+            <CardTitle className="text-sm font-medium text-secondary-foreground">
               Total Amount
             </CardTitle>
           </CardHeader>
           <CardContent>
-            <p className="text-3xl font-bold text-purple-900 dark:text-purple-100">
+            <p className="text-3xl font-bold text-secondary-foreground">
               ₦{(order.total || 0).toLocaleString()}
             </p>
-            <p className="text-xs text-purple-700 dark:text-purple-300 mt-1">
+            <p className="text-xs text-primary mt-1">
               {order.orderItems?.length || 0} items
             </p>
           </CardContent>

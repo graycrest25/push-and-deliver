@@ -122,7 +122,7 @@ export default function ProductDetailsPage() {
 
   if (loading) {
     return (
-      <div className="p-8 space-y-6">
+      <div className="space-y-6">
         <Skeleton className="h-8 w-48" />
         <Skeleton className="h-96 w-full" />
       </div>
@@ -139,7 +139,7 @@ export default function ProductDetailsPage() {
   const hasColorList = product.colorList && product.colorList.length > 0;
 
   return (
-    <div className="p-8 space-y-6">
+    <div className="space-y-6">
       {/* Header */}
       <div className="flex items-center gap-4">
         <Button

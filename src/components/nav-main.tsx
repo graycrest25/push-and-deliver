@@ -10,6 +10,8 @@ import { toast } from "sonner";
 import {
   SidebarGroup,
   SidebarGroupContent,
+  SidebarGroupLabel,
+  useSidebar,
   SidebarMenu,
   SidebarMenuButton,
   SidebarMenuItem,
@@ -31,17 +33,19 @@ export function NavMain({
     title: string;
     url: string;
     icon?: Icon;
+    group?: string;
   }[];
 }) {
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const location = useLocation();
+  const { setOpenMobile, isMobile } = useSidebar();
   const { user } = useCurrentUser();
   const adminType = user?.adminType || "customercare";
   const isValidAdmin =
     user?.adminType === "super" || user?.adminType === "regular";
 
   return (
-    <SidebarGroup>
+    <SidebarGroup className="p-0">
       <SidebarGroupContent className="flex flex-col gap-2">
         <SidebarMenu>
           <SidebarMenuItem className="flex items-center gap-2">
@@ -50,7 +54,7 @@ export function NavMain({
                 <DialogTrigger asChild>
                   <SidebarMenuButton
                     tooltip="Create Coupon"
-                    className="bg-primary text-primary-foreground hover:bg-primary/90 hover:text-primary-foreground active:bg-primary/90 active:text-primary-foreground min-w-8 duration-200 ease-linear"
+                    className="mb-3 h-10 border border-sidebar-border bg-sidebar-accent text-sidebar-accent-foreground hover:bg-sidebar-primary hover:text-sidebar-primary-foreground"
                   >
                     <IconCirclePlusFilled />
                     <span>Create Coupon</span>
@@ -69,31 +73,45 @@ export function NavMain({
             )}
           </SidebarMenuItem>
         </SidebarMenu>
-        <SidebarMenu>
-          {items.map((item) => {
-            const isActive =
-              location.pathname === item.url ||
-              location.pathname.startsWith(item.url + "/");
-            return (
-              <SidebarMenuItem key={item.title}>
-                <SidebarMenuButton
-                  className={
-                    isActive
-                      ? "bg-sidebar-accent text-sidebar-accent-foreground"
-                      : ""
-                  }
-                  tooltip={item.title}
-                  asChild
-                >
-                  <Link to={item.url}>
-                    {item.icon && <item.icon />}
-                    <span>{item.title}</span>
-                  </Link>
-                </SidebarMenuButton>
-              </SidebarMenuItem>
-            );
-          })}
-        </SidebarMenu>
+        {Array.from(
+          new Set(items.map((item) => item.group || "Workspace")),
+        ).map((group) => (
+          <div key={group} className="navigation-section">
+            <SidebarGroupLabel className="px-3 text-xs font-medium text-sidebar-foreground/70">
+              {group}
+            </SidebarGroupLabel>
+            <SidebarMenu className="gap-1">
+              {items
+                .filter((item) => (item.group || "Workspace") === group)
+                .map((item) => {
+                  const isActive =
+                    location.pathname === item.url ||
+                    location.pathname.startsWith(item.url + "/");
+                  return (
+                    <SidebarMenuItem key={item.url}>
+                      <SidebarMenuButton
+                        isActive={isActive}
+                        tooltip={item.title}
+                        asChild
+                        className="nav-destination"
+                      >
+                        <Link
+                          to={item.url}
+                          aria-current={isActive ? "page" : undefined}
+                          onClick={() => {
+                            if (isMobile) setOpenMobile(false);
+                          }}
+                        >
+                          {item.icon && <item.icon stroke={1.7} />}
+                          <span>{item.title}</span>
+                        </Link>
+                      </SidebarMenuButton>
+                    </SidebarMenuItem>
+                  );
+                })}
+            </SidebarMenu>
+          </div>
+        ))}
       </SidebarGroupContent>
     </SidebarGroup>
   );

@@ -569,7 +569,7 @@ export default function RiderDetailsPage() {
 
   if (loading) {
     return (
-      <div className="p-8 space-y-6">
+      <div className="space-y-6">
         <Skeleton className="h-8 w-48" />
         <div className="grid gap-6">
           <Skeleton className="h-64 w-full" />
@@ -585,7 +585,7 @@ export default function RiderDetailsPage() {
   const isCarOrBike = rider.vehicleType === 0 || rider.vehicleType === 2;
 
   return (
-    <div className="p-8 space-y-6">
+    <div className="space-y-6">
       {/* Header with Back Button */}
       <div className="flex items-center gap-4">
         <Button
@@ -1406,7 +1406,7 @@ export default function RiderDetailsPage() {
               <p className="text-sm text-muted-foreground">Wallet Balance</p>
               <p
                 className="text-2xl font-bold"
-                style={{ color: "hsl(150, 35%, 42%)" }}
+                style={{ color: "var(--success)" }}
               >
                 ₦{formatAmount(rider.walletbalance || 0)}
               </p>

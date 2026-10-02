@@ -111,7 +111,7 @@ export default function DHLZonesPage() {
 
   if (loading) {
     return (
-      <div className="p-8 space-y-6">
+      <div className="space-y-6">
         <div>
           <h1 className="text-3xl font-bold tracking-tight">DHL Zones</h1>
           <p className="text-muted-foreground">
@@ -133,7 +133,7 @@ export default function DHLZonesPage() {
   }
 
   return (
-    <div className="p-8 space-y-6">
+    <div className="space-y-6">
       {/* Header */}
       <div>
         <h1 className="text-3xl font-bold tracking-tight">DHL Zones</h1>

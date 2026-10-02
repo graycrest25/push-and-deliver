@@ -1,6 +1,5 @@
 import { useFirestorePagination } from "@/hooks/use-firestore-pagination";
 import { TablePagination } from "@/components/table-pagination";
-"use client";
 
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
@@ -42,10 +41,6 @@ import {
   PieChart,
   Pie,
   Cell,
-  AreaChart,
-  Area,
-  LineChart,
-  Line,
   XAxis,
   YAxis,
   CartesianGrid,
@@ -65,33 +60,33 @@ const formatAmount = (amount: number) => {
 const walletChartConfig = {
   high: {
     label: "High (>₦10,000)",
-    color: "hsl(150, 35%, 42%)", // forest green
+    color: "var(--success)",
   },
   medium: {
     label: "Medium (₦1,000-10,000)",
-    color: "hsl(30, 50%, 48%)", // amber
+    color: "var(--warning)",
   },
   low: {
     label: "Low (<₦1,000)",
-    color: "hsl(350, 50%, 48%)", // burgundy
+    color: "var(--destructive)",
   },
 } satisfies ChartConfig;
 
 const referralChartConfig = {
   users: {
     label: "Users",
-    color: "hsl(220, 40%, 45%)", // navy blue
+    color: "var(--primary)",
   },
   referrals: {
     label: "Referrals",
-    color: "hsl(270, 35%, 45%)", // deep purple
+    color: "var(--primary)",
   },
 } satisfies ChartConfig;
 
 const balanceDistributionConfig = {
   balance: {
     label: "Wallet Balance (₦)",
-    color: "hsl(185, 40%, 45%)", // teal
+    color: "var(--success)",
   },
 } satisfies ChartConfig;
 
@@ -114,9 +109,15 @@ export default function UsersPage() {
     try {
       setLoading(true);
       const usersData = await usersService.getAllUsers(pagination.options);
-      const entries = await Promise.all(usersData.map(async (user) => [
-        user.id!, await referralsService.getReferralCountByReferrerId(user.id!),
-      ] as const));
+      const entries = await Promise.all(
+        usersData.map(
+          async (user) =>
+            [
+              user.id!,
+              await referralsService.getReferralCountByReferrerId(user.id!),
+            ] as const,
+        ),
+      );
       setUsers(usersData);
       setReferralCounts(new Map(entries));
     } catch (error) {
@@ -256,10 +257,12 @@ export default function UsersPage() {
 
   if (loading) {
     return (
-      <div className="p-8 space-y-6">
+      <div className="space-y-6">
         <div>
           <h1 className="text-3xl font-bold tracking-tight">Users</h1>
-        <p className="text-sm text-muted-foreground">Search, filters, summaries, and exports apply to the current page.</p>
+          <p className="text-sm text-muted-foreground">
+            Search, filters, summaries, and exports apply to the current page.
+          </p>
           <p className="text-muted-foreground">
             View user wallets and referral information
           </p>
@@ -281,10 +284,13 @@ export default function UsersPage() {
   }
 
   return (
-    <div className="p-8 space-y-6">
+    <div className="space-y-6">
       {/* Header */}
       <div>
         <h1 className="text-3xl font-bold tracking-tight">Users</h1>
+        <p className="text-sm text-muted-foreground">
+          Search, filters, summaries, and exports apply to the current page.
+        </p>
         <p className="text-muted-foreground">
           View user wallets and referral information
         </p>
@@ -292,7 +298,7 @@ export default function UsersPage() {
 
       {/* Stats Cards */}
       <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-        <Card className="border-l-4 border-l-[hsl(220,40%,45%)] bg-gradient-to-br from-slate-50 to-white dark:from-slate-900/20 dark:to-background">
+        <Card className="metric-card">
           <CardHeader className="pb-2">
             <CardTitle className="text-sm font-medium text-muted-foreground">
               Total Users
@@ -301,7 +307,7 @@ export default function UsersPage() {
           <CardContent>
             <div
               className="text-3xl font-bold"
-              style={{ color: "hsl(220, 40%, 45%)" }}
+              style={{ color: "var(--primary)" }}
             >
               {totalUsers}
             </div>
@@ -310,7 +316,7 @@ export default function UsersPage() {
             </p>
           </CardContent>
         </Card>
-        <Card className="border-l-4 border-l-[hsl(150,35%,42%)] bg-gradient-to-br from-emerald-50 to-white dark:from-emerald-900/20 dark:to-background">
+        <Card className="metric-card">
           <CardHeader className="pb-2">
             <CardTitle className="text-sm font-medium text-muted-foreground">
               New Today
@@ -319,7 +325,7 @@ export default function UsersPage() {
           <CardContent>
             <div
               className="text-3xl font-bold"
-              style={{ color: "hsl(150, 35%, 42%)" }}
+              style={{ color: "var(--success)" }}
             >
               {newUsersToday}
             </div>
@@ -328,7 +334,7 @@ export default function UsersPage() {
             </p>
           </CardContent>
         </Card>
-        <Card className="border-l-4 border-l-[hsl(185,40%,45%)] bg-gradient-to-br from-cyan-50 to-white dark:from-cyan-900/20 dark:to-background">
+        <Card className="metric-card">
           <CardHeader className="pb-2">
             <CardTitle className="text-sm font-medium text-muted-foreground">
               New This Week
@@ -337,14 +343,14 @@ export default function UsersPage() {
           <CardContent>
             <div
               className="text-3xl font-bold"
-              style={{ color: "hsl(185, 40%, 45%)" }}
+              style={{ color: "var(--success)" }}
             >
               {newUsersThisWeek}
             </div>
             <p className="text-xs text-muted-foreground mt-1">Last 7 days</p>
           </CardContent>
         </Card>
-        <Card className="border-l-4 border-l-[hsl(270,35%,45%)] bg-gradient-to-br from-purple-50 to-white dark:from-purple-900/20 dark:to-background">
+        <Card className="metric-card">
           <CardHeader className="pb-2">
             <CardTitle className="text-sm font-medium text-muted-foreground">
               Growth Rate
@@ -353,7 +359,7 @@ export default function UsersPage() {
           <CardContent>
             <div
               className="text-3xl font-bold flex items-center gap-2"
-              style={{ color: "hsl(270, 35%, 45%)" }}
+              style={{ color: "var(--primary)" }}
             >
               {growthRate}%
               <TrendingUp className="h-5 w-5" />
@@ -362,141 +368,6 @@ export default function UsersPage() {
           </CardContent>
         </Card>
       </div>
-
-      {/* Charts Section */}
-      <div className="grid gap-4 md:grid-cols-2">
-        <Card>
-          <CardHeader>
-            <CardTitle>Wallet Balance Distribution</CardTitle>
-            <p className="text-sm text-muted-foreground">
-              Users grouped by wallet balance
-            </p>
-          </CardHeader>
-          <CardContent className="pt-4">
-            <ChartContainer config={walletChartConfig}>
-              <PieChart width={500} height={300}>
-                <Pie
-                  data={walletDistributionData.filter(
-                    (item) =>
-                      (item.high || 0 || item.medium || 0 || item.low || 0) > 0,
-                  )}
-                  cx="50%"
-                  cy="50%"
-                  labelLine={false}
-                  label={({ payload, ...props }) => {
-                    const value = payload.high || payload.medium || payload.low;
-                    return (
-                      <text
-                        cx={props.cx}
-                        cy={props.cy}
-                        x={props.x}
-                        y={props.y}
-                        textAnchor={props.textAnchor}
-                        dominantBaseline={props.dominantBaseline}
-                        className="fill-foreground text-xs font-medium"
-                      >
-                        {`${payload.category}: ${value}`}
-                      </text>
-                    );
-                  }}
-                  outerRadius={100}
-                  dataKey={(data) => data.high || data.medium || data.low}
-                >
-                  {walletDistributionData.map((entry, index) => (
-                    <Cell key={`cell-${index}`} fill={entry.fill} />
-                  ))}
-                </Pie>
-                <ChartTooltip content={<ChartTooltipContent hideLabel />} />
-              </PieChart>
-            </ChartContainer>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardHeader>
-            <CardTitle>Top 10 Users by Balance</CardTitle>
-            <p className="text-sm text-muted-foreground">
-              Highest wallet balances
-            </p>
-          </CardHeader>
-          <CardContent className="pt-4">
-            <ChartContainer config={balanceDistributionConfig}>
-              <AreaChart data={topUsersByBalance} width={500} height={300}>
-                <defs>
-                  <linearGradient id="colorBalance" x1="0" y1="0" x2="0" y2="1">
-                    <stop
-                      offset="5%"
-                      stopColor="var(--color-balance)"
-                      stopOpacity={0.8}
-                    />
-                    <stop
-                      offset="95%"
-                      stopColor="var(--color-balance)"
-                      stopOpacity={0.1}
-                    />
-                  </linearGradient>
-                </defs>
-                <CartesianGrid strokeDasharray="3 3" vertical={false} />
-                <XAxis
-                  dataKey="name"
-                  tickLine={false}
-                  tickMargin={10}
-                  axisLine={false}
-                  angle={-45}
-                  textAnchor="end"
-                  height={80}
-                />
-                <YAxis tickLine={false} axisLine={false} tickMargin={10} />
-                <ChartTooltip content={<ChartTooltipContent />} />
-                <Area
-                  type="monotone"
-                  dataKey="balance"
-                  stroke="var(--color-balance)"
-                  fill="url(#colorBalance)"
-                />
-              </AreaChart>
-            </ChartContainer>
-          </CardContent>
-        </Card>
-      </div>
-
-      {/* Top Referrers Chart */}
-      {topUsersByReferrals.length > 0 && (
-        <Card>
-          <CardHeader>
-            <CardTitle>Top 10 Users by Referrals</CardTitle>
-            <p className="text-sm text-muted-foreground">
-              Most active referrers
-            </p>
-          </CardHeader>
-          <CardContent className="pt-4">
-            <ChartContainer config={referralChartConfig}>
-              <LineChart data={topUsersByReferrals} width={500} height={300}>
-                <CartesianGrid strokeDasharray="3 3" vertical={false} />
-                <XAxis
-                  dataKey="name"
-                  tickLine={false}
-                  tickMargin={10}
-                  axisLine={false}
-                  angle={-45}
-                  textAnchor="end"
-                  height={80}
-                />
-                <YAxis tickLine={false} axisLine={false} tickMargin={10} />
-                <ChartTooltip content={<ChartTooltipContent />} />
-                <Line
-                  type="monotone"
-                  dataKey="referrals"
-                  stroke="var(--color-referrals)"
-                  strokeWidth={3}
-                  dot={{ r: 6, fill: "var(--color-referrals)" }}
-                  activeDot={{ r: 8 }}
-                />
-              </LineChart>
-            </ChartContainer>
-          </CardContent>
-        </Card>
-      )}
 
       {/* Users Table */}
       <Card>
@@ -566,64 +437,206 @@ export default function UsersPage() {
 
           {/* Table */}
           <div className="border rounded-lg overflow-hidden">
-            <><Table>
-              <TableHeader>
-                <TableRow className="bg-muted/50">
-                  <TableHead>Name</TableHead>
-                  <TableHead>User ID</TableHead>
-                  <TableHead>Email</TableHead>
-                  <TableHead>Wallet Balance</TableHead>
-                  <TableHead>Referral Count</TableHead>
-                  <TableHead>Joined</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {filteredUsers.length === 0 ? (
-                  <TableRow>
-                    <TableCell
-                      colSpan={6}
-                      className="text-center text-muted-foreground py-8"
-                    >
-                      No users found
-                    </TableCell>
+            <>
+              <Table>
+                <TableHeader>
+                  <TableRow className="bg-muted/50">
+                    <TableHead>Name</TableHead>
+                    <TableHead>User ID</TableHead>
+                    <TableHead>Email</TableHead>
+                    <TableHead>Wallet Balance</TableHead>
+                    <TableHead>Referral Count</TableHead>
+                    <TableHead>Joined</TableHead>
                   </TableRow>
-                ) : (
-                  filteredUsers.map((user) => (
-                    <TableRow
-                      key={user.id}
-                      className="hover:bg-muted/50 cursor-pointer"
-                      onClick={() => handleUserClick(user)}
-                    >
-                      <TableCell className="font-medium">
-                        {user.username || "N/A"}
-                      </TableCell>
-                      <TableCell className="font-mono text-sm">
-                        {user.id || "N/A"}
-                      </TableCell>
-                      <TableCell className="text-sm">
-                        {user.email || "N/A"}
-                      </TableCell>
-                      <TableCell className="font-medium">
-                        ₦{formatAmount(user.walletbalance || 0)}
-                      </TableCell>
-                      <TableCell>
-                        <Badge variant="outline">
-                          {referralCounts.get(user.id!) || 0}
-                        </Badge>
-                      </TableCell>
-                      <TableCell className="text-sm text-muted-foreground">
-                        {user.createdAt instanceof Date
-                          ? user.createdAt.toLocaleDateString()
-                          : "N/A"}
+                </TableHeader>
+                <TableBody>
+                  {filteredUsers.length === 0 ? (
+                    <TableRow>
+                      <TableCell
+                        colSpan={6}
+                        className="text-center text-muted-foreground py-8"
+                      >
+                        No users found
                       </TableCell>
                     </TableRow>
-                  ))
-                )}
-              </TableBody>
-            </Table><TablePagination pagination={pagination} loading={loading} /></>
+                  ) : (
+                    filteredUsers.map((user) => (
+                      <TableRow
+                        key={user.id}
+                        className="hover:bg-muted/50 cursor-pointer"
+                        onClick={() => handleUserClick(user)}
+                      >
+                        <TableCell className="font-medium">
+                          {user.username || "N/A"}
+                        </TableCell>
+                        <TableCell className="font-mono text-sm">
+                          {user.id || "N/A"}
+                        </TableCell>
+                        <TableCell className="text-sm">
+                          {user.email || "N/A"}
+                        </TableCell>
+                        <TableCell className="font-medium">
+                          ₦{formatAmount(user.walletbalance || 0)}
+                        </TableCell>
+                        <TableCell>
+                          <Badge variant="outline">
+                            {referralCounts.get(user.id!) || 0}
+                          </Badge>
+                        </TableCell>
+                        <TableCell className="text-sm text-muted-foreground">
+                          {user.createdAt instanceof Date
+                            ? user.createdAt.toLocaleDateString()
+                            : "N/A"}
+                        </TableCell>
+                      </TableRow>
+                    ))
+                  )}
+                </TableBody>
+              </Table>
+              <TablePagination pagination={pagination} loading={loading} />
+            </>
           </div>
         </CardContent>
       </Card>
+      <details className="page-insights">
+        <summary>
+          <span>Page insights</span>
+          <span className="text-sm font-normal text-muted-foreground">
+            Charts and rankings from this page
+          </span>
+        </summary>
+        <div className="space-y-4 pt-5">
+          <div className="grid gap-4 md:grid-cols-2">
+            <Card>
+              <CardHeader>
+                <CardTitle>Wallet Balance Distribution</CardTitle>
+                <p className="text-sm text-muted-foreground">
+                  Users grouped by wallet balance
+                </p>
+              </CardHeader>
+              <CardContent className="pt-4">
+                <ChartContainer config={walletChartConfig}>
+                  <PieChart width={500} height={300}>
+                    <Pie
+                      isAnimationActive={false}
+                      data={walletDistributionData.filter(
+                        (item) =>
+                          (item.high ||
+                            0 ||
+                            item.medium ||
+                            0 ||
+                            item.low ||
+                            0) > 0,
+                      )}
+                      cx="50%"
+                      cy="50%"
+                      labelLine={false}
+                      label={({ payload, ...props }) => {
+                        const value =
+                          payload.high || payload.medium || payload.low;
+                        return (
+                          <text
+                            cx={props.cx}
+                            cy={props.cy}
+                            x={props.x}
+                            y={props.y}
+                            textAnchor={props.textAnchor}
+                            dominantBaseline={props.dominantBaseline}
+                            className="fill-foreground text-xs font-medium"
+                          >
+                            {`${payload.category}: ${value}`}
+                          </text>
+                        );
+                      }}
+                      outerRadius={100}
+                      dataKey={(data) => data.high || data.medium || data.low}
+                    >
+                      {walletDistributionData
+                        .filter(
+                          (item) =>
+                            (item.high || item.medium || item.low || 0) > 0,
+                        )
+                        .map((entry, index) => (
+                          <Cell key={`cell-${index}`} fill={entry.fill} />
+                        ))}
+                    </Pie>
+                    <ChartTooltip content={<ChartTooltipContent hideLabel />} />
+                  </PieChart>
+                </ChartContainer>
+              </CardContent>
+            </Card>
+
+            <Card>
+              <CardHeader>
+                <CardTitle>Top 10 Users by Balance</CardTitle>
+                <p className="text-sm text-muted-foreground">
+                  Highest wallet balances
+                </p>
+              </CardHeader>
+              <CardContent className="pt-4">
+                <ChartContainer config={balanceDistributionConfig}>
+                  <BarChart data={topUsersByBalance} width={500} height={300}>
+                    <CartesianGrid strokeDasharray="3 3" vertical={false} />
+                    <XAxis
+                      dataKey="name"
+                      tickLine={false}
+                      tickMargin={10}
+                      axisLine={false}
+                      angle={-45}
+                      textAnchor="end"
+                      height={80}
+                    />
+                    <YAxis tickLine={false} axisLine={false} tickMargin={10} />
+                    <ChartTooltip content={<ChartTooltipContent />} />
+                    <Bar
+                      dataKey="balance"
+                      fill="var(--color-balance)"
+                      radius={[5, 5, 0, 0]}
+                      isAnimationActive={false}
+                    />
+                  </BarChart>
+                </ChartContainer>
+              </CardContent>
+            </Card>
+          </div>
+
+          {/* Top Referrers Chart */}
+          {topUsersByReferrals.length > 0 && (
+            <Card>
+              <CardHeader>
+                <CardTitle>Top 10 Users by Referrals</CardTitle>
+                <p className="text-sm text-muted-foreground">
+                  Most active referrers
+                </p>
+              </CardHeader>
+              <CardContent className="pt-4">
+                <ChartContainer config={referralChartConfig}>
+                  <BarChart data={topUsersByReferrals} width={500} height={300}>
+                    <CartesianGrid strokeDasharray="3 3" vertical={false} />
+                    <XAxis
+                      dataKey="name"
+                      tickLine={false}
+                      tickMargin={10}
+                      axisLine={false}
+                      angle={-45}
+                      textAnchor="end"
+                      height={80}
+                    />
+                    <YAxis tickLine={false} axisLine={false} tickMargin={10} />
+                    <ChartTooltip content={<ChartTooltipContent />} />
+                    <Bar
+                      dataKey="referrals"
+                      fill="var(--color-referrals)"
+                      radius={[5, 5, 0, 0]}
+                      isAnimationActive={false}
+                    />
+                  </BarChart>
+                </ChartContainer>
+              </CardContent>
+            </Card>
+          )}
+        </div>
+      </details>
     </div>
   );
 }

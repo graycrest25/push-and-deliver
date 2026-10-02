@@ -1,30 +1,5 @@
-import {
-  IconBell,
-  IconCar,
-  IconCash,
-  IconCoin,
-  IconDashboard,
-  IconFile,
-  IconFileText,
-  IconGift,
-  IconGiftCard,
-  IconHeadset,
-  IconMapPin,
-  IconMotorbike,
-  IconPackage,
-  IconLink,
-  IconPlane,
-  IconReceipt,
-  IconSettings,
-  IconShoppingBag,
-  IconShoppingCart,
-  IconTicket,
-  IconTruckDelivery,
-  IconUsers,
-  IconUserShield,
-  IconWorld,
-} from "@tabler/icons-react";
-
+import { IconArrowUpRight } from "@tabler/icons-react";
+import { Link } from "react-router-dom";
 import { NavMain } from "@/components/nav-main";
 import { NavUser } from "@/components/nav-user";
 import {
@@ -32,153 +7,39 @@ import {
   SidebarContent,
   SidebarFooter,
   SidebarHeader,
-  SidebarMenu,
-  SidebarMenuButton,
-  SidebarMenuItem,
 } from "@/components/ui/sidebar";
 import { useCurrentUser } from "@/contexts/UserContext";
-import { Link } from "react-router-dom";
-import { adminHome, canAccessAdminScreen } from "@/lib/admin-access";
+import { adminHome } from "@/lib/admin-access";
+import { allowedNavigation } from "@/lib/navigation";
 
-const data = {
-  navMain: [
-    {
-      title: "Dashboard",
-      url: "/dashboard",
-      icon: IconDashboard,
-    },
-    {
-      title: "Users",
-      url: "/users",
-      icon: IconUsers,
-    },
-    {
-      title: "Riders",
-      url: "/riders",
-      icon: IconMotorbike,
-    },
-    {
-      title: "Restaurants",
-      url: "/vendors",
-      icon: IconTruckDelivery,
-    },
-    {
-      title: "Fees",
-      url: "/fees",
-      icon: IconCoin,
-    },
-    {
-      title: "Referrals",
-      url: "/referrals",
-      icon: IconGift,
-    },
-    {
-      title: "Withdrawals",
-      url: "/withdrawals",
-      icon: IconCash,
-    },
-    {
-      title: "Coupons",
-      url: "/coupons",
-      icon: IconGiftCard,
-    },
-    {
-      title: "Generated Referrals",
-      url: "/generated",
-      icon: IconLink,
-    },
-    {
-      title: "Support Tickets",
-      url: "/support-tickets",
-      icon: IconHeadset,
-    },
-    {
-      title: "Restaurant Orders",
-      url: "/restaurant-orders",
-      icon: IconShoppingCart,
-    },
-    {
-      title: "Shipment Orders",
-      url: "/shipment-orders",
-      icon: IconPlane,
-    },
-    {
-      title: "Ride Hailing",
-      url: "/ride-hailing",
-      icon: IconCar,
-    },
-    {
-      title: "Export Rates",
-      url: "/export-rates",
-      icon: IconPlane,
-    },
-    {
-      title: "Delivery Zones",
-      url: "/delivery-zones",
-      icon: IconMapPin,
-    },
-    {
-      title: "E-commerce Merchants",
-      url: "/ecommerce-merchants",
-      icon: IconShoppingBag,
-    },
-    {
-      title: "Product Orders",
-      url: "/product-orders",
-      icon: IconShoppingCart,
-    },
-    {
-      title: "General Notifications",
-      url: "/general-notifications",
-      icon: IconBell,
-    },
-    {
-      title: "DHL Zones",
-      url: "/dhl-zones",
-      icon: IconWorld,
-    },
-    {
-      title: "App Config",
-      url: "/app-config",
-      icon: IconSettings,
-    },
-  ],
-};
-
-export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
+export function AppSidebar(props: React.ComponentProps<typeof Sidebar>) {
   const { user } = useCurrentUser();
-  const adminType = user?.adminType;
-  const navItems = [...data.navMain];
-  navItems.splice(1, 0, {
-    title: "User Management",
-    url: "/admin/users",
-    icon: IconUserShield,
-  });
-  const allowedItems = user?.isAdmin
-    ? navItems.filter((item) => canAccessAdminScreen(adminType, item.url))
-    : [];
-
+  const items = user?.isAdmin ? allowedNavigation(user.adminType) : [];
   return (
-    <Sidebar collapsible="offcanvas" {...props}>
-      <SidebarHeader>
-        <SidebarMenu>
-          <SidebarMenuItem>
-            <SidebarMenuButton
-              asChild
-              className="data-[slot=sidebar-menu-button]:!p-1.5"
-            >
-              <Link to={adminHome(adminType)}>
-                <IconTruckDelivery className="!size-5" />
-                <span className="text-base font-semibold">PushNDeliver</span>
-              </Link>
-            </SidebarMenuButton>
-          </SidebarMenuItem>
-        </SidebarMenu>
+    <Sidebar collapsible="offcanvas" className="workspace-sidebar" {...props}>
+      <SidebarHeader className="px-5 py-6">
+        <Link
+          to={adminHome(user?.adminType)}
+          className="brand-lockup"
+          aria-label="PushNDeliver home"
+        >
+          <img src="/logo.png" alt="" width={40} height={40} className="brand-logo" />
+          <span className="text-lg font-bold tracking-tight">
+            PushNDeliver
+            <span className="block text-xs font-normal tracking-normal text-sidebar-foreground/70">
+              Admin workspace
+            </span>
+          </span>
+          <IconArrowUpRight
+            size={16}
+            className="ml-auto text-sidebar-foreground/50"
+          />
+        </Link>
       </SidebarHeader>
-      <SidebarContent>
-        <NavMain items={allowedItems} />
+      <SidebarContent className="px-3 pb-4">
+        <NavMain items={items} />
       </SidebarContent>
-      <SidebarFooter>
+      <SidebarFooter className="border-t border-sidebar-border p-3">
         <NavUser
           user={{
             name: user?.username || "Admin",

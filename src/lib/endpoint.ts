@@ -10,6 +10,9 @@ const firebaseEndpoint = (name: string): string => {
 };
 
 export const endpoints = {
+  get resloveShipmentFee() {
+    return firebaseEndpoint("resloveShipmentFee");
+  },
   get listAdminUsers() {
     return firebaseEndpoint("listAdminUsers");
   },

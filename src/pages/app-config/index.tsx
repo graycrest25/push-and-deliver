@@ -166,7 +166,7 @@ export default function AppConfigPage() {
 
   if (loading) {
     return (
-      <div className="p-8 space-y-6">
+      <div className="space-y-6">
         <div>
           <h1 className="text-3xl font-bold tracking-tight">
             App Configuration
@@ -184,7 +184,7 @@ export default function AppConfigPage() {
   }
 
   return (
-    <div className="p-8 space-y-6">
+    <div className="space-y-6">
       {/* Header */}
       <div className="flex items-center gap-3">
         <IconSettings className="h-8 w-8 text-primary" />

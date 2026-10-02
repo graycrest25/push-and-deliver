@@ -117,7 +117,7 @@ export default function ReferralDetailsPage() {
 
   if (loading) {
     return (
-      <div className="p-8 space-y-6">
+      <div className="space-y-6">
         <Skeleton className="h-10 w-64" />
         <Card>
           <CardHeader>
@@ -132,7 +132,7 @@ export default function ReferralDetailsPage() {
   }
 
   return (
-    <div className="p-8 space-y-6">
+    <div className="space-y-6">
       {/* Header */}
       <div className="flex items-center gap-4">
         <Button variant="outline" size="icon" onClick={handleBack}>

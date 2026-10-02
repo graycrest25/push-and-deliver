@@ -1,3 +1,4 @@
+import { normalizeWithdrawal } from "@/lib/withdrawal-utils";
 import { getPaginatedDocs, type PaginationOptions } from "@/lib/firestore-pagination";
 // Withdrawals Service - Read and Update status
 import {
@@ -22,11 +23,7 @@ export const withdrawalsService = {
     try {
       const querySnapshot = await getPaginatedDocs(collection(db, COLLECTION_NAME), pagination);
 
-      return querySnapshot.docs.map(doc => ({
-        id: doc.id,
-        ...doc.data(),
-        createdAt: doc.data().createdAt?.toDate?.(),
-      })) as Withdrawal[];
+      return querySnapshot.docs.map(doc => normalizeWithdrawal(doc.id, doc.data()));
     } catch (error) {
       console.error('Error fetching withdrawals:', error);
       throw error;
@@ -42,11 +39,7 @@ export const withdrawalsService = {
       );
       const querySnapshot = await getPaginatedDocs(q, pagination);
 
-      return querySnapshot.docs.map(doc => ({
-        id: doc.id,
-        ...doc.data(),
-        createdAt: doc.data().createdAt?.toDate?.(),
-      })) as Withdrawal[];
+      return querySnapshot.docs.map(doc => normalizeWithdrawal(doc.id, doc.data()));
     } catch (error) {
       console.error('Error fetching withdrawals by status:', error);
       throw error;
@@ -67,11 +60,7 @@ export const withdrawalsService = {
       );
       const querySnapshot = await getPaginatedDocs(q, pagination);
 
-      return querySnapshot.docs.map(doc => ({
-        id: doc.id,
-        ...doc.data(),
-        createdAt: doc.data().createdAt?.toDate?.(),
-      })) as Withdrawal[];
+      return querySnapshot.docs.map(doc => normalizeWithdrawal(doc.id, doc.data()));
     } catch (error) {
       console.error('Error fetching withdrawals by user type:', error);
       throw error;
@@ -85,11 +74,7 @@ export const withdrawalsService = {
       const docSnap = await getDoc(docRef);
 
       if (docSnap.exists()) {
-        return {
-          id: docSnap.id,
-          ...docSnap.data(),
-          createdAt: docSnap.data().createdAt?.toDate?.(),
-        } as Withdrawal;
+        return normalizeWithdrawal(docSnap.id, docSnap.data());
       }
 
       return null;

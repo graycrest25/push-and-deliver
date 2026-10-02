@@ -1,0 +1,6 @@
+# Local decision servers, browser captures, and review results.
+questions/
+review/
+live/
+mocks/
+build/

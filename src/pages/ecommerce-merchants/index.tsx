@@ -146,7 +146,7 @@ export default function EcommerceMerchantsPage() {
 
   if (loading) {
     return (
-      <div className="p-8 space-y-6">
+      <div className="space-y-6">
         <Skeleton className="h-12 w-96" />
         <Skeleton className="h-64 w-full" />
       </div>
@@ -154,7 +154,7 @@ export default function EcommerceMerchantsPage() {
   }
 
   return (
-    <div className="p-8 space-y-6">
+    <div className="space-y-6">
       {/* Header */}
       <div>
         <h1 className="text-3xl font-bold tracking-tight">

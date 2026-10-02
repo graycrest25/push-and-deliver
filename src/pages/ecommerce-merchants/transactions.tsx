@@ -55,7 +55,7 @@ export default function MerchantTransactionsPage() {
 
   if (loading) {
     return (
-      <div className="p-8 space-y-6">
+      <div className="space-y-6">
         <Skeleton className="h-8 w-48" />
         <Skeleton className="h-64 w-full" />
       </div>
@@ -63,7 +63,7 @@ export default function MerchantTransactionsPage() {
   }
 
   return (
-    <div className="p-8 space-y-6">
+    <div className="space-y-6">
       {/* Header with Back Button */}
       <div className="flex items-center gap-4">
         <Button

@@ -206,63 +206,56 @@ export default function RideHailingDetailsPage() {
                 return {
                   label: "Requested",
                   icon: IconClockHour4,
-                  colorClass:
-                    "from-amber-50 to-amber-100 dark:from-amber-950 dark:to-amber-900 border-amber-200 dark:border-amber-800",
-                  textClass: "text-amber-900 dark:text-amber-100",
+                  colorClass: "state-panel state-warning",
+                  textClass: "text-inherit",
                   badgeVariant: "outline" as const,
                 };
               case RideHaulingStatus.accepted:
                 return {
                   label: "Accepted",
                   icon: IconCircleCheck,
-                  colorClass:
-                    "from-blue-50 to-blue-100 dark:from-blue-950 dark:to-blue-900 border-blue-200 dark:border-blue-800",
-                  textClass: "text-blue-900 dark:text-blue-100",
+                  colorClass: "state-panel state-info",
+                  textClass: "text-inherit",
                   badgeVariant: "default" as const,
                 };
               case RideHaulingStatus.onroute:
                 return {
                   label: "On Route",
                   icon: IconTruck,
-                  colorClass:
-                    "from-indigo-50 to-indigo-100 dark:from-indigo-950 dark:to-indigo-900 border-indigo-200 dark:border-indigo-800",
-                  textClass: "text-indigo-900 dark:text-indigo-100",
+                  colorClass: "state-panel state-info",
+                  textClass: "text-inherit",
                   badgeVariant: "default" as const,
                 };
               case RideHaulingStatus.completed:
                 return {
                   label: "Completed",
                   icon: IconCircleCheck,
-                  colorClass:
-                    "from-green-50 to-green-100 dark:from-green-950 dark:to-green-900 border-green-200 dark:border-green-800",
-                  textClass: "text-green-900 dark:text-green-100",
+                  colorClass: "state-panel state-success",
+                  textClass: "text-inherit",
                   badgeVariant: "default" as const,
                 };
               case RideHaulingStatus.cancelled:
                 return {
                   label: "Cancelled",
                   icon: IconAlertTriangle,
-                  colorClass:
-                    "from-red-50 to-red-100 dark:from-red-950 dark:to-red-900 border-red-200 dark:border-red-800",
-                  textClass: "text-red-900 dark:text-red-100",
+                  colorClass: "state-panel state-error",
+                  textClass: "text-inherit",
                   badgeVariant: "destructive" as const,
                 };
               case RideHaulingStatus.expired:
                 return {
                   label: "Expired",
                   icon: IconAlertTriangle,
-                  colorClass:
-                    "from-gray-50 to-gray-100 dark:from-gray-950 dark:to-gray-900 border-gray-200 dark:border-gray-800",
-                  textClass: "text-gray-900 dark:text-gray-100",
+                  colorClass: "state-panel state-neutral",
+                  textClass: "text-inherit",
                   badgeVariant: "outline" as const,
                 };
               default:
                 return {
                   label: "Unknown",
                   icon: IconAlertTriangle,
-                  colorClass:
-                    "from-gray-50 to-gray-100 dark:from-gray-950 dark:to-gray-900 border-gray-200 dark:border-gray-800",
-                  textClass: "text-gray-900 dark:text-gray-100",
+                  colorClass: "state-panel state-neutral",
+                  textClass: "text-inherit",
                   badgeVariant: "secondary" as const,
                 };
             }
@@ -275,7 +268,7 @@ export default function RideHailingDetailsPage() {
           const StatusIcon = statusInfo.icon;
 
           return (
-            <Card className={`bg-gradient-to-br ${statusInfo.colorClass}`}>
+            <Card className={statusInfo.colorClass}>
               <CardHeader className="pb-3">
                 <CardTitle
                   className={`text-sm font-medium ${statusInfo.textClass}`}
@@ -298,14 +291,14 @@ export default function RideHailingDetailsPage() {
           );
         })()}
 
-        <Card className="bg-gradient-to-br from-green-50 to-green-100 dark:from-green-950 dark:to-green-900 border-green-200 dark:border-green-800">
+        <Card className="status-panel">
           <CardHeader className="pb-3">
-            <CardTitle className="text-sm font-medium text-green-900 dark:text-green-100">
+            <CardTitle className="text-sm font-medium text-secondary-foreground">
               Payment Type
             </CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="flex items-center gap-2 text-green-900 dark:text-green-100">
+            <div className="flex items-center gap-2 text-secondary-foreground">
               {order.paymentType === 0 ? (
                 <>
                   <IconWallet className="h-5 w-5" />
@@ -321,14 +314,14 @@ export default function RideHailingDetailsPage() {
           </CardContent>
         </Card>
 
-        <Card className="bg-gradient-to-br from-purple-50 to-purple-100 dark:from-purple-950 dark:to-purple-900 border-purple-200 dark:border-purple-800">
+        <Card className="status-panel">
           <CardHeader className="pb-3">
-            <CardTitle className="text-sm font-medium text-purple-900 dark:text-purple-100">
+            <CardTitle className="text-sm font-medium text-secondary-foreground">
               Total Amount
             </CardTitle>
           </CardHeader>
           <CardContent>
-            <p className="text-2xl font-bold text-purple-900 dark:text-purple-100">
+            <p className="text-2xl font-bold text-secondary-foreground">
               ₦{(order.totalAmount || 0).toLocaleString()}
             </p>
           </CardContent>
@@ -337,7 +330,7 @@ export default function RideHailingDetailsPage() {
 
       {/* Cancellation Reason Card - Only shown when cancelled */}
       {order.orderStatus === RideHaulingStatus.cancelled && (
-        <Card className="bg-gradient-to-br from-red-50 to-red-100 dark:from-red-950 dark:to-red-900 border-red-300 dark:border-red-800">
+        <Card className="status-panel">
           <CardHeader>
             <CardTitle className="flex items-center gap-2 text-red-900 dark:text-red-100">
               <IconAlertTriangle className="h-5 w-5" />

@@ -153,7 +153,7 @@ export default function ReferralsPage() {
   };
   if (loading) {
     return (
-      <div className="p-8 space-y-6">
+      <div className="space-y-6">
         <div>
           <h1 className="text-3xl font-bold tracking-tight">Referrals</h1>
         <p className="text-sm text-muted-foreground">Search, filters, summaries, and exports apply to the current page.</p>
@@ -176,7 +176,7 @@ export default function ReferralsPage() {
   }
 
   return (
-    <div className="p-8 space-y-6">
+    <div className="space-y-6">
       {/* Header */}
       <div>
         <h1 className="text-3xl font-bold tracking-tight">Referrals</h1>

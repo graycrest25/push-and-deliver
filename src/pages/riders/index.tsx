@@ -286,7 +286,7 @@ export default function RidersPage() {
 
   if (loading) {
     return (
-      <div className="p-8 space-y-6">
+      <div className="space-y-6">
         <div>
           <h1 className="text-3xl font-bold tracking-tight">Riders</h1>
         <p className="text-sm text-muted-foreground">Search, filters, summaries, and exports apply to the current page.</p>
@@ -309,10 +309,11 @@ export default function RidersPage() {
   }
 
   return (
-    <div className="p-8 space-y-6">
+    <div className="space-y-6">
       {/* Header */}
       <div>
         <h1 className="text-3xl font-bold tracking-tight">Riders</h1>
+        <p className="text-sm text-muted-foreground">Search, filters, summaries, and exports apply to the current page.</p>
         <p className="text-muted-foreground">
           Manage delivery riders, verification, and wallet balances
         </p>
@@ -320,7 +321,7 @@ export default function RidersPage() {
 
       {/* Stats Cards */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-        <Card className="border-l-4 border-l-[hsl(220,40%,45%)] bg-gradient-to-br from-slate-50 to-white dark:from-slate-900/20 dark:to-background">
+        <Card className="metric-card">
           <CardHeader className="pb-2">
             <CardTitle className="text-sm font-medium text-muted-foreground">
               Total Riders
@@ -329,7 +330,7 @@ export default function RidersPage() {
           <CardContent>
             <div
               className="text-3xl font-bold"
-              style={{ color: "hsl(220, 40%, 45%)" }}
+              style={{ color: "var(--primary)" }}
             >
               {totalRiders}
               <div className="flex gap-2">
@@ -337,7 +338,7 @@ export default function RidersPage() {
                   Cars:{" "}
                   <span
                     className="font-bold text-foreground"
-                    style={{ color: "hsl(220, 40%, 45%)" }}
+                    style={{ color: "var(--primary)" }}
                   >
                     {carRiders}
                   </span>
@@ -346,7 +347,7 @@ export default function RidersPage() {
                   Bicycles:{" "}
                   <span
                     className="font-bold text-foreground"
-                    style={{ color: "hsl(220, 40%, 45%)" }}
+                    style={{ color: "var(--primary)" }}
                   >
                     {bicycleRiders}
                   </span>
@@ -355,7 +356,7 @@ export default function RidersPage() {
                   Bikes:{" "}
                   <span
                     className="font-bold text-foreground"
-                    style={{ color: "hsl(220, 40%, 45%)" }}
+                    style={{ color: "var(--primary)" }}
                   >
                     {bikeRiders}
                   </span>
@@ -367,7 +368,7 @@ export default function RidersPage() {
             </p>
           </CardContent>
         </Card>
-        <Card className="border-l-4 border-l-[hsl(150,35%,42%)] bg-gradient-to-br from-emerald-50 to-white dark:from-emerald-900/20 dark:to-background">
+        <Card className="metric-card">
           <CardHeader className="pb-2">
             <CardTitle className="text-sm font-medium text-muted-foreground">
               Verified
@@ -376,7 +377,7 @@ export default function RidersPage() {
           <CardContent>
             <div
               className="text-3xl font-bold"
-              style={{ color: "hsl(150, 35%, 42%)" }}
+              style={{ color: "var(--success)" }}
             >
               {verifiedRiders}
             </div>
@@ -385,7 +386,7 @@ export default function RidersPage() {
                 Cars:{" "}
                 <span
                   className="font-bold text-foreground"
-                  style={{ color: "hsl(150, 35%, 42%)" }}
+                  style={{ color: "var(--success)" }}
                 >
                   {verifiedByVehicle[0] || 0}
                 </span>
@@ -394,7 +395,7 @@ export default function RidersPage() {
                 Bicycles:{" "}
                 <span
                   className="font-bold text-foreground"
-                  style={{ color: "hsl(150, 35%, 42%)" }}
+                  style={{ color: "var(--success)" }}
                 >
                   {verifiedByVehicle[1] || 0}
                 </span>
@@ -403,7 +404,7 @@ export default function RidersPage() {
                 Bikes:{" "}
                 <span
                   className="font-bold text-foreground"
-                  style={{ color: "hsl(150, 35%, 42%)" }}
+                  style={{ color: "var(--success)" }}
                 >
                   {verifiedByVehicle[2] || 0}
                 </span>
@@ -414,7 +415,7 @@ export default function RidersPage() {
             </p>
           </CardContent>
         </Card>
-        <Card className="border-l-4 border-l-[hsl(30,50%,48%)] bg-gradient-to-br from-amber-50 to-white dark:from-amber-900/20 dark:to-background">
+        <Card className="metric-card">
           <CardHeader className="pb-2">
             <CardTitle className="text-sm font-medium text-muted-foreground">
               Pending
@@ -423,7 +424,7 @@ export default function RidersPage() {
           <CardContent>
             <div
               className="text-3xl font-bold"
-              style={{ color: "hsl(30, 50%, 48%)" }}
+              style={{ color: "var(--warning)" }}
             >
               {pendingRiders}
               <div className="flex gap-2">
@@ -431,7 +432,7 @@ export default function RidersPage() {
                   Cars:{" "}
                   <span
                     className="font-bold text-foreground"
-                    style={{ color: "hsl(30, 50%, 48%)" }}
+                    style={{ color: "var(--warning)" }}
                   >
                     {pendingByVehicle[0] || 0}
                   </span>
@@ -440,7 +441,7 @@ export default function RidersPage() {
                   Bicycles:{" "}
                   <span
                     className="font-bold text-foreground"
-                    style={{ color: "hsl(30, 50%, 48%)" }}
+                    style={{ color: "var(--warning)" }}
                   >
                     {pendingByVehicle[1] || 0}
                   </span>
@@ -449,7 +450,7 @@ export default function RidersPage() {
                   Bikes:{" "}
                   <span
                     className="font-bold text-foreground"
-                    style={{ color: "hsl(30, 50%, 48%)" }}
+                    style={{ color: "var(--warning)" }}
                   >
                     {pendingByVehicle[2] || 0}
                   </span>
@@ -461,7 +462,7 @@ export default function RidersPage() {
             </p>
           </CardContent>
         </Card>
-        <Card className="border-l-4 border-l-[hsl(350,50%,48%)] bg-gradient-to-br from-red-50 to-white dark:from-red-900/20 dark:to-background">
+        <Card className="metric-card">
           <CardHeader className="pb-2">
             <CardTitle className="text-sm font-medium text-muted-foreground">
               Blocked
@@ -470,7 +471,7 @@ export default function RidersPage() {
           <CardContent>
             <div
               className="text-3xl font-bold"
-              style={{ color: "hsl(350, 50%, 48%)" }}
+              style={{ color: "var(--destructive)" }}
             >
               {blockedRiders}
               <div className="flex gap-2">
@@ -478,7 +479,7 @@ export default function RidersPage() {
                   Cars:{" "}
                   <span
                     className="font-bold text-foreground"
-                    style={{ color: "hsl(350, 50%, 48%)" }}
+                    style={{ color: "var(--destructive)" }}
                   >
                     {blockedByVehicle[0] || 0}
                   </span>
@@ -487,7 +488,7 @@ export default function RidersPage() {
                   Bicycles:{" "}
                   <span
                     className="font-bold text-foreground"
-                    style={{ color: "hsl(350, 50%, 48%)" }}
+                    style={{ color: "var(--destructive)" }}
                   >
                     {blockedByVehicle[1] || 0}
                   </span>
@@ -496,7 +497,7 @@ export default function RidersPage() {
                   Bikes:{" "}
                   <span
                     className="font-bold text-foreground"
-                    style={{ color: "hsl(350, 50%, 48%)" }}
+                    style={{ color: "var(--destructive)" }}
                   >
                     {blockedByVehicle[2] || 0}
                   </span>

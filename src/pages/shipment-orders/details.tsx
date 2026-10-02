@@ -19,6 +19,7 @@ import {
 import { Skeleton } from "@/components/ui/skeleton";
 import { Switch } from "@/components/ui/switch";
 import { useCurrentUser } from "@/contexts/UserContext";
+import { ShipmentFeeForm } from "@/components/shipment-orders/shipment-fee-form";
 import { shipmentOrdersService } from "@/services/shipment-orders.service";
 import {
   IntlShipmentType,
@@ -188,9 +189,9 @@ export default function ShipmentOrderDetailsPage() {
 
       {/* Colored Status Cards */}
       <div className="grid gap-4 md:grid-cols-3">
-        <Card className="bg-gradient-to-br from-blue-50 to-blue-100 dark:from-blue-950 dark:to-blue-900 border-blue-200 dark:border-blue-800">
+        <Card className="status-panel">
           <CardHeader className="pb-3">
-            <CardTitle className="text-sm font-medium text-blue-900 dark:text-blue-100">
+            <CardTitle className="text-sm font-medium text-secondary-foreground">
               Order Status
             </CardTitle>
           </CardHeader>
@@ -246,14 +247,14 @@ export default function ShipmentOrderDetailsPage() {
           </CardContent>
         </Card>
 
-        <Card className="bg-gradient-to-br from-green-50 to-green-100 dark:from-green-950 dark:to-green-900 border-green-200 dark:border-green-800">
+        <Card className="status-panel">
           <CardHeader className="pb-3">
-            <CardTitle className="text-sm font-medium text-green-900 dark:text-green-100">
+            <CardTitle className="text-sm font-medium text-secondary-foreground">
               Payment Type
             </CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="flex items-center gap-2 text-green-900 dark:text-green-100">
+            <div className="flex items-center gap-2 text-secondary-foreground">
               {order.paymentType === 0 ? (
                 <>
                   <IconWallet className="h-5 w-5" />
@@ -269,19 +270,23 @@ export default function ShipmentOrderDetailsPage() {
           </CardContent>
         </Card>
 
-        <Card className="bg-gradient-to-br from-purple-50 to-purple-100 dark:from-purple-950 dark:to-purple-900 border-purple-200 dark:border-purple-800">
+        <Card className="status-panel">
           <CardHeader className="pb-3">
-            <CardTitle className="text-sm font-medium text-purple-900 dark:text-purple-100">
+            <CardTitle className="text-sm font-medium text-secondary-foreground">
               Total Amount
             </CardTitle>
           </CardHeader>
           <CardContent>
-            <p className="text-2xl font-bold text-purple-900 dark:text-purple-100">
+            <p className="text-2xl font-bold text-secondary-foreground">
               ₦{(order.totalAmount || 0).toLocaleString()}
             </p>
           </CardContent>
         </Card>
       </div>
+
+      {isExpress && user?.isAdmin === true && user.adminType === "super" && (
+        <ShipmentFeeForm key={order.id} order={order} />
+      )}
 
       {/* Customer & Receiver Info */}
       <div className="grid gap-4 md:grid-cols-2">

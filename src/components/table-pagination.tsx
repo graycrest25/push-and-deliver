@@ -20,7 +20,7 @@ export function TablePagination({
   return (
     <nav
       aria-label="Table pagination"
-      className="flex flex-wrap items-center justify-between gap-4 border-t px-2 py-4"
+      className="flex flex-wrap items-center justify-between gap-4 px-1 pb-1 pt-5 text-muted-foreground"
     >
       <div className="flex items-center gap-2 text-sm">
         <span>Rows per page</span>
@@ -44,8 +44,18 @@ export function TablePagination({
         </Select>
       </div>
       <div role="status" className="text-sm tabular-nums">
-        Page {pagination.totalPages === 0 ? 0 : pagination.pageIndex + 1} of{" "}
-        {pagination.totalPages} · {pagination.total.toLocaleString()} documents
+        {pagination.total === 0 ? (
+          busy ? (
+            "Loading records…"
+          ) : (
+            "No records"
+          )
+        ) : (
+          <>
+            Page {pagination.pageIndex + 1} of {pagination.totalPages} ·{" "}
+            {pagination.total.toLocaleString()} documents
+          </>
+        )}
       </div>
       <div className="flex gap-2">
         <Button

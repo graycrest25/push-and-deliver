@@ -1,473 +1,430 @@
-'use client'
-
-import { useState, useEffect } from 'react'
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
-import { Skeleton } from '@/components/ui/skeleton'
-import { analyticsService } from '@/services/analytics.service'
+import { useEffect, useState } from "react";
+import { Link } from "react-router-dom";
 import {
-  ChartContainer,
-  ChartTooltip,
-  ChartTooltipContent,
-  type ChartConfig,
-} from '@/components/ui/chart' 
+  IconArrowRight,
+  IconArrowUpRight,
+  IconRefresh,
+  IconPlane,
+  IconShoppingCart,
+  IconCar,
+  IconHeadset,
+  IconCircleCheck,
+  IconAlertCircle,
+} from "@tabler/icons-react";
+import { Button } from "@/components/ui/button";
 import {
-  BarChart,
-  Bar,
-  PieChart,
-  Pie,
-  Cell,
-  LineChart,
-  Line,
-  AreaChart,
-  Area,
-  XAxis,
-  YAxis,
-  CartesianGrid,
-  Legend,
-} from 'recharts'
+  Card,
+  CardContent,
+  CardHeader,
+  CardTitle,
+  CardDescription,
+} from "@/components/ui/card";
+import { Skeleton } from "@/components/ui/skeleton";
+import { useCurrentUser } from "@/contexts/UserContext";
+import { canAccessAdminScreen } from "@/lib/admin-access";
+import { analyticsService } from "@/services/analytics.service";
 
-// Professional chart configurations
-const platformChartConfig = {
-  users: {
-    label: 'Users',
-    color: 'hsl(220, 40%, 45%)', // navy blue
+type Stats = Record<string, number>;
+const shortcuts = [
+  {
+    title: "Shipments",
+    description: "International deliveries",
+    url: "/shipment-orders",
+    icon: IconPlane,
   },
-  riders: {
-    label: 'Riders',
-    color: 'hsl(150, 35%, 42%)', // forest green
+  {
+    title: "Restaurant orders",
+    description: "Food deliveries",
+    url: "/restaurant-orders",
+    icon: IconShoppingCart,
   },
-  restaurants: {
-    label: 'Restaurants',
-    color: 'hsl(30, 50%, 48%)', // amber
+  {
+    title: "Product orders",
+    description: "Merchant purchases",
+    url: "/product-orders",
+    icon: IconShoppingCart,
   },
-  referrals: {
-    label: 'Referrals',
-    color: 'hsl(270, 35%, 45%)', // deep purple
+  {
+    title: "Ride hailing",
+    description: "Trips and riders",
+    url: "/ride-hailing",
+    icon: IconCar,
   },
-} satisfies ChartConfig
-
-const ridersChartConfig = {
-  verified: {
-    label: 'Verified',
-    color: 'hsl(150, 35%, 42%)', // forest green
+  {
+    title: "Support",
+    description: "Customer conversations",
+    url: "/support-tickets",
+    icon: IconHeadset,
   },
-  pending: {
-    label: 'Pending',
-    color: 'hsl(30, 50%, 48%)', // amber
-  },
-  blocked: {
-    label: 'Blocked',
-    color: 'hsl(350, 50%, 48%)', // burgundy
-  },
-  online: {
-    label: 'Online',
-    color: 'hsl(185, 40%, 45%)', // teal
-  },
-} satisfies ChartConfig
-
-const restaurantsChartConfig = {
-  verified: {
-    label: 'Verified',
-    color: 'hsl(150, 35%, 42%)', // forest green
-  },
-  pending: {
-    label: 'Pending',
-    color: 'hsl(30, 50%, 48%)', // amber
-  },
-  blocked: {
-    label: 'Blocked',
-    color: 'hsl(350, 50%, 48%)', // burgundy
-  },
-  open: {
-    label: 'Open',
-    color: 'hsl(185, 40%, 45%)', // teal
-  },
-} satisfies ChartConfig
-
-const withdrawalsChartConfig = {
-  total: {
-    label: 'Total',
-    color: 'hsl(235, 40%, 48%)', // indigo
-  },
-  pending: {
-    label: 'Pending',
-    color: 'hsl(30, 50%, 48%)', // amber
-  },
-  successful: {
-    label: 'Successful',
-    color: 'hsl(150, 35%, 42%)', // forest green
-  },
-} satisfies ChartConfig
-
-const verificationChartConfig = {
-  verifiedRiders: {
-    label: 'Verified Riders',
-    color: 'hsl(150, 35%, 42%)', // forest green
-  },
-  verifiedRestaurants: {
-    label: 'Verified Restaurants',
-    color: 'hsl(185, 40%, 45%)', // teal
-  },
-  pendingRiders: {
-    label: 'Pending Riders',
-    color: 'hsl(30, 50%, 48%)', // amber
-  },
-  pendingRestaurants: {
-    label: 'Pending Restaurants',
-    color: 'hsl(320, 40%, 48%)', // mauve
-  },
-  blockedRiders: {
-    label: 'Blocked Riders',
-    color: 'hsl(350, 50%, 48%)', // burgundy
-  },
-  blockedRestaurants: {
-    label: 'Blocked Restaurants',
-    color: 'hsl(270, 35%, 45%)', // deep purple
-  },
-} satisfies ChartConfig
+];
 
 export default function DashboardPage() {
-  const [loading, setLoading] = useState(true)
-  const [stats, setStats] = useState({
-    totalUsers: 0,
-    totalRiders: 0,
-    totalRestaurants: 0,
-    totalReferrals: 0,
-    totalWithdrawals: 0,
-    verifiedRiders: 0,
-    verifiedRestaurants: 0,
-    pendingRiders: 0,
-    pendingRestaurants: 0,
-    blockedRiders: 0,
-    blockedRestaurants: 0,
-    pendingWithdrawals: 0,
-    successfulWithdrawals: 0,
-    onlineRiders: 0,
-    openRestaurants: 0,
-  })
+  const { user } = useCurrentUser();
+  const [loading, setLoading] = useState(true);
+  const [stats, setStats] = useState<Stats>({});
+  const [failed, setFailed] = useState(false);
+  const [updatedAt, setUpdatedAt] = useState<Date | null>(null);
 
+  async function loadDashboardData() {
+    setLoading(true);
+    const responses = await Promise.allSettled([
+      analyticsService.getTotalCounts(),
+      analyticsService.getVerifiedCounts(),
+      analyticsService.getPendingCounts(),
+      analyticsService.getBlockedCounts(),
+      analyticsService.getWithdrawalStats(),
+      analyticsService.getOnlineRidersCount(),
+      analyticsService.getOpenRestaurantsCount(),
+    ]);
+    const next: Stats = {};
+    responses.forEach((response, index) => {
+      if (response.status !== "fulfilled") return;
+      if (index === 5) next.onlineRiders = response.value as number;
+      else if (index === 6) next.openRestaurants = response.value as number;
+      else Object.assign(next, response.value);
+    });
+    setStats(next);
+    setFailed(responses.some((response) => response.status === "rejected"));
+    setUpdatedAt(new Date());
+    setLoading(false);
+  }
   useEffect(() => {
-    loadDashboardData()
-  }, [])
+    void loadDashboardData();
+  }, []);
 
-  const loadDashboardData = async () => {
-    try {
-      setLoading(true)
-      const [
-        totals,
-        verified,
-        pending,
-        blocked,
-        withdrawals,
-        onlineRiders,
-        openRestaurants
-      ] = await Promise.all([
-        analyticsService.getTotalCounts(),
-        analyticsService.getVerifiedCounts(),
-        analyticsService.getPendingCounts(),
-        analyticsService.getBlockedCounts(),
-        analyticsService.getWithdrawalStats(),
-        analyticsService.getOnlineRidersCount(),
-        analyticsService.getOpenRestaurantsCount(),
-      ])
-
-      setStats({
-        totalUsers: totals.totalUsers,
-        totalRiders: totals.totalRiders,
-        totalRestaurants: totals.totalRestaurants,
-        totalReferrals: totals.totalReferrals,
-        totalWithdrawals: totals.totalWithdrawals,
-        verifiedRiders: verified.verifiedRiders,
-        verifiedRestaurants: verified.verifiedRestaurants,
-        pendingRiders: pending.pendingRiders,
-        pendingRestaurants: pending.pendingRestaurants,
-        blockedRiders: blocked.blockedRiders,
-        blockedRestaurants: blocked.blockedRestaurants,
-        pendingWithdrawals: withdrawals.pendingWithdrawals,
-        successfulWithdrawals: withdrawals.successfulWithdrawals,
-        onlineRiders,
-        openRestaurants,
-      })
-    } catch (error) {
-      console.error('Error loading dashboard data:', error)
-    } finally {
-      setLoading(false)
-    }
-  }
-
-  if (loading) {
-    return (
-      <div className="p-8 space-y-6">
-        <div>
-          <h1 className="text-3xl font-bold tracking-tight">Dashboard</h1>
-          <p className="text-muted-foreground">Overview of your platform</p>
-        </div>
-        <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
-          {[1, 2, 3, 4, 5, 6, 7, 8].map((i) => (
-            <Card key={i}>
-              <CardHeader className="pb-2">
-                <Skeleton className="h-4 w-24" />
-              </CardHeader>
-              <CardContent>
-                <Skeleton className="h-8 w-16" />
-                <Skeleton className="h-3 w-20 mt-2" />
-              </CardContent>
-            </Card>
-          ))}
-        </div>
-      </div>
-    )
-  }
-
-  // Prepare data for charts
-  const platformData = [
-    { category: 'Users', users: stats.totalUsers, fill: 'var(--color-users)' },
-    { category: 'Riders', riders: stats.totalRiders, fill: 'var(--color-riders)' },
-    { category: 'Restaurants', restaurants: stats.totalRestaurants, fill: 'var(--color-restaurants)' },
-    { category: 'Referrals', referrals: stats.totalReferrals, fill: 'var(--color-referrals)' },
-  ]
-
-  const ridersStatusData = [
-    { status: 'Verified', verified: stats.verifiedRiders, fill: 'var(--color-verified)' },
-    { status: 'Pending', pending: stats.pendingRiders, fill: 'var(--color-pending)' },
-    { status: 'Blocked', blocked: stats.blockedRiders, fill: 'var(--color-blocked)' },
-    { status: 'Online', online: stats.onlineRiders, fill: 'var(--color-online)' },
-  ]
-
-  const restaurantsStatusData = [
-    { status: 'Verified', verified: stats.verifiedRestaurants, fill: 'var(--color-verified)' },
-    { status: 'Pending', pending: stats.pendingRestaurants, fill: 'var(--color-pending)' },
-    { status: 'Blocked', blocked: stats.blockedRestaurants, fill: 'var(--color-blocked)' },
-    { status: 'Open', open: stats.openRestaurants, fill: 'var(--color-open)' },
-  ]
-
-  const withdrawalsData = [
-    { type: 'Total', total: stats.totalWithdrawals, fill: 'var(--color-total)' },
-    { type: 'Pending', pending: stats.pendingWithdrawals, fill: 'var(--color-pending)' },
-    { type: 'Successful', successful: stats.successfulWithdrawals, fill: 'var(--color-successful)' },
-  ]
-
-  const verificationPieData = [
-    { name: 'verifiedRiders', value: stats.verifiedRiders, fill: 'var(--color-verifiedRiders)' },
-    { name: 'verifiedRestaurants', value: stats.verifiedRestaurants, fill: 'var(--color-verifiedRestaurants)' },
-    { name: 'pendingRiders', value: stats.pendingRiders, fill: 'var(--color-pendingRiders)' },
-    { name: 'pendingRestaurants', value: stats.pendingRestaurants, fill: 'var(--color-pendingRestaurants)' },
-    { name: 'blockedRiders', value: stats.blockedRiders, fill: 'var(--color-blockedRiders)' },
-    { name: 'blockedRestaurants', value: stats.blockedRestaurants, fill: 'var(--color-blockedRestaurants)' },
-  ]
+  const count = (key: string) =>
+    stats[key] === undefined ? "Unavailable" : stats[key].toLocaleString();
+  const firstName = user?.username?.trim().split(/\s+/)[0] || "there";
+  const queues = [
+    {
+      title: "Rider verification",
+      description: "Riders awaiting review",
+      key: "pendingRiders",
+      url: "/riders",
+    },
+    {
+      title: "Restaurant verification",
+      description: "Restaurants awaiting review",
+      key: "pendingRestaurants",
+      url: "/vendors",
+    },
+    {
+      title: "Pending withdrawals",
+      description: "Withdrawal requests awaiting processing",
+      key: "pendingWithdrawals",
+      url: "/withdrawals",
+    },
+  ].filter((item) => canAccessAdminScreen(user?.adminType, item.url));
+  const totals = [
+    {
+      title: "Users",
+      key: "totalUsers",
+      url: "/users",
+      detail: "Customer accounts",
+    },
+    {
+      title: "Riders",
+      key: "totalRiders",
+      url: "/riders",
+      detail: `${count("onlineRiders")} online`,
+    },
+    {
+      title: "Restaurants",
+      key: "totalRestaurants",
+      url: "/vendors",
+      detail: `${count("openRestaurants")} open`,
+    },
+    {
+      title: "Referrals",
+      key: "totalReferrals",
+      url: "/referrals",
+      detail: "All-time referrals",
+    },
+  ];
 
   return (
-    <div className="p-8 space-y-6">
-      {/* Header */}
-      <div>
-        <h1 className="text-3xl font-bold tracking-tight">Dashboard</h1>
-        <p className="text-muted-foreground">Overview of your platform metrics</p>
+    <div className="flex flex-col gap-6">
+      <div className="flex flex-wrap items-start justify-between gap-4">
+        <div>
+          <h1>Overview</h1>
+          <p className="text-sm text-muted-foreground">
+            A clear view of your platform and the work ahead.
+          </p>
+        </div>
+        <div className="flex items-center gap-3">
+          {updatedAt && (
+            <span className="hidden sm:inline text-xs text-muted-foreground">
+              Updated{" "}
+              {updatedAt.toLocaleTimeString([], {
+                hour: "2-digit",
+                minute: "2-digit",
+              })}
+            </span>
+          )}
+          <Button
+            variant="outline"
+            onClick={() => void loadDashboardData()}
+            disabled={loading}
+          >
+            <IconRefresh className={loading ? "animate-spin" : ""} />
+            {loading ? "Refreshing…" : "Refresh"}
+          </Button>
+        </div>
       </div>
 
-      {/* Key Metrics Cards */}
-      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
-        <Card className="border-l-4 border-l-[hsl(220,40%,45%)] bg-gradient-to-br from-slate-50 to-white dark:from-slate-900/20 dark:to-background">
-          <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium text-muted-foreground">
-              Total Users
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="text-3xl font-bold" style={{ color: 'hsl(220, 40%, 45%)' }}>{stats.totalUsers}</div>
-            <p className="text-xs text-muted-foreground mt-1">Platform users</p>
-          </CardContent>
-        </Card>
-
-        <Card className="border-l-4 border-l-[hsl(150,35%,42%)] bg-gradient-to-br from-emerald-50 to-white dark:from-emerald-900/20 dark:to-background">
-          <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium text-muted-foreground">
-              Total Riders
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="text-3xl font-bold" style={{ color: 'hsl(150, 35%, 42%)' }}>{stats.totalRiders}</div>
-            <p className="text-xs text-muted-foreground mt-1">
-              <span className="font-semibold" style={{ color: 'hsl(150, 35%, 42%)' }}>{stats.onlineRiders}</span> online now
+      <section className="overview-welcome" aria-labelledby="welcome-title">
+        <div className="flex flex-wrap items-start justify-between gap-4">
+          <div>
+            <h2
+              id="welcome-title"
+              className="text-2xl font-semibold tracking-tight"
+            >
+              Welcome back, {firstName}.
+            </h2>
+            <p className="mt-2 text-sm">
+              Keep orders moving and your team connected.
             </p>
+          </div>
+          <span className="welcome-mark" aria-hidden="true">
+            <IconArrowUpRight size={30} stroke={1.6} />
+          </span>
+        </div>
+        <nav aria-label="Operations shortcuts" className="workflow-shortcuts">
+          {shortcuts
+            .filter((item) => canAccessAdminScreen(user?.adminType, item.url))
+            .map((item) => (
+              <Link to={item.url} key={item.url} className="workflow-shortcut">
+                <item.icon size={21} stroke={1.7} />
+                <div>
+                  <span className="block font-semibold text-sm">
+                    {item.title}
+                  </span>
+                  <span className="block text-xs mt-1">{item.description}</span>
+                </div>
+                <IconArrowRight className="ml-auto shrink-0" size={17} />
+              </Link>
+            ))}
+        </nav>
+      </section>
+
+      {failed && (
+        <div role="alert" className="dashboard-alert">
+          <IconAlertCircle size={19} className="shrink-0" />
+          <span>
+            Some metrics could not be loaded. Available figures are shown below;
+            refresh to try again.
+          </span>
+        </div>
+      )}
+
+      <section className="platform-totals" aria-label="Platform totals">
+        {totals.map((item) => (
+          <div key={item.key} className="platform-total">
+            <span className="text-sm text-muted-foreground">{item.title}</span>
+            {loading ? (
+              <Skeleton className="my-3 h-9 w-24" />
+            ) : (
+              <p
+                className={
+                  stats[item.key] === undefined
+                    ? "my-3 text-sm text-muted-foreground"
+                    : "my-2 text-3xl font-semibold tabular-nums"
+                }
+              >
+                {count(item.key)}
+              </p>
+            )}
+            <div className="flex items-center justify-between gap-2">
+              <span className="text-xs text-muted-foreground">
+                {item.detail}
+              </span>
+              {canAccessAdminScreen(user?.adminType, item.url) && (
+                <Link
+                  to={item.url}
+                  className="text-primary"
+                  aria-label={`View ${item.title.toLowerCase()}`}
+                >
+                  <IconArrowUpRight size={18} />
+                </Link>
+              )}
+            </div>
+          </div>
+        ))}
+      </section>
+
+      <div className="dashboard-columns">
+        <Card>
+          <CardHeader>
+            <CardTitle>Needs attention</CardTitle>
+            <CardDescription>
+              Pending work across your platform. Open a section to review its
+              records.
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-1">
+            {queues.map((item) => (
+              <Link to={item.url} key={item.key} className="attention-row">
+                <span
+                  className={
+                    stats[item.key] === 0
+                      ? "queue-count queue-clear"
+                      : "queue-count"
+                  }
+                >
+                  {loading ? (
+                    <Skeleton className="h-6 w-6" />
+                  ) : stats[item.key] === undefined ? (
+                    "—"
+                  ) : (
+                    count(item.key)
+                  )}
+                </span>
+                <div className="min-w-0 flex-1">
+                  <p className="font-semibold text-sm">{item.title}</p>
+                  <p className="text-xs text-muted-foreground mt-1">
+                    {stats[item.key] === 0
+                      ? "No pending records"
+                      : item.description}
+                  </p>
+                </div>
+                <IconArrowUpRight
+                  size={19}
+                  className="text-muted-foreground shrink-0"
+                />
+              </Link>
+            ))}
+            {!loading &&
+              queues.length > 0 &&
+              queues.every((item) => stats[item.key] === 0) && (
+                <p className="flex items-center gap-2 pt-4 text-sm text-[var(--success)]">
+                  <IconCircleCheck size={19} />
+                  All caught up in these queues.
+                </p>
+              )}
           </CardContent>
         </Card>
-
-        <Card className="border-l-4 border-l-[hsl(30,50%,48%)] bg-gradient-to-br from-amber-50 to-white dark:from-amber-900/20 dark:to-background">
-          <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium text-muted-foreground">
-              Total Restaurants
-            </CardTitle>
+        <Card>
+          <CardHeader>
+            <CardTitle>Platform availability</CardTitle>
+            <CardDescription>
+              Current availability and completed payments.
+            </CardDescription>
           </CardHeader>
-          <CardContent>
-            <div className="text-3xl font-bold" style={{ color: 'hsl(30, 50%, 48%)' }}>{stats.totalRestaurants}</div>
-            <p className="text-xs text-muted-foreground mt-1">
-              <span className="font-semibold" style={{ color: 'hsl(30, 50%, 48%)' }}>{stats.openRestaurants}</span> open now
-            </p>
-          </CardContent>
-        </Card>
-
-        <Card className="border-l-4 border-l-[hsl(270,35%,45%)] bg-gradient-to-br from-purple-50 to-white dark:from-purple-900/20 dark:to-background">
-          <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium text-muted-foreground">
-              Total Referrals
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="text-3xl font-bold" style={{ color: 'hsl(270, 35%, 45%)' }}>{stats.totalReferrals}</div>
-            <p className="text-xs text-muted-foreground mt-1">All time referrals</p>
+          <CardContent className="space-y-4">
+            {[
+              {
+                title: "Riders online",
+                key: "onlineRiders",
+                total: "totalRiders",
+                url: "/riders",
+                label: "of all riders",
+              },
+              {
+                title: "Restaurants open",
+                key: "openRestaurants",
+                total: "totalRestaurants",
+                url: "/vendors",
+                label: "of all restaurants",
+              },
+              {
+                title: "Successful withdrawals",
+                key: "successfulWithdrawals",
+                total: "totalWithdrawals",
+                url: "/withdrawals",
+                label: "of all withdrawals",
+              },
+            ]
+              .filter((item) => canAccessAdminScreen(user?.adminType, item.url))
+              .map((item) => (
+                <div key={item.key} className="availability-item">
+                  <div className="flex items-center justify-between gap-3 text-sm">
+                    <span className="font-medium">{item.title}</span>
+                    {loading ? (
+                      <Skeleton className="h-5 w-12" />
+                    ) : (
+                      <span className="font-semibold tabular-nums">
+                        {count(item.key)}
+                      </span>
+                    )}
+                  </div>
+                  <div className="availability-track" aria-hidden="true">
+                    <span
+                      style={{
+                        width: `${stats[item.total] > 0 ? Math.min(100, ((stats[item.key] || 0) / stats[item.total]) * 100) : 0}%`,
+                      }}
+                    />
+                  </div>
+                  <p className="text-xs text-muted-foreground">
+                    {count(item.total)} {item.label}
+                  </p>
+                </div>
+              ))}
           </CardContent>
         </Card>
       </div>
 
-      {/* Platform Overview Chart */}
       <Card>
         <CardHeader>
-          <CardTitle>Platform Overview</CardTitle>
-          <p className="text-sm text-muted-foreground">Distribution of platform entities</p>
+          <CardTitle>Account verification</CardTitle>
+          <CardDescription>
+            Compare account states without leaving the overview.
+          </CardDescription>
         </CardHeader>
-        <CardContent className="pt-4">
-          <ChartContainer config={platformChartConfig}>
-            <BarChart data={platformData} width={500} height={300}>
-              <CartesianGrid strokeDasharray="3 3" vertical={false} />
-              <XAxis dataKey="category" tickLine={false} tickMargin={10} axisLine={false} />
-              <YAxis tickLine={false} axisLine={false} tickMargin={10} />
-              <ChartTooltip content={<ChartTooltipContent />} />
-              <Bar dataKey="users" fill="var(--color-users)" radius={[8, 8, 0, 0]} />
-              <Bar dataKey="riders" fill="var(--color-riders)" radius={[8, 8, 0, 0]} />
-              <Bar dataKey="restaurants" fill="var(--color-restaurants)" radius={[8, 8, 0, 0]} />
-              <Bar dataKey="referrals" fill="var(--color-referrals)" radius={[8, 8, 0, 0]} />
-            </BarChart>
-          </ChartContainer>
+        <CardContent>
+          <div className="verification-grid">
+            {[
+              { title: "Riders", suffix: "Riders", url: "/riders" },
+              { title: "Restaurants", suffix: "Restaurants", url: "/vendors" },
+            ].map((group) => (
+              <div key={group.suffix} className="verification-section">
+                <div className="flex items-center justify-between mb-4">
+                  <h3 className="font-semibold">{group.title}</h3>
+                  <Link
+                    to={group.url}
+                    className="text-sm text-primary hover:underline"
+                  >
+                    View accounts{" "}
+                    <IconArrowRight size={14} className="inline" />
+                  </Link>
+                </div>
+                <dl className="grid grid-cols-3 gap-3">
+                  {[
+                    {
+                      label: "Verified",
+                      prefix: "verified",
+                      className: "verification-success",
+                    },
+                    {
+                      label: "Pending",
+                      prefix: "pending",
+                      className: "verification-pending",
+                    },
+                    {
+                      label: "Blocked",
+                      prefix: "blocked",
+                      className: "verification-blocked",
+                    },
+                  ].map((state) => (
+                    <div
+                      key={state.prefix}
+                      className={`verification-stat ${state.className}`}
+                    >
+                      <dt className="text-xs">{state.label}</dt>
+                      <dd className="mt-2 text-lg font-semibold tabular-nums">
+                        {loading ? (
+                          <Skeleton className="h-6 w-12" />
+                        ) : (
+                          count(state.prefix + group.suffix)
+                        )}
+                      </dd>
+                    </div>
+                  ))}
+                </dl>
+              </div>
+            ))}
+          </div>
         </CardContent>
       </Card>
-
-      {/* Riders & Restaurants Status */}
-      <div className="grid gap-4 md:grid-cols-2">
-        <Card>
-          <CardHeader>
-            <CardTitle>Riders Status</CardTitle>
-            <p className="text-sm text-muted-foreground">Breakdown of rider accounts</p>
-          </CardHeader>
-          <CardContent className="pt-4">
-            <ChartContainer config={ridersChartConfig}>
-              <AreaChart data={ridersStatusData} width={500} height={300}>
-                <defs>
-                  <linearGradient id="colorVerified" x1="0" y1="0" x2="0" y2="1">
-                    <stop offset="5%" stopColor="var(--color-verified)" stopOpacity={0.8}/>
-                    <stop offset="95%" stopColor="var(--color-verified)" stopOpacity={0.1}/>
-                  </linearGradient>
-                  <linearGradient id="colorPending" x1="0" y1="0" x2="0" y2="1">
-                    <stop offset="5%" stopColor="var(--color-pending)" stopOpacity={0.8}/>
-                    <stop offset="95%" stopColor="var(--color-pending)" stopOpacity={0.1}/>
-                  </linearGradient>
-                  <linearGradient id="colorBlocked" x1="0" y1="0" x2="0" y2="1">
-                    <stop offset="5%" stopColor="var(--color-blocked)" stopOpacity={0.8}/>
-                    <stop offset="95%" stopColor="var(--color-blocked)" stopOpacity={0.1}/>
-                  </linearGradient>
-                  <linearGradient id="colorOnline" x1="0" y1="0" x2="0" y2="1">
-                    <stop offset="5%" stopColor="var(--color-online)" stopOpacity={0.8}/>
-                    <stop offset="95%" stopColor="var(--color-online)" stopOpacity={0.1}/>
-                  </linearGradient>
-                </defs>
-                <CartesianGrid strokeDasharray="3 3" vertical={false} />
-                <XAxis dataKey="status" tickLine={false} tickMargin={10} axisLine={false} />
-                <YAxis tickLine={false} axisLine={false} tickMargin={10} />
-                <ChartTooltip content={<ChartTooltipContent />} />
-                <Area type="monotone" dataKey="verified" stroke="var(--color-verified)" fill="url(#colorVerified)" />
-                <Area type="monotone" dataKey="pending" stroke="var(--color-pending)" fill="url(#colorPending)" />
-                <Area type="monotone" dataKey="blocked" stroke="var(--color-blocked)" fill="url(#colorBlocked)" />
-                <Area type="monotone" dataKey="online" stroke="var(--color-online)" fill="url(#colorOnline)" />
-              </AreaChart>
-            </ChartContainer>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardHeader>
-            <CardTitle>Restaurants Status</CardTitle>
-            <p className="text-sm text-muted-foreground">Breakdown of restaurant accounts</p>
-          </CardHeader>
-          <CardContent className="pt-4">
-            <ChartContainer config={restaurantsChartConfig}>
-              <LineChart data={restaurantsStatusData} width={500} height={300}>
-                <CartesianGrid strokeDasharray="3 3" vertical={false} />
-                <XAxis dataKey="status" tickLine={false} tickMargin={10} axisLine={false} />
-                <YAxis tickLine={false} axisLine={false} tickMargin={10} />
-                <ChartTooltip content={<ChartTooltipContent />} />
-                <Line type="monotone" dataKey="verified" stroke="var(--color-verified)" strokeWidth={3} dot={{ r: 5 }} />
-                <Line type="monotone" dataKey="pending" stroke="var(--color-pending)" strokeWidth={3} dot={{ r: 5 }} />
-                <Line type="monotone" dataKey="blocked" stroke="var(--color-blocked)" strokeWidth={3} dot={{ r: 5 }} />
-                <Line type="monotone" dataKey="open" stroke="var(--color-open)" strokeWidth={3} dot={{ r: 5 }} />
-              </LineChart>
-            </ChartContainer>
-          </CardContent>
-        </Card>
-      </div>
-
-      {/* Verification & Withdrawals */}
-      <div className="grid gap-4 md:grid-cols-2">
-        <Card>
-          <CardHeader>
-            <CardTitle>Verification Distribution</CardTitle>
-            <p className="text-sm text-muted-foreground">All account statuses at a glance</p>
-          </CardHeader>
-          <CardContent className="pt-4">
-            <ChartContainer config={verificationChartConfig}>
-              <PieChart width={500} height={300}>
-                <Pie
-                  data={verificationPieData.filter(item => item.value > 0)}
-                  cx="50%"
-                  cy="50%"
-                  labelLine={false}
-                  label={({ payload, ...props }) => {
-                    const config = verificationChartConfig[payload.name as keyof typeof verificationChartConfig]
-                    return (
-                      <text
-                        cx={props.cx}
-                        cy={props.cy}
-                        x={props.x}
-                        y={props.y}
-                        textAnchor={props.textAnchor}
-                        dominantBaseline={props.dominantBaseline}
-                        className="fill-foreground text-xs font-medium"
-                      >
-                        {`${config?.label}: ${payload.value}`}
-                      </text>
-                    )
-                  }}
-                  outerRadius={100}
-                  dataKey="value"
-                >
-                  {verificationPieData.filter(item => item.value > 0).map((entry, index) => (
-                    <Cell key={`cell-${index}`} fill={entry.fill} />
-                  ))}
-                </Pie>
-                <ChartTooltip content={<ChartTooltipContent hideLabel />} />
-              </PieChart>
-            </ChartContainer>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardHeader>
-            <CardTitle>Withdrawals Overview</CardTitle>
-            <p className="text-sm text-muted-foreground">Withdrawal statistics</p>
-          </CardHeader>
-          <CardContent className="pt-4">
-            <ChartContainer config={withdrawalsChartConfig}>
-              <BarChart data={withdrawalsData} width={500} height={300}>
-                <CartesianGrid strokeDasharray="3 3" vertical={false} />
-                <XAxis dataKey="type" tickLine={false} tickMargin={10} axisLine={false} />
-                <YAxis tickLine={false} axisLine={false} tickMargin={10} allowDecimals={false} />
-                <ChartTooltip content={<ChartTooltipContent />} />
-                <Bar dataKey="total" fill="var(--color-total)" radius={[8, 8, 0, 0]} />
-                <Bar dataKey="pending" fill="var(--color-pending)" radius={[8, 8, 0, 0]} />
-                <Bar dataKey="successful" fill="var(--color-successful)" radius={[8, 8, 0, 0]} />
-              </BarChart>
-            </ChartContainer>
-          </CardContent>
-        </Card>
-      </div>
     </div>
-  )
+  );
 }
