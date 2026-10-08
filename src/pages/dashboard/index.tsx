@@ -1,3 +1,4 @@
+import { SectionHelp } from "@/components/section-help";
 import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 import {
@@ -179,7 +180,7 @@ export default function DashboardPage() {
               id="welcome-title"
               className="text-2xl font-semibold tracking-tight"
             >
-              Welcome back, {firstName}.
+              Welcome back, {firstName}. <SectionHelp title="Operations shortcuts" />
             </h2>
             <p className="mt-2 text-sm">
               Keep orders moving and your team connected.
@@ -220,7 +221,7 @@ export default function DashboardPage() {
       <section className="platform-totals" aria-label="Platform totals">
         {totals.map((item) => (
           <div key={item.key} className="platform-total">
-            <span className="text-sm text-muted-foreground">{item.title}</span>
+            <span className="flex items-center justify-between gap-2 text-sm text-muted-foreground">{item.title}<SectionHelp title={item.title} /></span>
             {loading ? (
               <Skeleton className="my-3 h-9 w-24" />
             ) : (

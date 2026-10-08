@@ -1,3 +1,4 @@
+import { SectionHelp } from "@/components/section-help";
 import { useFirestorePagination } from "@/hooks/use-firestore-pagination";
 import { TablePagination } from "@/components/table-pagination";
 "use client";
@@ -158,7 +159,7 @@ export default function SupportTicketsPage() {
       {/* Left Sidebar - Ticket List */}
       <div className="w-1/3 border-r flex flex-col min-w-[300px]">
         <div className="p-4 border-b bg-muted/30">
-          <h2 className="font-semibold text-lg">Support Tickets</h2>
+          <h2 className="flex items-center justify-between gap-2 font-semibold text-lg">Support Tickets<SectionHelp title="Support Tickets" /></h2>
         </div>
         <ScrollArea className="flex-1 overflow-y-auto">
           <div className="flex flex-col">
@@ -222,7 +223,7 @@ export default function SupportTicketsPage() {
                 </Avatar>
                 <div>
                   <h3 className="font-semibold text-sm">
-                    Ticket #{selectedTicket.id}
+                    Ticket #{selectedTicket.id}<SectionHelp title="Ticket conversation" />
                   </h3>
                   <p className="text-xs text-muted-foreground">
                     User ID: {selectedTicket.userId}
@@ -231,6 +232,7 @@ export default function SupportTicketsPage() {
               </div>
 
               {/* Status Toggle */}
+              <SectionHelp title="Close ticket" />
               <div className="flex items-center gap-2">
                 <Tooltip>
                   <TooltipTrigger>

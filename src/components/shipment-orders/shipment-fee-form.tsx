@@ -5,10 +5,12 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { shipmentOrdersService } from "@/services/shipment-orders.service";
-import type { ShipmentOrder } from "@/types";
+import { IntlShipmentType, type ShipmentOrder } from "@/types";
 
 export function ShipmentFeeForm({ order }: { order: ShipmentOrder }) {
-  const [amount, setAmount] = useState("");
+  const isPayLater = order.shipmentType === IntlShipmentType.express && order.paylater === true;
+  const initialAmount = isPayLater && order.totalAmount != null ? String(order.totalAmount) : "";
+  const [amount, setAmount] = useState(initialAmount);
   const [weight, setWeight] = useState("");
   const [reference, setReference] = useState(() => `shipment-fee-${crypto.randomUUID()}`);
   const [submitting, setSubmitting] = useState(false);
@@ -53,16 +55,16 @@ export function ShipmentFeeForm({ order }: { order: ShipmentOrder }) {
   return (
     <Card>
       <CardHeader>
-        <CardTitle>Additional shipment fee</CardTitle>
-        <CardDescription>Create a checkout link for an additional fee in naira. Sender: {order.senderemailaddress || "No email address"}</CardDescription>
+        <CardTitle>{isPayLater ? "Shipment fee payment" : "Additional shipment fee"}</CardTitle>
+        <CardDescription>{isPayLater ? "Create a checkout link to pay the shipment fee in naira." : "Create a checkout link for an additional fee in naira."} Sender: {order.senderemailaddress || "No email address"}</CardDescription>
       </CardHeader>
       <CardContent>
         <form onSubmit={handleSubmit} className="space-y-4">
           <fieldset disabled={submitting || !!result} className="grid gap-4 sm:grid-cols-2">
             <div className="space-y-2">
-              <Label htmlFor="shipment-fee-amount">Additional fee (₦)</Label>
+              <Label htmlFor="shipment-fee-amount">{isPayLater ? "Shipment fee (₦)" : "Additional fee (₦)"}</Label>
               <Input id="shipment-fee-amount" type="number" min="0.01" step="0.01" required value={amount} onChange={(event) => setAmount(event.target.value)} />
-              <p className="text-sm text-muted-foreground">Enter the additional fee, not the new total.</p>
+              <p className="text-sm text-muted-foreground">{isPayLater ? "Enter the shipment fee to collect from the sender." : "Enter the additional fee, not the new total."}</p>
             </div>
             <div className="space-y-2">
               <Label htmlFor="shipment-fee-weight">Final weight (kg, optional)</Label>
@@ -88,10 +90,10 @@ export function ShipmentFeeForm({ order }: { order: ShipmentOrder }) {
               </div>
               <Button type="button" variant="outline" onClick={() => {
                 setResult(null);
-                setAmount("");
+                setAmount(initialAmount);
                 setWeight("");
                 setReference(`shipment-fee-${crypto.randomUUID()}`);
-              }}>Create another fee</Button>
+              }}>{isPayLater ? "Create another payment link" : "Create another fee"}</Button>
             </div>
           )}
         </form>

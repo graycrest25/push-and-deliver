@@ -1,3 +1,4 @@
+import { SectionHelp } from "@/components/section-help";
 import { AdminAccountsList } from "./admin-accounts-list";
 import { useFirestorePagination } from "@/hooks/use-firestore-pagination";
 import { TablePagination } from "@/components/table-pagination";
@@ -150,6 +151,7 @@ export default function UserManagementPage() {
           </TabsTrigger>
         </TabsList>
         <TabsContent value="users" className="space-y-4 pt-4">
+          <h2 className="flex items-center gap-2 font-semibold">Users<SectionHelp title="Users" /></h2>
           <div className="flex items-center gap-2">
             <IconSearch className="h-5 w-5 shrink-0 text-muted-foreground" />
             <Input
@@ -261,6 +263,7 @@ export default function UserManagementPage() {
           />
         </TabsContent>
         <TabsContent value="admins" className="pt-4">
+          <h2 className="mb-4 flex items-center gap-2 font-semibold">Admin accounts<SectionHelp title="Admins" /></h2>
           <AdminAccountsList
             currentUid={currentUser.id!}
             updatingUid={updatingUid}

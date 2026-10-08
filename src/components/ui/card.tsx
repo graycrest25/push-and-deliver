@@ -1,6 +1,7 @@
 import * as React from "react"
 
 import { cn } from "@/lib/utils"
+import { SectionHelp, sectionTitleText, useTutorialsEnabled } from "@/components/section-help"
 
 function Card({ className, ...props }: React.ComponentProps<"div">) {
   return (
@@ -28,13 +29,18 @@ function CardHeader({ className, ...props }: React.ComponentProps<"div">) {
   )
 }
 
-function CardTitle({ className, ...props }: React.ComponentProps<"div">) {
+function CardTitle({ className, children, ...props }: React.ComponentProps<"div">) {
+  const helpEnabled = useTutorialsEnabled();
+  if (!helpEnabled) return <div data-slot="card-title" className={cn("leading-none font-semibold", className)} {...props}>{children}</div>;
   return (
     <div
       data-slot="card-title"
-      className={cn("leading-none font-semibold", className)}
+      className={cn("flex items-center gap-2 leading-none font-semibold", className)}
       {...props}
-    />
+    >
+      <span className="flex min-w-0 flex-1 flex-wrap items-center gap-2">{children}</span>
+      <SectionHelp title={sectionTitleText(children)} />
+    </div>
   )
 }
 

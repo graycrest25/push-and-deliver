@@ -56,6 +56,8 @@ export default function ShipmentOrderDetailsPage() {
   const [loading, setLoading] = useState(true);
   const [updatingPayment, setUpdatingPayment] = useState(false);
   const [updatingStatus, setUpdatingStatus] = useState(false);
+  const isFinalStatus = order?.orderStatus === ShipmentOrderStatus.cancelled ||
+    order?.orderStatus === ShipmentOrderStatus.deliveredToDestination;
 
   useEffect(() => {
     if (id) {
@@ -92,7 +94,7 @@ export default function ShipmentOrderDetailsPage() {
   };
 
   const handleStatusChange = async (newStatus: string) => {
-    if (!order?.id) return;
+    if (!order?.id || isFinalStatus || updatingStatus || isViewOnly) return;
 
     try {
       setUpdatingStatus(true);
@@ -199,7 +201,7 @@ export default function ShipmentOrderDetailsPage() {
             <Select
               value={order.orderStatus?.toString()}
               onValueChange={handleStatusChange}
-              disabled={updatingStatus || isViewOnly}
+              disabled={updatingStatus || isViewOnly || isFinalStatus}
             >
               <SelectTrigger className="bg-white dark:bg-gray-900">
                 <SelectValue />

@@ -1,3 +1,4 @@
+import { SectionHelp } from "@/components/section-help";
 import { useFirestorePagination } from "@/hooks/use-firestore-pagination";
 import { TablePagination } from "@/components/table-pagination";
 import { getPaginatedDocs } from "@/lib/firestore-pagination";
@@ -1173,7 +1174,7 @@ export default function RiderDetailsPage() {
       {/* Verification Images */}
       {canUploadDocuments && (
         <div className="space-y-4">
-          <h2 className="text-xl font-semibold">Verification Images</h2>
+          <h2 className="flex items-center gap-2 text-xl font-semibold">Verification Images<SectionHelp title="Verification images" /></h2>
           <div className="grid gap-4 md:grid-cols-3">
             <ImageUploadCard
               title={

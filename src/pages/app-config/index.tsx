@@ -1,3 +1,5 @@
+import { SectionHelp } from "@/components/section-help";
+import { TenSecondsForm } from "@/components/game-rules/ten-seconds-form";
 import { TablePagination } from "@/components/table-pagination";
 import { useFirestorePagination } from "@/hooks/use-firestore-pagination";
 "use client";
@@ -198,10 +200,12 @@ export default function AppConfigPage() {
         </div>
       </div>
 
+      <TenSecondsForm />
+
       {/* App Version Configurations */}
       {appVersionConfigs.length > 0 && (
         <div className="space-y-4">
-          <h2 className="text-xl font-semibold">App Version Settings</h2>
+          <h2 className="flex items-center gap-2 text-xl font-semibold">App Version Settings<SectionHelp title="App version settings" /></h2>
           <div className="grid gap-4 md:grid-cols-2">
             {appVersionConfigs.map((config) => (
               <Card key={config.id}>
@@ -296,7 +300,7 @@ export default function AppConfigPage() {
       {/* General Configurations */}
       {generalConfigs.length > 0 && (
         <div className="space-y-4">
-          <h2 className="text-xl font-semibold">General Settings</h2>
+          <h2 className="flex items-center gap-2 text-xl font-semibold">General Settings<SectionHelp title="General settings" /></h2>
           <div className="grid gap-4 md:grid-cols-2">
             {generalConfigs.map((config) => (
               <Card key={config.id} className="md:col-span-2">

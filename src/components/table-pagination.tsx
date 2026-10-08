@@ -1,3 +1,4 @@
+import { SectionHelp } from "@/components/section-help";
 import { Button } from "@/components/ui/button";
 import {
   Select,
@@ -23,7 +24,7 @@ export function TablePagination({
       className="flex flex-wrap items-center justify-between gap-4 px-1 pb-1 pt-5 text-muted-foreground"
     >
       <div className="flex items-center gap-2 text-sm">
-        <span>Rows per page</span>
+        <span>Rows per page</span><SectionHelp title="Table pagination" />
         <Select
           value={String(pagination.pageSize)}
           onValueChange={(value) =>

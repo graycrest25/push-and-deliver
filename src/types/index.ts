@@ -394,6 +394,7 @@ export interface ShipmentOrder {
   orderStatus?: number;
   packingListUrl?: string | null;
   paymentType?: number; // 0 = wallet, 1 = cash
+  paylater?: boolean;
   pndofficeaddress?: string;
   pndofficelocation?: ShipmentLocation;
   receiveremail?: string;

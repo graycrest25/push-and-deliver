@@ -1,3 +1,4 @@
+import { SectionHelp } from "@/components/section-help";
 import { useFirestorePagination } from "@/hooks/use-firestore-pagination";
 import { TablePagination } from "@/components/table-pagination";
 "use client";
@@ -170,7 +171,7 @@ export default function GeneratedReferralsPage() {
     <div className="p-6 space-y-6">
       {/* Header */}
       <div className="flex items-center justify-between">
-        <h1 className="text-2xl font-semibold">Generated Referrals</h1>
+        <h1 className="flex items-center gap-2 text-2xl font-semibold">Generated Referrals<SectionHelp title="Generated referrals" /></h1>
 
         <Dialog open={open} onOpenChange={setOpen}>
           <DialogTrigger asChild>
