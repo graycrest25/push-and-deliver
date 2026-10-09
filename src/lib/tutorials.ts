@@ -53,7 +53,7 @@ export const pageTutorials: Record<string, Tutorial> = {
     ),
     step(
       "Update or collect payment",
-      "On the details page, authorised admins can change an active shipment’s status. Cancelled and delivered shipments are locked. Super admins can create an express shipment checkout link; pay-later orders start with the total amount, while other orders collect an additional fee.",
+      "On the details page, authorised admins can change an active shipment’s status. Cancelled and delivered shipments are locked. Super and regular admins can create an express shipment checkout link; pay-later orders start with the total amount, while other orders collect an additional fee.",
     ),
   ),
   "/restaurant-orders": guide(
@@ -564,7 +564,7 @@ export const sectionTutorials: Record<string, Tutorial> = {
     "Shipment fee payment",
     step(
       "Collect the pay-later shipment fee",
-      "This form creates a checkout link for an express shipment that will be paid later. It is available to super admins. Check the sender email before proceeding; a missing email prevents link creation.",
+      "This form creates a checkout link for an express shipment that will be paid later. It is available to super and regular admins. Check the sender email before proceeding; a missing email prevents link creation.",
     ),
     step(
       "Review the amount",
@@ -583,7 +583,7 @@ export const sectionTutorials: Record<string, Tutorial> = {
     "Additional shipment fee",
     step(
       "Collect an extra shipment charge",
-      "Super admins can use this form to create a checkout link for an additional express shipment fee. Confirm that the sender email is available before proceeding.",
+      "Super and regular admins can use this form to create a checkout link for an additional express shipment fee. Confirm that the sender email is available before proceeding.",
     ),
     step(
       "Enter only the additional amount",

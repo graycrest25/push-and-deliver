@@ -35,8 +35,8 @@ export const shipmentOrdersService = {
     if (!currentUser) throw new Error("Sign in to resolve a shipment fee");
     const idToken = await currentUser.getIdToken(true);
     const { claims } = await currentUser.getIdTokenResult();
-    if (claims.isAdmin !== true || claims.adminType !== "super") {
-      throw new Error("Super admin access is required");
+    if (claims.isAdmin !== true || (claims.adminType !== "super" && claims.adminType !== "regular")) {
+      throw new Error("Super or regular admin access is required");
     }
     const shipment = await getDoc(doc(db, COLLECTION_NAME, input.orderId));
     if (!shipment.exists()) throw new Error("Shipment not found");

@@ -40,11 +40,18 @@ assert.deepEqual(JSON.parse(requests[0].body), {
 });
 await context.service.resolveShipmentFee({ ...input, newweightinKG: 2 });
 assert.equal(JSON.parse(requests[1].body).metadata.newweightinKG, 2);
-for (const adminType of ['regular', 'customercare', 'verifier']) {
+claims = { isAdmin: true, adminType: 'regular' };
+await context.service.resolveShipmentFee(input);
+assert.deepEqual(JSON.parse(requests[2].body), JSON.parse(requests[0].body));
+for (const adminType of ['customercare', 'verifier', '', 'unknown']) {
   claims = { isAdmin: true, adminType };
-  await assert.rejects(context.service.resolveShipmentFee(input), /Super admin/);
+  await assert.rejects(context.service.resolveShipmentFee(input), /Super or regular admin/);
 }
-assert.equal(requests.length, 2);
+for (const adminType of ['super', 'regular']) {
+  claims = { isAdmin: false, adminType };
+  await assert.rejects(context.service.resolveShipmentFee(input), /Super or regular admin/);
+}
+assert.equal(requests.length, 3);
 claims = { isAdmin: true, adminType: 'super' };
 for (const amount of [0, -1, NaN, Infinity]) {
   await assert.rejects(context.service.resolveShipmentFee({ ...input, amount }), /additional fee/);

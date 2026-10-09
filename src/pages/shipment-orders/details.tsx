@@ -286,7 +286,7 @@ export default function ShipmentOrderDetailsPage() {
         </Card>
       </div>
 
-      {isExpress && user?.isAdmin === true && user.adminType === "super" && (
+      {isExpress && user?.isAdmin === true && (user.adminType === "super" || user.adminType === "regular") && (
         <ShipmentFeeForm key={order.id} order={order} />
       )}
 

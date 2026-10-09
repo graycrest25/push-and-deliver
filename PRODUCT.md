@@ -16,7 +16,7 @@ Manage the existing PushNDeliver platform through its Firebase-backed administra
 
 ## Capabilities and Constraints
 
-Preserve existing workflows, data, routes, authentication, and role permissions. Super, regular, customer care, and verifier roles have different access. The additional shipment fee action appears only for super admins on express shipments. Search, filtering, summaries, and exports on paginated lists operate on the current page; preserve that disclosure.
+Preserve existing workflows, data, routes, authentication, and role permissions. Super, regular, customer care, and verifier roles have different access. The additional shipment fee action appears for super and regular admins on express shipments. Search, filtering, summaries, and exports on paginated lists operate on the current page; preserve that disclosure.
 
 ## Brand Commitments
 
