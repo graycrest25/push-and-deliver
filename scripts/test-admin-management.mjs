@@ -128,121 +128,58 @@ assert.equal(
 );
 assert.equal(result.sessionRefreshRequired, true);
 
-// Admin listing uses opaque Auth pagination tokens, not Firestore cursors.
+// Listing reads AdminUsers and uses document IDs as pagination cursors.
 failPostChangeRefresh = false;
-context.URL = URL;
-context.endpoints.listAdminUsers = "https://listAdminUsers-example.a.run.app";
-response = {
-  success: true,
-  count: 1,
-  scannedCount: 100,
-  pageSize: 100,
-  nextPageToken: "NEXT+/=&",
-  users: [
-    {
-      name: "Jane Doe",
-      imageurl: null,
-      email: "jane@example.com",
-      userid: "target",
-      isAdmin: true,
-      adminType: "super",
-    },
-  ],
-};
-let list = await context.listAdminUsers();
-let listRequest = requests.at(-1);
-let listUrl = new URL(listRequest.url);
-assert.equal(listRequest.method, "GET");
-assert.equal(listRequest.headers.Authorization, "Bearer fresh-id-token");
-assert.equal(listRequest.body, undefined);
-assert.equal(listUrl.searchParams.get("pageSize"), "100");
-assert.equal(
-  listUrl.searchParams.has("pageToken"),
-  false,
-  "First requests must omit the token",
-);
+const queries = [];
+let documents = [
+  { id: "doc-1", data: () => ({ name: "Deen Kasim", email: "kzyjrofficial@gmail.com", imageurl: "https://example.com/avatar.jpg", userid: "auth-uid", adminType: "super" }) },
+  { id: "doc-2", data: () => ({ userid: "second-uid", adminType: "regular" }) },
+];
+Object.assign(context, {
+  db: {},
+  collection: (_db, name) => ({ collection: name }),
+  documentId: () => "__name__",
+  orderBy: (field) => ({ orderBy: field }),
+  startAfter: (cursor) => ({ startAfter: cursor }),
+  limit: (value) => ({ limit: value }),
+  query: (...parts) => parts,
+  getDocs: async (parts) => { queries.push(parts); return { docs: documents }; },
+});
+const beforeList = requests.length;
+let list = await context.listAdminUsers({ pageSize: 1 });
+assert.equal(requests.length, beforeList, "Listing must not call the Auth listing endpoint");
+assert.equal(queries[0][0].collection, "AdminUsers");
+assert.equal(queries[0][1].orderBy, "__name__");
+assert.equal(queries[0][2].limit, 2, "Fetch one extra document to detect the next page");
 assert.equal(list.count, 1);
-assert.equal(
-  list.scannedCount,
-  100,
-  "Scanned accounts must not be mistaken for admins returned",
-);
-response = {
-  success: true,
-  count: 0,
-  scannedCount: 10,
-  pageSize: 10,
-  nextPageToken: "CONTINUE",
-  users: [],
-};
-list = await context.listAdminUsers({ pageSize: 10, pageToken: "NEXT+/=&" });
-listUrl = new URL(requests.at(-1).url);
-assert.equal(
-  listUrl.searchParams.get("pageToken"),
-  "NEXT+/=&",
-  "Tokens must round-trip through URL encoding",
-);
-assert.equal(list.count, 0);
-assert.equal(
-  list.nextPageToken,
-  "CONTINUE",
-  "Empty admin batches may still have another page",
-);
-response = {
-  ...response,
-  pageSize: 1000,
-  scannedCount: 1000,
-  nextPageToken: null,
-};
-list = await context.listAdminUsers({ pageSize: 1000 });
+assert.equal(list.nextPageToken, "doc-1");
+assert.equal(list.users[0].userid, "auth-uid", "Role actions use the userid field, not the document ID");
+assert.equal(list.users[0].name, "Deen Kasim");
+assert.equal(list.users[0].email, "kzyjrofficial@gmail.com");
+assert.equal(list.users[0].imageurl, "https://example.com/avatar.jpg");
+assert.equal(list.users[0].isAdmin, true, "The collection does not require an isAdmin field");
+documents = documents.slice(1);
+list = await context.listAdminUsers({ pageSize: 1, pageToken: "doc-1" });
+assert.equal(queries.at(-1)[2].startAfter, "doc-1");
 assert.equal(list.nextPageToken, null);
-response = {
-  success: true,
-  count: 1,
-  pageSize: 10,
-  scannedCount: 68,
-  nextPageToken: null,
-  users: [
-    {
-      name: "Paul David ",
-      imageurl: "",
-      email: "ebinehitadavid@outlook.com",
-      userid: "YZihZDlSfVfv9jqlcWXMp4oa2p23",
-      isAdmin: true,
-      adminType: "super",
-    },
-  ],
-};
-list = await context.listAdminUsers({ pageSize: 10 });
-assert.equal(list.count, 1);
-assert.equal(list.scannedCount, 68);
-assert.equal(list.users[0].imageurl, "");
-assert.equal(list.users[0].adminType, "super");
+assert.equal(list.users[0].name, null);
+documents = [];
+list = await context.listAdminUsers();
+assert.equal(list.count, 0);
 assert.equal(list.nextPageToken, null);
 for (const pageSize of [0, 1001, 2.5])
   await assert.rejects(context.listAdminUsers({ pageSize }), /Page size/);
-await assert.rejects(
-  context.listAdminUsers({ pageToken: "" }),
-  /Omit the page token/,
-);
-statusOk = false;
-response = { success: false, error: "Only super admins can list admin users" };
-await assert.rejects(context.listAdminUsers(), /Only super admins/);
-statusOk = true;
-response = {
-  success: true,
-  count: 99,
-  scannedCount: 100,
-  pageSize: 100,
-  nextPageToken: null,
-  users: [],
-};
-await assert.rejects(context.listAdminUsers(), /invalid admin list response/);
+await assert.rejects(context.listAdminUsers({ pageToken: "" }), /Omit the page token/);
 claims = { isAdmin: true, adminType: "regular" };
-const beforeForbiddenList = requests.length;
+const beforeForbiddenList = queries.length;
 await assert.rejects(context.listAdminUsers(), /Only super admins/);
-assert.equal(requests.length, beforeForbiddenList);
+assert.equal(queries.length, beforeForbiddenList);
 claims = { isAdmin: true, adminType: "super" };
+const controller = new AbortController();
+controller.abort();
+await assert.rejects(context.listAdminUsers({ signal: controller.signal }), /abort/i);
+documents = [{ id: "bad", data: () => ({ userid: "target", adminType: "invalid" }) }];
+await assert.rejects(context.listAdminUsers(), /invalid user ID or admin role/);
 
 let now = 10_000;
 let refreshed = 0;
@@ -306,5 +243,5 @@ assert.ok(
 );
 assert.ok(page.includes("Admin Accounts"));
 console.log(
-  "Admin management tests passed: authenticated requests, removal, access/error handling, response validation, token refresh, refresh failure, focus/interval refresh, cleanup, tab wiring, GET admin listing, opaque token encoding, sparse batches, and final pages.",
+  "Admin management tests passed: authenticated requests, removal, access/error handling, response validation, token refresh, refresh failure, focus/interval refresh, cleanup, tab wiring, AdminUsers field mapping, document cursors, cancellation, and final pages.",
 );

@@ -28,7 +28,7 @@ import type { User } from "@/types";
 import { toast } from "sonner";
 import { Skeleton } from "@/components/ui/skeleton";
 import { ExportButton } from "@/components/ExportButton";
-import { exportToCSV } from "@/lib/csv-export";
+import { exportAdminAccountsCsv } from "@/services/account-export.service";
 import {
   ChartContainer,
   ChartTooltip,
@@ -99,6 +99,7 @@ export default function UsersPage() {
   );
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState("");
+  const [exporting, setExporting] = useState(false);
   const [dateRange, setDateRange] = useState<DateRange | undefined>();
 
   useEffect(() => {
@@ -261,7 +262,7 @@ export default function UsersPage() {
         <div>
           <h1 className="text-3xl font-bold tracking-tight">Users</h1>
           <p className="text-sm text-muted-foreground">
-            Search, filters, summaries, and exports apply to the current page.
+            Search, filters, and summaries apply to the current page. CSV exports include all users in the selected date range. Select a date range to export.
           </p>
           <p className="text-muted-foreground">
             View user wallets and referral information
@@ -289,7 +290,7 @@ export default function UsersPage() {
       <div>
         <h1 className="text-3xl font-bold tracking-tight">Users</h1>
         <p className="text-sm text-muted-foreground">
-          Search, filters, summaries, and exports apply to the current page.
+          Search, filters, and summaries apply to the current page. CSV exports include all users in the selected date range. Select a date range to export.
         </p>
         <p className="text-muted-foreground">
           View user wallets and referral information
@@ -407,31 +408,20 @@ export default function UsersPage() {
             )}
 
             <ExportButton
-              onClick={() => {
-                exportToCSV(
-                  filteredUsers,
-                  [
-                    { header: "Username", accessor: "username" },
-                    { header: "Email", accessor: "email" },
-                    { header: "Phone", accessor: "phonenumber" },
-                    { header: "Wallet Balance", accessor: "walletbalance" },
-                    {
-                      header: "Referral Count",
-                      accessor: (u: User) => referralCounts.get(u.id!) || 0,
-                    },
-                    {
-                      header: "Created At",
-                      accessor: (u: User) =>
-                        u.createdAt instanceof Date
-                          ? u.createdAt.toISOString().split("T")[0]
-                          : "",
-                    },
-                  ],
-                  "users_export",
-                );
-                toast.success("Users exported successfully");
+              loading={exporting}
+              disabled={!dateRange?.from}
+              onClick={async () => {
+                if (!dateRange?.from || exporting) return;
+                setExporting(true);
+                try {
+                  await exportAdminAccountsCsv("users", dateRange.from, dateRange.to ?? dateRange.from);
+                  toast.success("Users exported successfully");
+                } catch (error) {
+                  toast.error(error instanceof Error ? error.message : "Failed to export users.");
+                } finally {
+                  setExporting(false);
+                }
               }}
-              disabled={filteredUsers.length === 0}
             />
           </div>
 

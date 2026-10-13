@@ -77,7 +77,7 @@ export function AdminAccountsList({
         });
         if (controller.signal.aborted || version !== revision.current) return;
         if (index === 0) tokens.current = [undefined];
-        // Tokens refer to batches of Auth accounts, including batches with no admins.
+        // Tokens are AdminUsers document IDs used as Firestore cursors.
         tokens.current[index + 1] = data.nextPageToken ?? undefined;
         setResult(data);
         setPageIndex(index);
@@ -210,7 +210,7 @@ export function AdminAccountsList({
                     : searchTerm
                       ? "No admins match your search on this page."
                       : result?.nextPageToken
-                        ? "No admins in this batch. Select Next to continue."
+                        ? "No admins on this page. Select Next to continue."
                         : "No admin accounts on this page."}
                 </TableCell>
               </TableRow>
@@ -310,7 +310,7 @@ export function AdminAccountsList({
         </div>
         <p role="status" className="text-sm tabular-nums">
           {result
-            ? `Page ${pageIndex + 1} · ${result.count} admins · ${result.scannedCount} accounts checked`
+            ? `Page ${pageIndex + 1} · ${result.count} admins`
             : loading
               ? "Loading admin accounts..."
               : "No page loaded"}

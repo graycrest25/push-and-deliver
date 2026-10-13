@@ -50,7 +50,7 @@ import { VerificationStatus } from "@/types";
 import { toast } from "sonner";
 import { Skeleton } from "@/components/ui/skeleton";
 import { ExportButton } from "@/components/ExportButton";
-import { exportToCSV } from "@/lib/csv-export";
+import { exportAdminAccountsCsv } from "@/services/account-export.service";
 import { DateRangePicker } from "@/components/ui/date-range-picker";
 import type { DateRange } from "react-day-picker";
 import { startOfDay, endOfDay, isWithinInterval } from "date-fns";
@@ -96,6 +96,7 @@ export default function RidersPage() {
   const [searchTerm, setSearchTerm] = useState("");
   const [statusFilter, setStatusFilter] = useState<string>("all");
   const [actionLoading, setActionLoading] = useState<string | null>(null);
+  const [exporting, setExporting] = useState(false);
   const [dateRange, setDateRange] = useState<DateRange | undefined>();
 
   useEffect(() => {
@@ -289,7 +290,7 @@ export default function RidersPage() {
       <div className="space-y-6">
         <div>
           <h1 className="text-3xl font-bold tracking-tight">Riders</h1>
-        <p className="text-sm text-muted-foreground">Search, filters, summaries, and exports apply to the current page.</p>
+        <p className="text-sm text-muted-foreground">Search, filters, and summaries apply to the current page. CSV exports include all riders in the selected date range. Select a date range to export.</p>
           <p className="text-muted-foreground">Manage delivery riders</p>
         </div>
         <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
@@ -313,7 +314,7 @@ export default function RidersPage() {
       {/* Header */}
       <div>
         <h1 className="text-3xl font-bold tracking-tight">Riders</h1>
-        <p className="text-sm text-muted-foreground">Search, filters, summaries, and exports apply to the current page.</p>
+        <p className="text-sm text-muted-foreground">Search, filters, and summaries apply to the current page. CSV exports include all riders in the selected date range. Select a date range to export.</p>
         <p className="text-muted-foreground">
           Manage delivery riders, verification, and wallet balances
         </p>
@@ -559,32 +560,20 @@ export default function RidersPage() {
               </Button>
             )}
             <ExportButton
-              onClick={() => {
-                exportToCSV(
-                  filteredRiders,
-                  [
-                    { header: "Full Name", accessor: "fullname" },
-                    { header: "Email", accessor: "email" },
-                    { header: "Phone", accessor: "phonenumber" },
-                    { header: "Vehicle Type", accessor: "vehicleType" },
-                    { header: "Vehicle Make", accessor: "vehicleMakename" },
-                    { header: "Plate Number", accessor: "plateNumber" },
-                    {
-                      header: "Status",
-                      accessor: (r: Rider) =>
-                        getStatusLabel(r.verificationStatus),
-                    },
-                    {
-                      header: "Online",
-                      accessor: (r: Rider) => (r.onlineStatus ? "Yes" : "No"),
-                    },
-                    { header: "Wallet Balance", accessor: "walletbalance" },
-                  ],
-                  "riders_export",
-                );
-                toast.success("Riders exported successfully");
+              loading={exporting}
+              disabled={!dateRange?.from}
+              onClick={async () => {
+                if (!dateRange?.from || exporting) return;
+                setExporting(true);
+                try {
+                  await exportAdminAccountsCsv("riders", dateRange.from, dateRange.to ?? dateRange.from);
+                  toast.success("Riders exported successfully");
+                } catch (error) {
+                  toast.error(error instanceof Error ? error.message : "Failed to export riders.");
+                } finally {
+                  setExporting(false);
+                }
               }}
-              disabled={filteredRiders.length === 0}
             />
           </div>
 

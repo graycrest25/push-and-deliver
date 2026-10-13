@@ -1,4 +1,5 @@
-import { auth } from "@/lib/firebase";
+import { collection, documentId, getDocs, limit, orderBy, query, startAfter } from "firebase/firestore";
+import { auth, db } from "@/lib/firebase";
 import { endpoints } from "@/lib/endpoint";
 import { isAdminType, type AdminType } from "@/lib/admin-access";
 
@@ -23,7 +24,6 @@ export interface AdminAccount {
 export interface ListAdminUsersResponse {
   success: true;
   count: number;
-  scannedCount: number;
   pageSize: number;
   nextPageToken: string | null;
   users: AdminAccount[];
@@ -45,55 +45,53 @@ export async function listAdminUsers(
   }
   const currentUser = auth.currentUser;
   if (!currentUser) throw new Error("Sign in to list admin accounts.");
-  const idToken = await currentUser.getIdToken(true);
+  options.signal?.throwIfAborted();
+  await currentUser.getIdToken(true);
   const { claims } = await currentUser.getIdTokenResult();
   if (claims.isAdmin !== true || claims.adminType !== "super") {
     throw new Error("Only super admins can list admin users");
   }
   if (auth.currentUser?.uid !== currentUser.uid)
     throw new Error("Your session changed. Please try again.");
-  const url = new URL(endpoints.listAdminUsers);
-  url.searchParams.set("pageSize", String(pageSize));
-  if (options.pageToken !== undefined)
-    url.searchParams.set("pageToken", options.pageToken);
-  const response = await fetch(url.toString(), {
-    method: "GET",
-    headers: { Authorization: `Bearer ${idToken}` },
-    signal: options.signal,
+  options.signal?.throwIfAborted();
+  const snapshot = await getDocs(
+    query(
+      collection(db, "AdminUsers"),
+      orderBy(documentId()),
+      ...(options.pageToken ? [startAfter(options.pageToken)] : []),
+      limit(pageSize + 1),
+    ),
+  );
+  options.signal?.throwIfAborted();
+  if (auth.currentUser?.uid !== currentUser.uid)
+    throw new Error("Your session changed. Please try again.");
+  const documents = snapshot.docs.slice(0, pageSize);
+  const users: AdminAccount[] = documents.map((document) => {
+    const data = document.data();
+    if (
+      typeof data.userid !== "string" || !data.userid.trim() ||
+      !isAdminType(data.adminType)
+    ) {
+      throw new Error("An AdminUsers document has an invalid user ID or admin role.");
+    }
+    return {
+      userid: data.userid,
+      adminType: data.adminType,
+      isAdmin: true,
+      name: typeof data.name === "string" ? data.name : null,
+      email: typeof data.email === "string" ? data.email : null,
+      imageurl: typeof data.imageurl === "string" ? data.imageurl : null,
+    };
   });
-  const data = await response.json().catch(() => null);
-  if (!response.ok || data?.success !== true) {
-    throw new Error(
-      (typeof data?.error === "string" && data.error) ||
-        "Failed to load admin accounts.",
-    );
-  }
-  if (
-    !Array.isArray(data.users) ||
-    !Number.isInteger(data.count) ||
-    data.count !== data.users.length ||
-    data.pageSize !== pageSize ||
-    !Number.isInteger(data.scannedCount) ||
-    data.scannedCount < data.count ||
-    !(
-      data.nextPageToken === null ||
-      (typeof data.nextPageToken === "string" && data.nextPageToken.length > 0)
-    ) ||
-    !data.users.every(
-      (user: AdminAccount) =>
-        user &&
-        typeof user.userid === "string" &&
-        user.userid.length > 0 &&
-        user.isAdmin === true &&
-        isAdminType(user.adminType) &&
-        (user.name === null || typeof user.name === "string") &&
-        (user.imageurl === null || typeof user.imageurl === "string") &&
-        (user.email === null || typeof user.email === "string"),
-    )
-  ) {
-    throw new Error("The server returned an invalid admin list response.");
-  }
-  return data as ListAdminUsersResponse;
+  return {
+    success: true,
+    count: users.length,
+    pageSize,
+    nextPageToken: snapshot.docs.length > pageSize
+      ? documents[documents.length - 1].id
+      : null,
+    users,
+  };
 }
 
 export async function manageAdminStatus(
