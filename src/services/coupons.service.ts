@@ -3,39 +3,62 @@ import {
   collection,
   doc,
   getDoc,
-  addDoc,
   updateDoc,
   deleteDoc,
   query,
   where,
   orderBy,
-  Timestamp,
 } from "firebase/firestore";
-import { db } from "@/lib/firebase";
+import { endpoints } from "@/lib/endpoint";
+import { auth, db } from "@/lib/firebase";
 import type { Coupon } from "@/types";
+
+export type CreateAdminCouponRequest = {
+  percentageDiscount: number;
+} & (
+  | { canExpire?: false; expTime?: null }
+  | { canExpire: true; expTime: "24hrs" | "48hrs" }
+);
 
 const COLLECTION_NAME = "Coupons";
 
 export const couponsService = {
-  // Create a new coupon
-  async createCoupon(
-    couponData: Omit<Coupon, "id" | "createdAt">
-  ): Promise<Coupon> {
-    try {
-      const now = new Date();
-      const docRef = await addDoc(collection(db, COLLECTION_NAME), {
-        ...couponData,
-        createdAt: Timestamp.fromDate(now),
-      });
-
-      return {
-        id: docRef.id,
-        ...couponData,
-        createdAt: now,
-      };
-    } catch (error) {
-      console.error("Error creating coupon:", error);
-      throw error;
+  async createCoupon(couponData: CreateAdminCouponRequest): Promise<void> {
+    if (!Number.isInteger(couponData.percentageDiscount) ||
+        couponData.percentageDiscount < 1 || couponData.percentageDiscount > 100) {
+      throw new Error("Enter a whole-number percentage from 1 to 100.");
+    }
+    if (couponData.canExpire !== undefined && typeof couponData.canExpire !== "boolean") {
+      throw new Error("Coupon expiry must be enabled or disabled.");
+    }
+    if (couponData.canExpire && !["24hrs", "48hrs"].includes(couponData.expTime ?? "")) {
+      throw new Error("Choose a 24-hour or 48-hour expiry.");
+    }
+    const currentUser = auth.currentUser;
+    if (!currentUser) throw new Error("Sign in to create coupons.");
+    const token = await currentUser.getIdToken(true);
+    const { claims } = await currentUser.getIdTokenResult();
+    if (claims.isAdmin !== true || !["super", "regular"].includes(String(claims.adminType))) {
+      throw new Error("Super or regular admin access is required to create coupons.");
+    }
+    if (auth.currentUser?.uid !== currentUser.uid) {
+      throw new Error("Your session changed. Please try again.");
+    }
+    const body = couponData.canExpire
+      ? { percentageDiscount: couponData.percentageDiscount, canExpire: true, expTime: couponData.expTime }
+      : { percentageDiscount: couponData.percentageDiscount };
+    const response = await fetch(endpoints.createAdminCoupon, {
+      method: "POST",
+      headers: { Authorization: `Bearer ${token}`, "Content-Type": "application/json" },
+      body: JSON.stringify(body),
+    });
+    const data = await response.json().catch(() => null);
+    if (!response.ok || data?.success === false) {
+      throw new Error(
+        (typeof data?.error === "string" && data.error) ||
+        (typeof data?.message === "string" && data.message) ||
+        "Failed to create coupon. Please try again.",
+      );
     }
   },
 

@@ -231,6 +231,8 @@ export interface Notification {
 }
 
 export interface Coupon {
+  canExpire?: boolean;
+  expTime?: "24hrs" | "48hrs" | null;
   id?: string;
   createdAt?: Timestamp | Date;
   isActive: boolean;

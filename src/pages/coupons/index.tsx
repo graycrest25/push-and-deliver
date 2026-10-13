@@ -37,6 +37,7 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Switch } from "@/components/ui/switch";
 import { couponsService } from "@/services/coupons.service";
 import type { Coupon } from "@/types";
@@ -49,15 +50,17 @@ import { useCurrentUser } from "@/contexts/UserContext";
 export default function CouponsPage() {
   const pagination = useFirestorePagination();
   const { user } = useCurrentUser();
+  const canCreate = user?.isAdmin === true && (user.adminType === "super" || user.adminType === "regular");
   const isAdminViewOnly = user?.adminType === "customercare";
 
   const [coupons, setCoupons] = useState<Coupon[]>([]);
   const [loading, setLoading] = useState(true);
   const [editingCoupon, setEditingCoupon] = useState<Coupon | null>(null);
   const [isCreateOpen, setIsCreateOpen] = useState(false);
-  const [createValues, setCreateValues] = useState({
-    percentageDiscount: "",
-  });
+  const [createValues, setCreateValues] = useState<{
+    percentageDiscount: string;
+    expiry: "none" | "24hrs" | "48hrs";
+  }>({ percentageDiscount: "", expiry: "none" });
   const [editValues, setEditValues] = useState({
     percentageDiscount: "",
     isActive: false,
@@ -83,25 +86,25 @@ export default function CouponsPage() {
   };
 
   const handleCreateCoupon = async () => {
-    const discount = parseFloat(createValues.percentageDiscount);
-    if (isNaN(discount) || discount <= 0 || discount > 100) {
-      toast.error("Please enter a valid percentage (1-100)");
+    if (createLoading || !canCreate) return;
+    const discount = Number(createValues.percentageDiscount);
+    if (!Number.isInteger(discount) || discount < 1 || discount > 100) {
+      toast.error("Enter a whole-number percentage from 1 to 100.");
       return;
     }
 
     try {
       setCreateLoading(true);
-      await couponsService.createCoupon({
-        percentageDiscount: discount,
-        isActive: true,
-      });
+      await couponsService.createCoupon(createValues.expiry === "none"
+        ? { percentageDiscount: discount }
+        : { percentageDiscount: discount, canExpire: true, expTime: createValues.expiry });
       toast.success("Coupon created successfully");
       setIsCreateOpen(false);
-      setCreateValues({ percentageDiscount: "" });
+      setCreateValues({ percentageDiscount: "", expiry: "none" });
       await loadCoupons();
     } catch (error) {
       console.error("Error creating coupon:", error);
-      toast.error("Failed to create coupon");
+      toast.error(error instanceof Error ? error.message : "Failed to create coupon");
     } finally {
       setCreateLoading(false);
     }
@@ -186,8 +189,8 @@ export default function CouponsPage() {
           <h1 className="text-3xl font-bold tracking-tight">Coupons</h1>
           <p className="text-muted-foreground">Manage your platform coupons</p>
         </div>
-        {!isAdminViewOnly && (
-          <Dialog open={isCreateOpen} onOpenChange={setIsCreateOpen}>
+        {canCreate && (
+          <Dialog open={isCreateOpen} onOpenChange={(open) => { if (!createLoading) setIsCreateOpen(open); }}>
             <DialogTrigger asChild>
               <Button>
                 <Plus className="mr-2 h-4 w-4" />
@@ -198,7 +201,7 @@ export default function CouponsPage() {
               <DialogHeader>
                 <DialogTitle>Create Coupon</DialogTitle>
                 <DialogDescription>
-                  Create a new discount coupon for your users.
+                  Create a coupon template. Expiry starts when each user receives the coupon.
                 </DialogDescription>
               </DialogHeader>
               <div className="grid gap-4 py-4">
@@ -209,19 +212,37 @@ export default function CouponsPage() {
                   <Input
                     id="create-percentage"
                     type="number"
+                    min={1}
+                    max={100}
+                    step={1}
+                    disabled={createLoading}
                     value={createValues.percentageDiscount}
                     onChange={(e) =>
                       setCreateValues({
+                        ...createValues,
                         percentageDiscount: e.target.value,
                       })
                     }
                     placeholder="e.g. 50"
                   />
                 </div>
+                <div className="grid gap-2">
+                  <Label htmlFor="create-expiry">Expiry after receipt</Label>
+                  <Select value={createValues.expiry} disabled={createLoading}
+                    onValueChange={(expiry: "none" | "24hrs" | "48hrs") => setCreateValues({ ...createValues, expiry })}>
+                    <SelectTrigger id="create-expiry"><SelectValue /></SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="none">Does not expire</SelectItem>
+                      <SelectItem value="24hrs">24 hours</SelectItem>
+                      <SelectItem value="48hrs">48 hours</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
               </div>
               <DialogFooter>
                 <Button
                   variant="outline"
+                  disabled={createLoading}
                   onClick={() => setIsCreateOpen(false)}
                 >
                   Cancel
@@ -248,6 +269,7 @@ export default function CouponsPage() {
                 <TableRow className="bg-muted/50">
                   <TableHead>Coupon ID</TableHead>
                   <TableHead>Percentage Discount</TableHead>
+                  <TableHead>Expiry after receipt</TableHead>
                   <TableHead>Date Created</TableHead>
                   <TableHead>Status</TableHead>
                   {!isAdminViewOnly && (
@@ -259,7 +281,7 @@ export default function CouponsPage() {
                 {coupons.length === 0 ? (
                   <TableRow>
                     <TableCell
-                      colSpan={isAdminViewOnly ? 4 : 5}
+                      colSpan={isAdminViewOnly ? 5 : 6}
                       className="text-center text-muted-foreground py-8"
                     >
                       No coupons found
@@ -273,6 +295,9 @@ export default function CouponsPage() {
                       </TableCell>
                       <TableCell className="font-medium">
                         {coupon.percentageDiscount}%
+                      </TableCell>
+                      <TableCell>
+                        {coupon.canExpire ? (coupon.expTime === "24hrs" ? "24 hours" : coupon.expTime === "48hrs" ? "48 hours" : "Unknown") : "Does not expire"}
                       </TableCell>
                       <TableCell>
                         {coupon.createdAt

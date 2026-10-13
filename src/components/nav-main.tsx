@@ -3,6 +3,7 @@ import { Link, useLocation } from "react-router-dom";
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Label } from "@/components/ui/label";
 import { couponsService } from "@/services/coupons.service";
 import { toast } from "sonner";
@@ -41,8 +42,8 @@ export function NavMain({
   const { setOpenMobile, isMobile } = useSidebar();
   const { user } = useCurrentUser();
   const adminType = user?.adminType || "customercare";
-  const isValidAdmin =
-    user?.adminType === "super" || user?.adminType === "regular";
+  const isValidAdmin = user?.isAdmin === true &&
+    (user.adminType === "super" || user.adminType === "regular");
 
   return (
     <SidebarGroup className="p-0">
@@ -64,7 +65,7 @@ export function NavMain({
                   <DialogHeader>
                     <DialogTitle>Create Coupon</DialogTitle>
                     <DialogDescription>
-                      Fill in the details below to create a new coupon.
+                      Create a coupon template. Expiry starts when each user receives the coupon.
                     </DialogDescription>
                   </DialogHeader>
                   <CouponForm onSuccess={() => setIsDialogOpen(false)} />
@@ -120,31 +121,33 @@ export function NavMain({
 function CouponForm({ onSuccess }: { onSuccess: () => void }) {
   const [percentageDiscount, setPercentageDiscount] = useState("");
   const [loading, setLoading] = useState(false);
+  const [expiry, setExpiry] = useState<"none" | "24hrs" | "48hrs">("none");
 
   const handleCreateCoupon = async () => {
+    if (loading) return;
     if (!percentageDiscount) {
       toast.error("Please enter a percentage discount");
       return;
     }
 
-    const discount = parseFloat(percentageDiscount);
-    if (isNaN(discount) || discount <= 0 || discount > 100) {
-      toast.error("Please enter a valid percentage (1-100)");
+    const discount = Number(percentageDiscount);
+    if (!Number.isInteger(discount) || discount < 1 || discount > 100) {
+      toast.error("Enter a whole-number percentage from 1 to 100.");
       return;
     }
 
     try {
       setLoading(true);
-      await couponsService.createCoupon({
-        percentageDiscount: discount,
-        isActive: true,
-      });
+      await couponsService.createCoupon(expiry === "none"
+        ? { percentageDiscount: discount }
+        : { percentageDiscount: discount, canExpire: true, expTime: expiry });
       toast.success("Coupon created successfully");
       setPercentageDiscount("");
+      setExpiry("none");
       onSuccess();
     } catch (error) {
       console.error("Error creating coupon:", error);
-      toast.error("Failed to create coupon");
+      toast.error(error instanceof Error ? error.message : "Failed to create coupon");
     } finally {
       setLoading(false);
     }
@@ -157,10 +160,25 @@ function CouponForm({ onSuccess }: { onSuccess: () => void }) {
         <Input
           id="percentageDiscount"
           type="number"
+          min={1}
+          max={100}
+          step={1}
+          disabled={loading}
           placeholder="e.g. 50"
           value={percentageDiscount}
           onChange={(e) => setPercentageDiscount(e.target.value)}
         />
+      </div>
+      <div className="grid gap-2">
+        <Label htmlFor="sidebar-coupon-expiry">Expiry after receipt</Label>
+        <Select value={expiry} disabled={loading} onValueChange={(value: "none" | "24hrs" | "48hrs") => setExpiry(value)}>
+          <SelectTrigger id="sidebar-coupon-expiry"><SelectValue /></SelectTrigger>
+          <SelectContent>
+            <SelectItem value="none">Does not expire</SelectItem>
+            <SelectItem value="24hrs">24 hours</SelectItem>
+            <SelectItem value="48hrs">48 hours</SelectItem>
+          </SelectContent>
+        </Select>
       </div>
       <Button onClick={handleCreateCoupon} disabled={loading}>
         {loading ? "Creating..." : "Create Coupon"}
