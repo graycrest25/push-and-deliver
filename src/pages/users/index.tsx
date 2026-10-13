@@ -47,7 +47,6 @@ import {
 } from "recharts";
 import { DateRangePicker } from "@/components/ui/date-range-picker";
 import type { DateRange } from "react-day-picker";
-import { startOfDay, endOfDay, isWithinInterval } from "date-fns";
 
 const formatAmount = (amount: number) => {
   return amount.toLocaleString("en-US", {
@@ -141,28 +140,7 @@ export default function UsersPage() {
       u.email?.toLowerCase().includes(searchTerm.toLowerCase()) ||
       u.id?.toLowerCase().includes(searchTerm.toLowerCase());
 
-    // Date range filter
-    let matchesDateRange = true;
-    if (dateRange?.from && u.createdAt) {
-      const createdDate =
-        u.createdAt instanceof Date ? u.createdAt : u.createdAt.toDate();
-
-      if (dateRange.to) {
-        // Full range selected
-        matchesDateRange = isWithinInterval(createdDate, {
-          start: startOfDay(dateRange.from),
-          end: endOfDay(dateRange.to),
-        });
-      } else {
-        // Only from date selected (single day)
-        matchesDateRange = isWithinInterval(createdDate, {
-          start: startOfDay(dateRange.from),
-          end: endOfDay(dateRange.from),
-        });
-      }
-    }
-
-    return matchesSearch && matchesDateRange;
+    return matchesSearch;
   });
 
   const totalUsers = users.length;
@@ -262,7 +240,7 @@ export default function UsersPage() {
         <div>
           <h1 className="text-3xl font-bold tracking-tight">Users</h1>
           <p className="text-sm text-muted-foreground">
-            Search, filters, and summaries apply to the current page. CSV exports include all users in the selected date range. Select a date range to export.
+            Search, filters, and summaries apply to the current page. The date range applies only to CSV exports, which include all users in the selected date range. Select a date range to export.
           </p>
           <p className="text-muted-foreground">
             View user wallets and referral information
@@ -290,7 +268,7 @@ export default function UsersPage() {
       <div>
         <h1 className="text-3xl font-bold tracking-tight">Users</h1>
         <p className="text-sm text-muted-foreground">
-          Search, filters, and summaries apply to the current page. CSV exports include all users in the selected date range. Select a date range to export.
+          Search, filters, and summaries apply to the current page. The date range applies only to CSV exports, which include all users in the selected date range. Select a date range to export.
         </p>
         <p className="text-muted-foreground">
           View user wallets and referral information
@@ -403,7 +381,7 @@ export default function UsersPage() {
                 size="sm"
                 onClick={() => setDateRange(undefined)}
               >
-                Clear Date
+                Clear Export Dates
               </Button>
             )}
 

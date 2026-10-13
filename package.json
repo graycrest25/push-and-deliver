@@ -9,6 +9,7 @@
     "test:pagination": "node scripts/test-pagination.mjs",
     "test:admin-management": "node scripts/test-admin-management.mjs",
     "test:admin-list": "node scripts/test-admin-list.mjs",
+    "test:withdrawal-export": "node scripts/test-withdrawal-export.mjs",
     "test:account-export": "node scripts/test-account-export.mjs",
     "test:navigation": "node scripts/test-navigation.mjs",
     "test:shipment-fee": "node scripts/test-shipment-fee.mjs",

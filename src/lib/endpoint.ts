@@ -10,6 +10,9 @@ const firebaseEndpoint = (name: string): string => {
 };
 
 export const endpoints = {
+  get exportWithdrawalsCsv() {
+    return firebaseEndpoint("exportWithdrawalsCsv");
+  },
   get exportAdminAccountsCsv() {
     return firebaseEndpoint("exportAdminAccountsCsv");
   },

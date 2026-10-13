@@ -53,7 +53,6 @@ import { ExportButton } from "@/components/ExportButton";
 import { exportAdminAccountsCsv } from "@/services/account-export.service";
 import { DateRangePicker } from "@/components/ui/date-range-picker";
 import type { DateRange } from "react-day-picker";
-import { startOfDay, endOfDay, isWithinInterval } from "date-fns";
 
 const formatAmount = (amount: number) => {
   return amount.toLocaleString("en-US", {
@@ -125,28 +124,7 @@ export default function RidersPage() {
     const matchesStatus =
       statusFilter === "all" || r.verificationStatus === statusFilter;
 
-    // Date range filter
-    let matchesDateRange = true;
-    if (dateRange?.from && r.createdAt) {
-      const createdDate =
-        r.createdAt instanceof Date ? r.createdAt : r.createdAt.toDate(); // Convert Firestore Timestamp to Date
-
-      if (dateRange.to) {
-        // Both from and to dates selected
-        matchesDateRange = isWithinInterval(createdDate, {
-          start: startOfDay(dateRange.from),
-          end: endOfDay(dateRange.to),
-        });
-      } else {
-        // Only from date selected
-        matchesDateRange = isWithinInterval(createdDate, {
-          start: startOfDay(dateRange.from),
-          end: endOfDay(dateRange.from),
-        });
-      }
-    }
-
-    return matchesSearch && matchesStatus && matchesDateRange;
+    return matchesSearch && matchesStatus;
   });
 
   const handleVerify = async (id: string) => {
@@ -290,7 +268,7 @@ export default function RidersPage() {
       <div className="space-y-6">
         <div>
           <h1 className="text-3xl font-bold tracking-tight">Riders</h1>
-        <p className="text-sm text-muted-foreground">Search, filters, and summaries apply to the current page. CSV exports include all riders in the selected date range. Select a date range to export.</p>
+        <p className="text-sm text-muted-foreground">Search, filters, and summaries apply to the current page. The date range applies only to CSV exports, which include all riders in the selected date range. Select a date range to export.</p>
           <p className="text-muted-foreground">Manage delivery riders</p>
         </div>
         <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
@@ -314,7 +292,7 @@ export default function RidersPage() {
       {/* Header */}
       <div>
         <h1 className="text-3xl font-bold tracking-tight">Riders</h1>
-        <p className="text-sm text-muted-foreground">Search, filters, and summaries apply to the current page. CSV exports include all riders in the selected date range. Select a date range to export.</p>
+        <p className="text-sm text-muted-foreground">Search, filters, and summaries apply to the current page. The date range applies only to CSV exports, which include all riders in the selected date range. Select a date range to export.</p>
         <p className="text-muted-foreground">
           Manage delivery riders, verification, and wallet balances
         </p>
@@ -553,10 +531,10 @@ export default function RidersPage() {
               onDateRangeChange={setDateRange}
             />
 
-            {/* Clear Date Filter Button */}
+            {/* Clear Export Dates Filter Button */}
             {dateRange?.from && (
               <Button variant="outline" onClick={() => setDateRange(undefined)}>
-                Clear Date
+                Clear Export Dates
               </Button>
             )}
             <ExportButton

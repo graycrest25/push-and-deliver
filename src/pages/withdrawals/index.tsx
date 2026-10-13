@@ -1,4 +1,4 @@
-import { getUserTypeLabel, isUserTypeEqual, withdrawalDate, canEditWithdrawal } from "@/lib/withdrawal-utils";
+import { getUserTypeLabel, isUserTypeEqual, canEditWithdrawal } from "@/lib/withdrawal-utils";
 import { useFirestorePagination } from "@/hooks/use-firestore-pagination";
 import { TablePagination } from "@/components/table-pagination";
 
@@ -68,10 +68,9 @@ import {
   CartesianGrid,
 } from "recharts";
 import { ExportButton } from "@/components/ExportButton";
-import { exportToCSV } from "@/lib/csv-export";
+import { exportWithdrawalsCsv } from "@/services/withdrawal-export.service";
 import { DateRangePicker } from "@/components/ui/date-range-picker";
 import type { DateRange } from "react-day-picker";
-import { startOfDay, endOfDay, isWithinInterval } from "date-fns";
 
 const formatAmount = (amount: number) => {
   return amount.toLocaleString("en-US", {
@@ -126,6 +125,7 @@ export default function WithdrawalsPage() {
     null,
   );
   const [newStatus, setNewStatus] = useState<string>("");
+  const [exporting, setExporting] = useState(false);
   const [dateRange, setDateRange] = useState<DateRange | undefined>();
 
   useEffect(() => {
@@ -159,17 +159,7 @@ export default function WithdrawalsPage() {
       w.status?.toString() === statusFilter ||
       getStatusLabel(w.status) === statusFilter;
 
-    // Date filter
-    let matchesDateRange = true;
-    if (dateRange?.from) {
-      const createdDate = withdrawalDate(w.createdAt);
-      matchesDateRange = !!createdDate && isWithinInterval(createdDate, {
-        start: startOfDay(dateRange.from),
-        end: endOfDay(dateRange.to ?? dateRange.from),
-      });
-    }
-
-    return matchesSearch && matchesStatus && matchesDateRange;
+    return matchesSearch && matchesStatus;
   });
 
   const handleEditClick = (withdrawal: Withdrawal) => {
@@ -270,7 +260,7 @@ export default function WithdrawalsPage() {
         <div>
           <h1 className="text-3xl font-bold tracking-tight">Withdrawals</h1>
           <p className="text-sm text-muted-foreground">
-            Search, filters, summaries, and exports apply to the current page.
+            Search, filters, and summaries apply to the current page. The date range applies only to CSV exports. Select a status and date range to export all matching withdrawals.
           </p>
           <p className="text-muted-foreground">Manage withdrawal requests</p>
         </div>
@@ -296,7 +286,7 @@ export default function WithdrawalsPage() {
       <div>
         <h1 className="text-3xl font-bold tracking-tight">Withdrawals</h1>
         <p className="text-sm text-muted-foreground">
-          Search, filters, summaries, and exports apply to the current page.
+          Search, filters, and summaries apply to the current page. The date range applies only to CSV exports. Select a status and date range to export all matching withdrawals.
         </p>
         <p className="text-muted-foreground">
           Manage withdrawal requests and update their status
@@ -385,7 +375,7 @@ export default function WithdrawalsPage() {
         </CardHeader>
         <CardContent>
           {/* Search and Filter */}
-          <div className="mb-6 flex gap-2">
+          <div className="mb-6 flex flex-wrap items-center gap-2">
             <div className="relative flex-1">
               <Search className="absolute left-2 top-3 h-4 w-4 text-muted-foreground" />
               <Input
@@ -407,7 +397,7 @@ export default function WithdrawalsPage() {
                 <SelectItem value="3">Reversed</SelectItem>
               </SelectContent>
             </Select>
-            {/* <DateRangePicker
+            <DateRangePicker
               dateRange={dateRange}
               onDateRangeChange={setDateRange}
               className="w-full sm:w-auto"
@@ -419,34 +409,27 @@ export default function WithdrawalsPage() {
                 size="sm"
                 onClick={() => setDateRange(undefined)}
               >
-                Clear Date
+                Clear Export Dates
               </Button>
-            )} */}
+            )}
             <ExportButton
-              onClick={() => {
-                exportToCSV(
-                  filteredWithdrawals,
-                  [
-                    { header: "Account Name", accessor: "accountname" },
-                    { header: "Bank Name", accessor: "bankname" },
-                    { header: "Account Number", accessor: "accountnumber" },
-                    { header: "Amount", accessor: "amount" },
-                    {
-                      header: "User Type",
-                      accessor: (w) => getUserTypeLabel(w.userType),
-                    },
-                    {
-                      header: "Status",
-                      accessor: (w) => getStatusLabel(w.status),
-                    },
-                    {
-                      header: "Date",
-                      accessor: (w) =>
-                        w.createdAt ? w.createdAt.toString() : "N/A",
-                    },
-                  ],
-                  "withdrawals.csv",
-                );
+              loading={exporting}
+              disabled={!dateRange?.from || statusFilter === "all"}
+              onClick={async () => {
+                if (!dateRange?.from || exporting || statusFilter === "all") return;
+                setExporting(true);
+                try {
+                  await exportWithdrawalsCsv(
+                    getStatusLabel(statusFilter) as "Pending" | "Successful" | "Failed" | "Reversed",
+                    dateRange.from,
+                    dateRange.to ?? dateRange.from,
+                  );
+                  toast.success("Withdrawals exported successfully");
+                } catch (error) {
+                  toast.error(error instanceof Error ? error.message : "Failed to export withdrawals.");
+                } finally {
+                  setExporting(false);
+                }
               }}
             />
           </div>
