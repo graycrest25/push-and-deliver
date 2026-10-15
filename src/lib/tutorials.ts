@@ -374,7 +374,7 @@ export const pageTutorials: Record<string, Tutorial> = {
     "User activation",
     step("Read the page summary", "Super admins can review activation rate, average time, and record counts for the returned page only. All order statuses count across rides, shipments, restaurant, and product orders. Invalid records are excluded from rate and average calculations."),
     step("Find a single user", "Enter an exact user ID and choose Look up. Single-user lookup does not send pagination parameters. Choose Show all users to return to the first report page."),
-    step("Move through the report", "Use Next while another page is available, or Previous to revisit a page. Changing Users per page starts at page one. Dates use Lagos time and durations retain fractional days."),
+    step("Move through the report", "Use Next while another page is available, or Previous to revisit a page. Changing Users per page starts at page one. Dates use Lagos time. Individual times under one day show the first-order timestamp; longer durations and the average are rounded up to whole days."),
   ),
   "/head-offices": guide(
     "Head offices",

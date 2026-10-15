@@ -47,7 +47,13 @@ function dateLabel(value: string | null) {
 function daysLabel(value: number | null) {
   return value === null
     ? "—"
-    : `${value.toLocaleString(undefined, { maximumSignificantDigits: 6 })} days`;
+    : `${Math.ceil(value).toLocaleString()} ${Math.ceil(value) === 1 ? "day" : "days"}`;
+}
+
+function firstOrderTimeLabel(days: number | null, firstOrderAt: string | null) {
+  return days !== null && days >= 0 && days < 1
+    ? dateLabel(firstOrderAt)
+    : daysLabel(days);
 }
 
 export default function UserActivationPage() {
@@ -322,7 +328,7 @@ function UserActivationReport() {
                       {dateLabel(user.firstOrderAt)}
                     </TableCell>
                     <TableCell className="whitespace-nowrap tabular-nums">
-                      {daysLabel(user.timeToFirstOrderDays)}
+                      {firstOrderTimeLabel(user.timeToFirstOrderDays, user.firstOrderAt)}
                     </TableCell>
                     <TableCell>
                       <Badge
