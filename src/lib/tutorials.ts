@@ -32,6 +32,10 @@ export const pageTutorials: Record<string, Tutorial> = {
       "Review the counts for users, riders, restaurants, and merchants to understand the platform. Use Refresh to request the latest figures. If a figure could not load, refresh before relying on it.",
     ),
     step(
+      "Review weekly growth and rider activity",
+      "Super admins can review new users and unique riders with a completed order each Monday–Sunday week in Lagos time. Choose 1–52 weeks and an optional inclusive end date. The final week stops at that date; coverage figures flag missing completion dates or rider IDs.",
+    ),
+    step(
       "Find work that needs attention",
       "Review Needs attention for pending operational work, then follow its links to the relevant list. The shortcuts at the top also take you directly to the order areas available to your role.",
     ),
@@ -46,7 +50,10 @@ export const pageTutorials: Record<string, Tutorial> = {
       "Find a shipment",
       "Use the search field and shipment or clearance filters to narrow the loaded records. Check the shipment ID, sender, amount, and status before opening a row.",
     ),
-    pageScope,
+    step(
+      "Understand filter scope",
+      "Super admins can filter by a head office before pagination using its document ID, including inactive offices. Search and shipment or clearance type filters apply to the current page of that office’s shipments. Changing the office starts at page one.",
+    ),
     step(
       "Review the shipment",
       "Open a shipment row to see its sender, receiver, locations, documents, and assigned rider. Express shipments also show item weight and dimensions.",
@@ -271,6 +278,22 @@ export const pageTutorials: Record<string, Tutorial> = {
     ),
     permissions,
   ),
+  "/coupon-redemption-metrics": guide(
+    "Coupon redemption metrics",
+    step(
+      "Select the issuance cohort",
+      "Choose inclusive issuance start and end dates. Add an optional redemption cutoff on or after the issuance end date, or leave it blank for today in Lagos. Select View metrics.",
+    ),
+    step(
+      "Read coupon and user rates",
+      "Coupon redemption counts the selected issued coupons. User redemption counts distinct recipients with a qualifying redemption. Rates are unavailable when their denominators are empty. Compare cohorts with a consistent observation window.",
+    ),
+    step(
+      "Check data coverage",
+      "Known not redeemed excludes used coupons with missing or invalid redemption timestamps. Review coverage gaps before interpreting the rates. Reporting may lag source updates and backfills.",
+    ),
+    permissions,
+  ),
   "/coupons": guide(
     "Coupons",
     step(
@@ -334,6 +357,30 @@ export const pageTutorials: Record<string, Tutorial> = {
       "After confirmation, inspect Notification History for the title, message, target, and date. An available delete action removes the stored notification record; do not assume it recalls a message recipients have already seen.",
     ),
     permissions,
+  ),
+  "/weekly-concentration": guide(
+    "Weekly user concentration",
+    step("Select a week and top users", "Super admins can choose the top 10, 20, 50, or 100 users and any date within the requested Lagos Monday–Sunday week. Leaving the date empty selects the current week, which includes orders recorded so far."),
+    step("Read rankings and weekly shares", "Users are ranked by orders created in the selected week across ride-hailing, courier, express, and customs clearance. All statuses count. Shares use all eligible weekly orders, and missing profiles remain in the ranking."),
+    step("Check coverage", "Review scanned orders, invalid customer IDs, and unsupported services before interpreting concentration. Restaurant and product orders are excluded. Empty weeks show zero totals and no ranked users."),
+  ),
+  "/rider-weekly-deliveries": guide(
+    "Rider weekly deliveries",
+    step("Choose the reporting period", "Super admins can choose 1–52 Monday–Sunday weeks in Lagos time and an optional inclusive end date. The final week keeps its full calendar label while counts stop at the selected date."),
+    step("Review rider completions", "Each row includes weekly completions and a total for the requested period across all supported order types. Riders with zero completions are included. Open a rider name to review their account."),
+    step("Read coverage and navigate", "Coverage reports completed history scanned for this page’s riders and missing completion timestamps. Next retains the same weeks and end date. Results may change between requests; Refresh or changing filters restarts from page one."),
+  ),
+  "/user-activation": guide(
+    "User activation",
+    step("Read the page summary", "Super admins can review activation rate, average time, and record counts for the returned page only. All order statuses count across rides, shipments, restaurant, and product orders. Invalid records are excluded from rate and average calculations."),
+    step("Find a single user", "Enter an exact user ID and choose Look up. Single-user lookup does not send pagination parameters. Choose Show all users to return to the first report page."),
+    step("Move through the report", "Use Next while another page is available, or Previous to revisit a page. Changing Users per page starts at page one. Dates use Lagos time and durations retain fractional days."),
+  ),
+  "/head-offices": guide(
+    "Head offices",
+    step("Review office locations", "Super admins can search the office directory by location, address, or document ID. Use the status buttons to include active or inactive offices."),
+    step("Create or change availability", "Choose New head office and enter the location, full address, latitude, and longitude. The Active switch saves an office’s availability immediately."),
+    step("Delete an office", "Use the delete action and confirm the office identity. Deleting removes the office document permanently; existing shipment references remain. Deactivate instead to retain its details."),
   ),
   "/app-config": guide(
     "App configuration",

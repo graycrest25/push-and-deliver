@@ -1,3 +1,8 @@
+import CouponRedemptionMetricsPage from "@/pages/coupon-redemption-metrics";
+import WeeklyConcentrationPage from "@/pages/weekly-concentration";
+import RiderWeeklyDeliveriesPage from "@/pages/rider-weekly-deliveries";
+import UserActivationPage from "@/pages/user-activation";
+import HeadOfficesPage from "@/pages/head-offices";
 import UserManagementPage from "@/pages/admin/user-management";
 import { Layout } from "@/components/layout";
 import CouponsPage from "@/pages/coupons";
@@ -67,10 +72,14 @@ function Router() {
               <Layout>
                 <Routes>
                   <Route path="/dashboard" element={<DashboardPage />} />
+                  <Route path="/head-offices" element={<HeadOfficesPage />} />
                   <Route path="/admin/users" element={<UserManagementPage />} />
                   <Route path="/users" element={<UsersPage />} />
+                  <Route path="/weekly-concentration" element={<WeeklyConcentrationPage />} />
+                  <Route path="/user-activation" element={<UserActivationPage />} />
                   <Route path="/users/:id" element={<UserDetailsPage />} />
                   <Route path="/riders" element={<RidersPage />} />
+                  <Route path="/rider-weekly-deliveries" element={<RiderWeeklyDeliveriesPage />} />
                   <Route path="/riders/:id" element={<RiderDetailsPage />} />
                   <Route path="/vendors" element={<VendorsPage />} />
                   <Route path="/vendors/:id" element={<VendorDetailsPage />} />
@@ -107,6 +116,7 @@ function Router() {
                   />
                   <Route path="/withdrawals" element={<WithdrawalsPage />} />
                   <Route path="/coupons" element={<CouponsPage />} />
+                  <Route path="/coupon-redemption-metrics" element={<CouponRedemptionMetricsPage />} />
                   <Route
                     path="/general-notifications"
                     element={<GeneralNotificationsPage />}

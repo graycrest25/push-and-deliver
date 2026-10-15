@@ -1,0 +1,22 @@
+// Merge this match block inside your existing /databases/{database}/documents block.
+// This is a fragment, not a replacement for the project's deployed rules.
+match /HeadOfficeAddress/{officeId} {
+  function superAdmin() {
+    return request.auth != null
+      && request.auth.token.isAdmin == true
+      && request.auth.token.adminType == 'super';
+  }
+  function validOffice(data) {
+    return data.keys().hasAll(['active', 'address', 'geolocation', 'location'])
+      && data.keys().hasOnly(['active', 'address', 'geolocation', 'location'])
+      && data.active is bool
+      && data.address is string && data.address.size() > 0
+      && data.location is string && data.location.size() > 0
+      && data.geolocation is latlng;
+  }
+  allow read, delete: if superAdmin();
+  allow create: if superAdmin() && validOffice(request.resource.data);
+  allow update: if superAdmin()
+    && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['active'])
+    && request.resource.data.active is bool;
+}

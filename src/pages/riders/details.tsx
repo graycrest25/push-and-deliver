@@ -1,8 +1,11 @@
+"use client";
+
+import { AccountDetailsHeader } from "@/components/account-details-header";
+import { AccountRideCounts } from "@/components/account-ride-counts";
 import { SectionHelp } from "@/components/section-help";
 import { useFirestorePagination } from "@/hooks/use-firestore-pagination";
 import { TablePagination } from "@/components/table-pagination";
 import { getPaginatedDocs } from "@/lib/firestore-pagination";
-"use client";
 
 import { useState, useEffect } from "react";
 import { endpoints } from "@/lib/endpoint";
@@ -18,7 +21,7 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
-import { ArrowLeft, Pencil } from "lucide-react";
+import { Pencil } from "lucide-react";
 import {
   Dialog,
   DialogContent,
@@ -418,10 +421,13 @@ export default function RiderDetailsPage() {
 
   useEffect(() => {
     if (id) {
-      loadRiderData();
       loadRiderTransactions();
     }
   }, [id, pagination.options]);
+
+  useEffect(() => {
+    if (id) loadRiderData();
+  }, [id]);
 
   const loadRiderData = async () => {
     try {
@@ -586,38 +592,52 @@ export default function RiderDetailsPage() {
   const isCarOrBike = rider.vehicleType === 0 || rider.vehicleType === 2;
 
   return (
-    <div className="space-y-6">
-      {/* Header with Back Button */}
-      <div className="flex items-center gap-4">
-        <Button
-          variant="outline"
-          size="icon"
-          onClick={() => navigate("/riders")}
-        >
-          <ArrowLeft className="h-4 w-4" />
-        </Button>
-        <div>
-          <h1 className="text-3xl font-bold tracking-tight">Rider Details</h1>
-          <p className="text-muted-foreground">
-            Complete information for {rider.fullname || "rider"}
-          </p>
-        </div>
-
-        {/* Edit Rider Button — only for super admins */}
-        {isSuperAdmin && (
-          <div className="ml-auto">
+    <div className="account-details space-y-6">
+      <AccountDetailsHeader
+        title="Rider details"
+        name={rider.fullname || "Rider"}
+        email={rider.email}
+        phone={rider.phonenumber}
+        image={rider.imageUrl}
+        backTo="/riders"
+        status={
+          <>
+            <Badge
+              variant={getVerificationBadgeVariant(rider.verificationStatus)}
+            >
+              {getVerificationStatusLabel(rider.verificationStatus)}
+            </Badge>
+            <Badge variant="outline">
+              {rider.onlineStatus ? "Online" : "Offline"}
+            </Badge>
+          </>
+        }
+        actions={
+          isSuperAdmin ? (
             <EditRiderDialog rider={rider} onUpdateComplete={loadRiderData} />
-          </div>
-        )}
-      </div>
-
+          ) : undefined
+        }
+        sections={[
+          ...(isSuperAdmin
+            ? [{ id: "ride-activity", label: "Ride activity" }]
+            : []),
+          { id: "personal-information", label: "Personal information" },
+          { id: "vehicle-information", label: "Vehicle" },
+          ...(canUploadDocuments
+            ? [{ id: "rider-documents", label: "Documents" }]
+            : []),
+          { id: "wallet-bank", label: "Wallet & bank" },
+          { id: "transactions", label: "Transactions" },
+        ]}
+      />
+      <AccountRideCounts id={id!} usertype="rider" />
       {/* Personal Information */}
-      <Card>
+      <Card id="personal-information" className="min-w-0 scroll-mt-24">
         <CardHeader>
           <CardTitle>Personal Information</CardTitle>
         </CardHeader>
         <CardContent>
-          <div className="grid grid-cols-2 md:grid-cols-3 gap-6">
+          <div className="grid grid-cols-1 gap-x-6 gap-y-5 sm:grid-cols-2 xl:grid-cols-3">
             <div>
               <p className="text-sm text-muted-foreground">Full Name</p>
               <p className="font-medium">{rider.fullname || "N/A"}</p>
@@ -972,9 +992,9 @@ export default function RiderDetailsPage() {
                 <div
                   style={{
                     backgroundImage: `url(${rider.imageUrl})`,
-                    width: "200px",
-                    height: "200px",
-                    border: "1px solid black",
+                    width: "120px",
+                    height: "120px",
+                    border: "1px solid var(--border)",
                     backgroundSize: "cover",
                     backgroundPosition: "center",
                     borderRadius: "100%",
@@ -994,9 +1014,9 @@ export default function RiderDetailsPage() {
                       variant="outline"
                       className="
                         absolute bottom-2 left-1/2 -translate-x-1/2
-                        opacity-0 group-hover:opacity-100
+                        opacity-100
                         transition-opacity duration-200
-                        backdrop-blur-sm bg-white/80
+                        bg-background
                       "
                       disabled={uploadingProfileImage}
                       onClick={() =>
@@ -1014,12 +1034,12 @@ export default function RiderDetailsPage() {
       </Card>
 
       {/* Vehicle Information */}
-      <Card>
+      <Card id="vehicle-information" className="min-w-0 scroll-mt-24">
         <CardHeader>
           <CardTitle>Vehicle Information</CardTitle>
         </CardHeader>
         <CardContent>
-          <div className="grid grid-cols-2 md:grid-cols-3 gap-6">
+          <div className="grid grid-cols-1 gap-x-6 gap-y-5 sm:grid-cols-2 xl:grid-cols-3">
             <div>
               <p className="text-sm text-muted-foreground">Vehicle Type</p>
               <p className="font-medium capitalize">
@@ -1173,8 +1193,11 @@ export default function RiderDetailsPage() {
 
       {/* Verification Images */}
       {canUploadDocuments && (
-        <div className="space-y-4">
-          <h2 className="flex items-center gap-2 text-xl font-semibold">Verification Images<SectionHelp title="Verification images" /></h2>
+        <div id="rider-documents" className="scroll-mt-24 space-y-4">
+          <h2 className="flex items-center gap-2 text-xl font-semibold">
+            Verification Images
+            <SectionHelp title="Verification images" />
+          </h2>
           <div className="grid gap-4 md:grid-cols-3">
             <ImageUploadCard
               title={
@@ -1397,12 +1420,12 @@ export default function RiderDetailsPage() {
       )}
 
       {/* Wallet & Bank Information */}
-      <Card>
+      <Card id="wallet-bank" className="min-w-0 scroll-mt-24">
         <CardHeader>
           <CardTitle>Wallet & Bank Information</CardTitle>
         </CardHeader>
         <CardContent>
-          <div className="grid grid-cols-2 md:grid-cols-3 gap-6">
+          <div className="grid grid-cols-1 gap-x-6 gap-y-5 sm:grid-cols-2 xl:grid-cols-3">
             <div>
               <p className="text-sm text-muted-foreground">Wallet Balance</p>
               <p
@@ -1431,7 +1454,7 @@ export default function RiderDetailsPage() {
       </Card>
 
       {/* Transactions */}
-      <Card>
+      <Card id="transactions" className="min-w-0 scroll-mt-24">
         <CardHeader>
           <CardTitle>Transaction History</CardTitle>
         </CardHeader>
@@ -1448,65 +1471,73 @@ export default function RiderDetailsPage() {
             </p>
           ) : (
             <div className="border rounded-lg overflow-hidden">
-              <><Table>
-                <TableHeader>
-                  <TableRow className="bg-muted/50">
-                    <TableHead>Date</TableHead>
-                    <TableHead>Type</TableHead>
-                    <TableHead>Narration</TableHead>
-                    <TableHead>Amount</TableHead>
-                    <TableHead>Status</TableHead>
-                    <TableHead>Reference</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {transactions.map((txn) => (
-                    <TableRow key={txn.id}>
-                      <TableCell className="text-sm">
-                        {txn.time instanceof Date
-                          ? txn.time.toLocaleString()
-                          : "N/A"}
-                      </TableCell>
-                      <TableCell>
-                        <Badge
-                          variant={
-                            txn.transactionType === 0 ? "default" : "secondary"
-                          }
-                        >
-                          {txn.transactionType === 0
-                            ? "Credit"
-                            : txn.transactionType === 1
-                              ? "Debit"
-                              : "N/A"}
-                        </Badge>
-                      </TableCell>
-                      <TableCell className="text-sm max-w-xs">
-                        {txn.narration || "N/A"}
-                      </TableCell>
-                      <TableCell
-                        className={cn(
-                          "font-medium",
-                          txn.transactionType === 0
-                            ? "text-green-500"
-                            : "text-red-500",
-                        )}
-                      >
-                        ₦{formatAmount(txn.amount || 0)}
-                      </TableCell>
-                      <TableCell>
-                        <Badge
-                          variant={getStatusBadgeVariant(txn.status) as any}
-                        >
-                          {getStatusLabel(txn.status)}
-                        </Badge>
-                      </TableCell>
-                      <TableCell className="font-mono text-xs">
-                        {txn.trxref || "N/A"}
-                      </TableCell>
+              <>
+                <Table>
+                  <TableHeader>
+                    <TableRow className="bg-muted/50">
+                      <TableHead>Date</TableHead>
+                      <TableHead>Type</TableHead>
+                      <TableHead>Narration</TableHead>
+                      <TableHead>Amount</TableHead>
+                      <TableHead>Status</TableHead>
+                      <TableHead>Reference</TableHead>
                     </TableRow>
-                  ))}
-                </TableBody>
-              </Table><TablePagination pagination={pagination} loading={loadingTransactions} /></>
+                  </TableHeader>
+                  <TableBody>
+                    {transactions.map((txn) => (
+                      <TableRow key={txn.id}>
+                        <TableCell className="text-sm">
+                          {txn.time instanceof Date
+                            ? txn.time.toLocaleString()
+                            : "N/A"}
+                        </TableCell>
+                        <TableCell>
+                          <Badge
+                            variant={
+                              txn.transactionType === 0
+                                ? "default"
+                                : "secondary"
+                            }
+                          >
+                            {txn.transactionType === 0
+                              ? "Credit"
+                              : txn.transactionType === 1
+                                ? "Debit"
+                                : "N/A"}
+                          </Badge>
+                        </TableCell>
+                        <TableCell className="text-sm max-w-xs">
+                          {txn.narration || "N/A"}
+                        </TableCell>
+                        <TableCell
+                          className={cn(
+                            "font-medium",
+                            txn.transactionType === 0
+                              ? "text-[var(--success)]"
+                              : "text-destructive",
+                          )}
+                        >
+                          ₦{formatAmount(txn.amount || 0)}
+                        </TableCell>
+                        <TableCell>
+                          <Badge
+                            variant={getStatusBadgeVariant(txn.status) as any}
+                          >
+                            {getStatusLabel(txn.status)}
+                          </Badge>
+                        </TableCell>
+                        <TableCell className="font-mono text-xs">
+                          {txn.trxref || "N/A"}
+                        </TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
+                <TablePagination
+                  pagination={pagination}
+                  loading={loadingTransactions}
+                />
+              </>
             </div>
           )}
         </CardContent>

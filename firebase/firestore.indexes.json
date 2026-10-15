@@ -1,0 +1,13 @@
+{
+  "indexes": [
+    {
+      "collectionGroup": "ShippmentOrders",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "pndofficelocationID", "order": "ASCENDING" },
+        { "fieldPath": "createdAt", "order": "DESCENDING" }
+      ]
+    }
+  ],
+  "fieldOverrides": []
+}

@@ -1,9 +1,16 @@
-import { IconCirclePlusFilled, type Icon } from "@tabler/icons-react";
+import type { NavigationItem } from "@/lib/navigation";
+import { IconCirclePlusFilled, IconChevronDown } from "@tabler/icons-react";
 import { Link, useLocation } from "react-router-dom";
-import { useState } from "react";
+import { useEffect, useId, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { Label } from "@/components/ui/label";
 import { couponsService } from "@/services/coupons.service";
 import { toast } from "sonner";
@@ -16,6 +23,9 @@ import {
   SidebarMenu,
   SidebarMenuButton,
   SidebarMenuItem,
+  SidebarMenuSub,
+  SidebarMenuSubButton,
+  SidebarMenuSubItem,
 } from "@/components/ui/sidebar";
 import {
   Dialog,
@@ -30,19 +40,13 @@ import { useCurrentUser } from "@/contexts/UserContext";
 export function NavMain({
   items,
 }: {
-  items: {
-    title: string;
-    url: string;
-    icon?: Icon;
-    group?: string;
-  }[];
+  items: (NavigationItem & { children: NavigationItem[] })[];
 }) {
   const [isDialogOpen, setIsDialogOpen] = useState(false);
-  const location = useLocation();
-  const { setOpenMobile, isMobile } = useSidebar();
   const { user } = useCurrentUser();
   const adminType = user?.adminType || "customercare";
-  const isValidAdmin = user?.isAdmin === true &&
+  const isValidAdmin =
+    user?.isAdmin === true &&
     (user.adminType === "super" || user.adminType === "regular");
 
   return (
@@ -65,7 +69,8 @@ export function NavMain({
                   <DialogHeader>
                     <DialogTitle>Create Coupon</DialogTitle>
                     <DialogDescription>
-                      Create a coupon template. Expiry starts when each user receives the coupon.
+                      Create a coupon template. Expiry starts when each user
+                      receives the coupon.
                     </DialogDescription>
                   </DialogHeader>
                   <CouponForm onSuccess={() => setIsDialogOpen(false)} />
@@ -84,37 +89,95 @@ export function NavMain({
             <SidebarMenu className="gap-1">
               {items
                 .filter((item) => (item.group || "Workspace") === group)
-                .map((item) => {
-                  const isActive =
-                    location.pathname === item.url ||
-                    location.pathname.startsWith(item.url + "/");
-                  return (
-                    <SidebarMenuItem key={item.url}>
-                      <SidebarMenuButton
-                        isActive={isActive}
-                        tooltip={item.title}
-                        asChild
-                        className="nav-destination"
-                      >
-                        <Link
-                          to={item.url}
-                          aria-current={isActive ? "page" : undefined}
-                          onClick={() => {
-                            if (isMobile) setOpenMobile(false);
-                          }}
-                        >
-                          {item.icon && <item.icon stroke={1.7} />}
-                          <span>{item.title}</span>
-                        </Link>
-                      </SidebarMenuButton>
-                    </SidebarMenuItem>
-                  );
-                })}
+                .map((item) => (
+                  <NavigationDestination key={item.url} item={item} />
+                ))}
             </SidebarMenu>
           </div>
         ))}
       </SidebarGroupContent>
     </SidebarGroup>
+  );
+}
+
+function NavigationDestination({
+  item,
+}: {
+  item: NavigationItem & { children: NavigationItem[] };
+}) {
+  const location = useLocation();
+  const { setOpenMobile, isMobile } = useSidebar();
+  const submenuId = useId();
+  const matches = (url: string) =>
+    location.pathname === url || location.pathname.startsWith(`${url}/`);
+  const active =
+    matches(item.url) || item.children.some((child) => matches(child.url));
+  const [open, setOpen] = useState(active);
+  useEffect(() => {
+    if (active) setOpen(true);
+  }, [location.pathname, active]);
+  const closeMobile = () => {
+    if (isMobile) setOpenMobile(false);
+  };
+  if (!item.children.length)
+    return (
+      <SidebarMenuItem>
+        <SidebarMenuButton
+          isActive={active}
+          tooltip={item.title}
+          asChild
+          className="nav-destination"
+        >
+          <Link
+            to={item.url}
+            aria-current={active ? "page" : undefined}
+            onClick={closeMobile}
+          >
+            {item.icon && <item.icon stroke={1.7} />}
+            <span>{item.title}</span>
+          </Link>
+        </SidebarMenuButton>
+      </SidebarMenuItem>
+    );
+  return (
+    <SidebarMenuItem>
+      <SidebarMenuButton
+        type="button"
+        isActive={active}
+        tooltip={item.title}
+        className="nav-destination"
+        aria-expanded={open}
+        aria-controls={submenuId}
+        onClick={() => setOpen((value) => !value)}
+      >
+        {item.icon && <item.icon stroke={1.7} />}
+        <span>{item.title}</span>
+        <IconChevronDown
+          className={`ml-auto transition-transform motion-reduce:transition-none ${open ? "rotate-180" : ""}`}
+          size={16}
+        />
+      </SidebarMenuButton>
+      {open && (
+        <SidebarMenuSub id={submenuId} aria-label={`${item.title} subsections`}>
+          {[
+            { ...item, title: `All ${item.title.toLowerCase()}` },
+            ...item.children,
+          ].map((child) => (
+            <SidebarMenuSubItem key={child.url}>
+              <SidebarMenuSubButton asChild isActive={matches(child.url)}>
+                <Link
+                  to={child.url}
+                  onClick={closeMobile}
+                  aria-current={matches(child.url) ? "page" : undefined}
+                >
+                  <span>{child.title}</span>
+                </Link>
+              </SidebarMenuSubButton>
+            </SidebarMenuSubItem>
+          ))}
+        </SidebarMenuSub>
+      )}
+    </SidebarMenuItem>
   );
 }
 
@@ -138,16 +201,20 @@ function CouponForm({ onSuccess }: { onSuccess: () => void }) {
 
     try {
       setLoading(true);
-      await couponsService.createCoupon(expiry === "none"
-        ? { percentageDiscount: discount }
-        : { percentageDiscount: discount, canExpire: true, expTime: expiry });
+      await couponsService.createCoupon(
+        expiry === "none"
+          ? { percentageDiscount: discount }
+          : { percentageDiscount: discount, canExpire: true, expTime: expiry },
+      );
       toast.success("Coupon created successfully");
       setPercentageDiscount("");
       setExpiry("none");
       onSuccess();
     } catch (error) {
       console.error("Error creating coupon:", error);
-      toast.error(error instanceof Error ? error.message : "Failed to create coupon");
+      toast.error(
+        error instanceof Error ? error.message : "Failed to create coupon",
+      );
     } finally {
       setLoading(false);
     }
@@ -171,8 +238,16 @@ function CouponForm({ onSuccess }: { onSuccess: () => void }) {
       </div>
       <div className="grid gap-2">
         <Label htmlFor="sidebar-coupon-expiry">Expiry after receipt</Label>
-        <Select value={expiry} disabled={loading} onValueChange={(value: "none" | "24hrs" | "48hrs") => setExpiry(value)}>
-          <SelectTrigger id="sidebar-coupon-expiry"><SelectValue /></SelectTrigger>
+        <Select
+          value={expiry}
+          disabled={loading}
+          onValueChange={(value: "none" | "24hrs" | "48hrs") =>
+            setExpiry(value)
+          }
+        >
+          <SelectTrigger id="sidebar-coupon-expiry">
+            <SelectValue />
+          </SelectTrigger>
           <SelectContent>
             <SelectItem value="none">Does not expire</SelectItem>
             <SelectItem value="24hrs">24 hours</SelectItem>

@@ -1,3 +1,4 @@
+import { requireSuperAdmin } from "@/lib/require-super-admin";
 import { getPaginatedDocs, type PaginationOptions } from "@/lib/firestore-pagination";
 import { auth, db } from "@/lib/firebase";
 import { endpoints } from "@/lib/endpoint";
@@ -8,6 +9,7 @@ import {
   getDoc,
   orderBy,
   query,
+  where,
   updateDoc,
 } from "firebase/firestore";
 
@@ -72,10 +74,12 @@ export const shipmentOrdersService = {
     return { success: true, authurl: data.authurl, reference: data.reference };
   },
   // Get all shipment orders
-  async getAllOrders(pagination: PaginationOptions = {}): Promise<ShipmentOrder[]> {
+  async getAllOrders(pagination: PaginationOptions = {}, headOfficeId?: string): Promise<ShipmentOrder[]> {
+    if (headOfficeId) await requireSuperAdmin();
     try {
       const q = query(
         collection(db, COLLECTION_NAME),
+        ...(headOfficeId ? [where("pndofficelocationID", "==", headOfficeId)] : []),
         orderBy("createdAt", "desc")
       );
       const snapshot = await getPaginatedDocs(q, pagination);

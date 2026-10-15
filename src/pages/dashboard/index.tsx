@@ -1,3 +1,4 @@
+import { WeeklyOverview } from "@/components/dashboard/weekly-overview";
 import { SectionHelp } from "@/components/section-help";
 import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
@@ -64,6 +65,7 @@ export default function DashboardPage() {
   const [loading, setLoading] = useState(true);
   const [stats, setStats] = useState<Stats>({});
   const [failed, setFailed] = useState(false);
+  const [weeklyRefresh, setWeeklyRefresh] = useState(0);
   const [updatedAt, setUpdatedAt] = useState<Date | null>(null);
 
   async function loadDashboardData() {
@@ -164,7 +166,10 @@ export default function DashboardPage() {
           )}
           <Button
             variant="outline"
-            onClick={() => void loadDashboardData()}
+            onClick={() => {
+              void loadDashboardData();
+              setWeeklyRefresh((value) => value + 1);
+            }}
             disabled={loading}
           >
             <IconRefresh className={loading ? "animate-spin" : ""} />
@@ -180,7 +185,8 @@ export default function DashboardPage() {
               id="welcome-title"
               className="text-2xl font-semibold tracking-tight"
             >
-              Welcome back, {firstName}. <SectionHelp title="Operations shortcuts" />
+              Welcome back, {firstName}.{" "}
+              <SectionHelp title="Operations shortcuts" />
             </h2>
             <p className="mt-2 text-sm">
               Keep orders moving and your team connected.
@@ -221,7 +227,10 @@ export default function DashboardPage() {
       <section className="platform-totals" aria-label="Platform totals">
         {totals.map((item) => (
           <div key={item.key} className="platform-total">
-            <span className="flex items-center justify-between gap-2 text-sm text-muted-foreground">{item.title}<SectionHelp title={item.title} /></span>
+            <span className="flex items-center justify-between gap-2 text-sm text-muted-foreground">
+              {item.title}
+              <SectionHelp title={item.title} />
+            </span>
             {loading ? (
               <Skeleton className="my-3 h-9 w-24" />
             ) : (
@@ -252,6 +261,8 @@ export default function DashboardPage() {
           </div>
         ))}
       </section>
+
+      <WeeklyOverview refreshKey={weeklyRefresh} />
 
       <div className="dashboard-columns">
         <Card>

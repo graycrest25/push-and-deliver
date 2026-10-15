@@ -6,6 +6,13 @@
     "dev": "vite",
     "build": "vite build",
     "preview": "vite preview",
+    "test:weekly-concentration": "node scripts/test-weekly-concentration.mjs",
+    "test:rider-weekly-deliveries": "node scripts/test-rider-weekly-deliveries.mjs",
+    "test:super-admin-features": "node scripts/test-super-admin-features.mjs",
+    "test:weekly-overview": "node scripts/test-weekly-overview.mjs",
+    "test:user-activation": "node scripts/test-user-activation.mjs",
+    "test:head-offices": "node scripts/test-head-offices.mjs",
+    "test:admin-ride-counts": "node scripts/test-admin-ride-counts.mjs",
     "test:support-tickets": "node scripts/test-support-tickets.mjs",
     "test:pagination": "node scripts/test-pagination.mjs",
     "test:admin-management": "node scripts/test-admin-management.mjs",
@@ -17,7 +24,8 @@
     "test:shipment-fee": "node scripts/test-shipment-fee.mjs",
     "test:tutorials": "node scripts/test-tutorials.mjs",
     "test:game-rules": "node scripts/test-game-rules.mjs",
-    "test:withdrawals": "node scripts/test-withdrawals.mjs"
+    "test:withdrawals": "node scripts/test-withdrawals.mjs",
+    "test:coupon-redemption-metrics": "node scripts/test-coupon-redemption-metrics.mjs"
   },
   "dependencies": {
     "@clerk/clerk-react": "^5.55.0",

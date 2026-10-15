@@ -877,3 +877,15 @@
     min-width: 0;
   }
 }
+
+/* Account records keep long IDs and contact details within their field columns. */
+.account-details .grid > div {
+  min-width: 0;
+}
+.account-details p {
+  overflow-wrap: anywhere;
+}
+.account-details [data-slot="card-header"] {
+  padding-bottom: 1rem;
+  border-bottom: 1px solid var(--border);
+}

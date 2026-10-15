@@ -1,3 +1,6 @@
+import { useCurrentUser } from "@/contexts/UserContext";
+import { useHeadOffices } from "@/hooks/use-head-offices";
+import { Button } from "@/components/ui/button";
 import { useFirestorePagination } from "@/hooks/use-firestore-pagination";
 import { TablePagination } from "@/components/table-pagination";
 import { useState, useEffect } from "react";
@@ -46,36 +49,78 @@ const formatAmount = (amount: number) => {
 };
 
 export default function ShipmentOrdersPage() {
-  const pagination = useFirestorePagination();
+  const { adminType } = useCurrentUser();
+  const isSuperAdmin = adminType === "super";
+  const [headOfficeFilter, setHeadOfficeFilter] = useState("all");
+  const headOfficeId =
+    isSuperAdmin && headOfficeFilter !== "all" ? headOfficeFilter : undefined;
+  const pagination = useFirestorePagination(headOfficeId ?? "");
+  const {
+    offices,
+    loading: loadingOffices,
+    error: officeError,
+    reload: reloadOffices,
+  } = useHeadOffices();
+  const officeMap = new Map(offices.map((office) => [office.id, office]));
   const navigate = useNavigate();
   const [orders, setOrders] = useState<ShipmentOrder[]>([]);
   const [loading, setLoading] = useState(true);
+  const [orderError, setOrderError] = useState("");
+  const [reloadOrders, setReloadOrders] = useState(0);
   const [searchQuery, setSearchQuery] = useState("");
   const [shipmentTypeFilter, setShipmentTypeFilter] = useState<string>("all");
   const [clearanceTypeFilter, setClearanceTypeFilter] = useState<string>("all");
 
   useEffect(() => {
-    loadOrders();
-  }, [pagination.options]);
+    let active = true;
+    setLoading(true);
+    setOrders([]);
+    setOrderError("");
+    shipmentOrdersService
+      .getAllOrders(pagination.options, headOfficeId)
+      .then((data) => {
+        if (active) setOrders(data);
+      })
+      .catch((error: unknown) => {
+        if (active) {
+          const message =
+            error instanceof Error
+              ? error.message
+              : "Failed to load shipment orders";
+          setOrderError(message);
+          toast.error(message);
+        }
+      })
+      .finally(() => {
+        if (active) setLoading(false);
+      });
+    return () => {
+      active = false;
+    };
+  }, [pagination.options, headOfficeId, reloadOrders]);
 
-  const loadOrders = async () => {
-    try {
-      setLoading(true);
-      const data = await shipmentOrdersService.getAllOrders(pagination.options);
-      setOrders(data);
-    } catch (error) {
-      console.error("Error loading orders:", error);
-      toast.error("Failed to load shipment orders");
-    } finally {
-      setLoading(false);
-    }
-  };
+  const officeOptions = new Map(
+    offices.map((office) => [
+      office.id,
+      `${office.location || "Unnamed office"}${office.active ? "" : " (inactive)"} · ${office.id}`,
+    ]),
+  );
+  // Historical shipments retain their document ID after an office is deleted.
+  for (const order of orders) {
+    const id = order.pndofficelocationID;
+    if (id && !officeOptions.has(id))
+      officeOptions.set(id, `Unavailable office · ${id}`);
+  }
+  if (headOfficeId && !officeOptions.has(headOfficeId))
+    officeOptions.set(headOfficeId, `Unavailable office · ${headOfficeId}`);
 
   // Filter orders
   const filteredOrders = orders.filter((order) => {
-    const matchesSearch = order.shipmentID
-      ?.toLowerCase()
-      .includes(searchQuery.toLowerCase());
+    const matchesSearch =
+      !searchQuery.trim() ||
+      (order.shipmentID || order.id || "")
+        .toLowerCase()
+        .includes(searchQuery.trim().toLowerCase());
     const matchesShipmentType =
       shipmentTypeFilter === "all" ||
       order.shipmentType?.toString() === shipmentTypeFilter;
@@ -154,9 +199,6 @@ export default function ShipmentOrdersPage() {
   const deliveredShipments = orders.filter(
     (o) => o.orderStatus === ShipmentOrderStatus.deliveredToDestination,
   ).length;
-  const totalRevenue = orders
-    .filter((o) => o.ispaid)
-    .reduce((sum, o) => sum + (o.totalAmount || 0), 0);
   const deliveredRevenue = orders
     .filter(
       (o) =>
@@ -174,14 +216,19 @@ export default function ShipmentOrdersPage() {
       {/* Header */}
       <div>
         <h1 className="text-3xl font-bold tracking-tight">Shipment Orders</h1>
-        <p className="text-sm text-muted-foreground">Search, filters, summaries, and exports apply to the current page.</p>
+        <p className="text-sm text-muted-foreground">
+          Search, shipment type filters, and summaries apply to the current
+          page.{" "}
+          {isSuperAdmin &&
+            "Head office filters all shipments before pagination."}
+        </p>
         <p className="text-muted-foreground mt-2">
           Manage and track all international shipment orders
         </p>
       </div>
 
       {/* Metrics Cards */}
-      {loading ? (
+      {orderError ? null : loading ? (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
           {Array.from({ length: 4 }).map((_, i) => (
             <Card key={i}>
@@ -260,7 +307,7 @@ export default function ShipmentOrdersPage() {
               </CardTitle>
             </CardHeader>
             <CardContent>
-              <div className="text-3xl font-bold" style={{ color: "#e7000b" }}>
+              <div className="text-3xl font-bold" style={{ color: "var(--destructive)" }}>
                 {cancelledShipments}
               </div>
               <p className="text-xs text-muted-foreground mt-1">
@@ -293,6 +340,28 @@ export default function ShipmentOrdersPage() {
                 />
               </div>
 
+              {isSuperAdmin && (
+                <Select
+                  value={headOfficeId ?? "all"}
+                  onValueChange={setHeadOfficeFilter}
+                  disabled={loadingOffices}
+                >
+                  <SelectTrigger
+                    aria-label="Filter shipments by head office"
+                    className="w-full sm:w-[260px]"
+                  >
+                    <SelectValue placeholder="All head offices" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">All head offices</SelectItem>
+                    {[...officeOptions].map(([id, label]) => (
+                      <SelectItem key={id} value={id}>
+                        {label}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              )}
               {/* Shipment Type Filter */}
               <Select
                 value={shipmentTypeFilter}
@@ -335,117 +404,175 @@ export default function ShipmentOrdersPage() {
           </div>
         </CardHeader>
         <CardContent>
-          <><Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead>Shipment ID</TableHead>
-                <TableHead>Customer</TableHead>
-                <TableHead>Type</TableHead>
-                <TableHead>Status</TableHead>
-                <TableHead>Payment</TableHead>
-                <TableHead>Date Created</TableHead>
-                <TableHead className="text-right">Amount</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {loading ? (
-                Array.from({ length: 5 }).map((_, i) => (
-                  <TableRow key={i}>
-                    <TableCell>
-                      <Skeleton className="h-4 w-20" />
-                    </TableCell>
-                    <TableCell>
-                      <Skeleton className="h-4 w-32" />
-                    </TableCell>
-                    <TableCell>
-                      <Skeleton className="h-4 w-28" />
-                    </TableCell>
-                    <TableCell>
-                      <Skeleton className="h-4 w-24" />
-                    </TableCell>
-                    <TableCell>
-                      <Skeleton className="h-4 w-16" />
-                    </TableCell>
-                    <TableCell>
-                      <Skeleton className="h-4 w-24" />
-                    </TableCell>
-                    <TableCell>
-                      <Skeleton className="h-4 w-20 ml-auto" />
-                    </TableCell>
-                  </TableRow>
-                ))
-              ) : filteredOrders.length === 0 ? (
+          {isSuperAdmin && officeError && (
+            <div
+              role="alert"
+              className="mb-4 flex flex-wrap items-center gap-2 text-sm text-destructive"
+            >
+              Unable to load head office names: {officeError}
+              <Button variant="outline" size="sm" onClick={reloadOffices}>
+                Retry offices
+              </Button>
+            </div>
+          )}
+          <>
+            <Table>
+              <TableHeader>
                 <TableRow>
-                  <TableCell
-                    colSpan={7}
-                    className="text-center text-muted-foreground py-8"
-                  >
-                    {searchQuery ||
-                    shipmentTypeFilter !== "all" ||
-                    clearanceTypeFilter !== "all"
-                      ? "No shipments found matching your filters"
-                      : "No shipments found"}
-                  </TableCell>
+                  <TableHead>Shipment ID</TableHead>
+                  <TableHead>Customer</TableHead>
+                  {isSuperAdmin && <TableHead>Head office</TableHead>}
+                  <TableHead>Type</TableHead>
+                  <TableHead>Status</TableHead>
+                  <TableHead>Payment</TableHead>
+                  <TableHead>Date Created</TableHead>
+                  <TableHead className="text-right">Amount</TableHead>
                 </TableRow>
-              ) : (
-                filteredOrders.map((order) => (
-                  <TableRow
-                    key={order.id}
-                    className="cursor-pointer hover:bg-muted/50"
-                    onClick={() => handleRowClick(order.id!)}
-                  >
-                    <TableCell className="font-mono font-medium">
-                      {order.shipmentID || "N/A"}
-                    </TableCell>
-                    <TableCell>
-                      <div>
-                        <p className="font-medium">
-                          {order.customerName || "N/A"}
+              </TableHeader>
+              <TableBody>
+                {loading ? (
+                  Array.from({ length: 5 }).map((_, i) => (
+                    <TableRow key={i}>
+                      <TableCell>
+                        <Skeleton className="h-4 w-20" />
+                      </TableCell>
+                      <TableCell>
+                        <Skeleton className="h-4 w-32" />
+                      </TableCell>
+                      <TableCell>
+                        <Skeleton className="h-4 w-28" />
+                      </TableCell>
+                      <TableCell>
+                        <Skeleton className="h-4 w-24" />
+                      </TableCell>
+                      <TableCell>
+                        <Skeleton className="h-4 w-16" />
+                      </TableCell>
+                      <TableCell>
+                        <Skeleton className="h-4 w-24" />
+                      </TableCell>
+                      <TableCell>
+                        <Skeleton className="h-4 w-20 ml-auto" />
+                      </TableCell>
+                    </TableRow>
+                  ))
+                ) : orderError ? (
+                  <TableRow>
+                    <TableCell colSpan={isSuperAdmin ? 8 : 7} className="py-8">
+                      <div role="alert" className="space-y-3 text-center">
+                        <p className="break-words text-sm text-destructive">
+                          Unable to load shipments: {orderError}
                         </p>
-                        <p className="text-xs text-muted-foreground">
-                          {order.customerPhonenumber}
-                        </p>
+                        <Button
+                          variant="outline"
+                          onClick={() => setReloadOrders((value) => value + 1)}
+                        >
+                          Retry shipments
+                        </Button>
                       </div>
-                    </TableCell>
-                    <TableCell>
-                      <div>
-                        <p className="text-sm">
-                          {getShipmentTypeLabel(order.shipmentType)}
-                        </p>
-                        {order.shipmentType ===
-                          IntlShipmentType.customclearance && (
-                          <p className="text-xs text-muted-foreground">
-                            {getClearanceTypeLabel(order.clearanceType)}
-                          </p>
-                        )}
-                      </div>
-                    </TableCell>
-                    <TableCell>
-                      <Badge variant={getStatusVariant(order.orderStatus)}>
-                        {getStatusLabel(order.orderStatus)}
-                      </Badge>
-                    </TableCell>
-                    <TableCell>
-                      <Badge variant={order.ispaid ? "default" : "destructive"}>
-                        {order.ispaid ? "Paid" : "Unpaid"}
-                      </Badge>
-                    </TableCell>
-                    <TableCell>
-                      {order.createdAt
-                        ? format(
-                            new Date(order.createdAt as Date),
-                            "dd-MM-yyyy",
-                          )
-                        : "N/A"}
-                    </TableCell>
-                    <TableCell className="text-right font-medium">
-                      ₦{(order.totalAmount || 0).toLocaleString()}
                     </TableCell>
                   </TableRow>
-                ))
-              )}
-            </TableBody>
-          </Table><TablePagination pagination={pagination} loading={loading} /></>
+                ) : filteredOrders.length === 0 ? (
+                  <TableRow>
+                    <TableCell
+                      colSpan={isSuperAdmin ? 8 : 7}
+                      className="text-center text-muted-foreground py-8"
+                    >
+                      {searchQuery ||
+                      shipmentTypeFilter !== "all" ||
+                      clearanceTypeFilter !== "all" ||
+                      headOfficeId
+                        ? "No shipments found matching your filters"
+                        : "No shipments found"}
+                    </TableCell>
+                  </TableRow>
+                ) : (
+                  filteredOrders.map((order) => (
+                    <TableRow
+                      key={order.id}
+                      className="cursor-pointer hover:bg-muted/50"
+                      onClick={() => handleRowClick(order.id!)}
+                    >
+                      <TableCell className="font-mono font-medium">
+                        {order.shipmentID || "N/A"}
+                      </TableCell>
+                      <TableCell>
+                        <div>
+                          <p className="font-medium">
+                            {order.customerName || "N/A"}
+                          </p>
+                          <p className="text-xs text-muted-foreground">
+                            {order.customerPhonenumber}
+                          </p>
+                        </div>
+                      </TableCell>
+                      {isSuperAdmin && (
+                        <TableCell className="max-w-56">
+                          <p
+                            className="truncate text-sm"
+                            title={
+                              officeMap.get(order.pndofficelocationID || "")
+                                ?.location
+                            }
+                          >
+                            {order.pndofficelocationID
+                              ? officeMap.get(order.pndofficelocationID)
+                                  ?.location || "Unavailable office"
+                              : "Not assigned"}
+                          </p>
+                          {order.pndofficelocationID && (
+                            <p
+                              className="mt-1 truncate font-mono text-xs text-muted-foreground"
+                              title={order.pndofficelocationID}
+                            >
+                              {order.pndofficelocationID}
+                            </p>
+                          )}
+                        </TableCell>
+                      )}
+                      <TableCell>
+                        <div>
+                          <p className="text-sm">
+                            {getShipmentTypeLabel(order.shipmentType)}
+                          </p>
+                          {order.shipmentType ===
+                            IntlShipmentType.customclearance && (
+                            <p className="text-xs text-muted-foreground">
+                              {getClearanceTypeLabel(order.clearanceType)}
+                            </p>
+                          )}
+                        </div>
+                      </TableCell>
+                      <TableCell>
+                        <Badge variant={getStatusVariant(order.orderStatus)}>
+                          {getStatusLabel(order.orderStatus)}
+                        </Badge>
+                      </TableCell>
+                      <TableCell>
+                        <Badge
+                          variant={order.ispaid ? "default" : "destructive"}
+                        >
+                          {order.ispaid ? "Paid" : "Unpaid"}
+                        </Badge>
+                      </TableCell>
+                      <TableCell>
+                        {order.createdAt
+                          ? format(
+                              new Date(order.createdAt as Date),
+                              "dd-MM-yyyy",
+                            )
+                          : "N/A"}
+                      </TableCell>
+                      <TableCell className="text-right font-medium">
+                        ₦{(order.totalAmount || 0).toLocaleString()}
+                      </TableCell>
+                    </TableRow>
+                  ))
+                )}
+              </TableBody>
+            </Table>
+            <TablePagination pagination={pagination} loading={loading} />
+          </>
         </CardContent>
       </Card>
     </div>

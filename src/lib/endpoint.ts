@@ -10,6 +10,24 @@ const firebaseEndpoint = (name: string): string => {
 };
 
 export const endpoints = {
+  get getAdminCouponRedemptionMetrics() {
+    return firebaseEndpoint("getAdminCouponRedemptionMetrics");
+  },
+  get getAdminWeeklyConcentration() {
+    return firebaseEndpoint("getAdminWeeklyConcentration");
+  },
+  get getAdminRiderWeeklyDeliveries() {
+    return firebaseEndpoint("getAdminRiderWeeklyDeliveries");
+  },
+  get getAdminWeeklyOverview() {
+    return firebaseEndpoint("getAdminWeeklyOverview");
+  },
+  get getAdminTimeToFirstOrder() {
+    return firebaseEndpoint("getAdminTimeToFirstOrder");
+  },
+  get getAdminRideCounts() {
+    return firebaseEndpoint("getAdminRideCounts");
+  },
   get createAdminCoupon() {
     return firebaseEndpoint("createAdminCoupon");
   },

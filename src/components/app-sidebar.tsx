@@ -10,11 +10,11 @@ import {
 } from "@/components/ui/sidebar";
 import { useCurrentUser } from "@/contexts/UserContext";
 import { adminHome } from "@/lib/admin-access";
-import { allowedNavigation } from "@/lib/navigation";
+import { sidebarNavigation } from "@/lib/navigation";
 
 export function AppSidebar(props: React.ComponentProps<typeof Sidebar>) {
   const { user } = useCurrentUser();
-  const items = user?.isAdmin ? allowedNavigation(user.adminType) : [];
+  const items = user?.isAdmin ? sidebarNavigation(user.adminType) : [];
   return (
     <Sidebar collapsible="offcanvas" className="workspace-sidebar" {...props}>
       <SidebarHeader className="px-5 py-6">
@@ -23,7 +23,13 @@ export function AppSidebar(props: React.ComponentProps<typeof Sidebar>) {
           className="brand-lockup"
           aria-label="PushNDeliver home"
         >
-          <img src="/logo.png" alt="" width={40} height={40} className="brand-logo" />
+          <img
+            src="/logo.png"
+            alt=""
+            width={40}
+            height={40}
+            className="brand-logo"
+          />
           <span className="text-lg font-bold tracking-tight">
             PushNDeliver
             <span className="block text-xs font-normal tracking-normal text-sidebar-foreground/70">

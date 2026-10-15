@@ -27,6 +27,7 @@ export interface NavigationItem {
   url: string;
   icon: Icon;
   group: string;
+  parentUrl?: string;
 }
 
 export const navigation: NavigationItem[] = [
@@ -72,12 +73,15 @@ export const navigation: NavigationItem[] = [
     icon: IconUsers,
     group: "People & partners",
   },
+  { title: "User activation", url: "/user-activation", icon: IconDashboard, group: "People & partners", parentUrl: "/users" },
+  { title: "Weekly concentration", url: "/weekly-concentration", icon: IconDashboard, group: "People & partners", parentUrl: "/users" },
   {
     title: "Riders",
     url: "/riders",
     icon: IconMotorbike,
     group: "People & partners",
   },
+  { title: "Weekly deliveries", url: "/rider-weekly-deliveries", icon: IconMotorbike, group: "People & partners", parentUrl: "/riders" },
   {
     title: "Restaurants",
     url: "/vendors",
@@ -104,6 +108,7 @@ export const navigation: NavigationItem[] = [
     group: "Finance",
   },
   { title: "Coupons", url: "/coupons", icon: IconGiftCard, group: "Growth" },
+  { title: "Redemption metrics", url: "/coupon-redemption-metrics", icon: IconGiftCard, group: "Growth", parentUrl: "/coupons" },
   { title: "Referrals", url: "/referrals", icon: IconGift, group: "Growth" },
   {
     title: "Generated referrals",
@@ -116,6 +121,12 @@ export const navigation: NavigationItem[] = [
     url: "/general-notifications",
     icon: IconBell,
     group: "Growth",
+  },
+  {
+    title: "Head offices",
+    url: "/head-offices",
+    icon: IconMapPin,
+    group: "Administration",
   },
   {
     title: "Delivery zones",
@@ -145,6 +156,14 @@ export const navigation: NavigationItem[] = [
 
 export function allowedNavigation(adminType: unknown) {
   return navigation.filter((item) => canAccessAdminScreen(adminType, item.url));
+}
+
+export function sidebarNavigation(adminType: unknown) {
+  const allowed = allowedNavigation(adminType);
+  return allowed.filter((item) => !item.parentUrl).map((item) => ({
+    ...item,
+    children: allowed.filter((child) => child.parentUrl === item.url),
+  }));
 }
 
 export function navigationForPath(pathname: string) {

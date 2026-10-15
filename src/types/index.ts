@@ -382,7 +382,16 @@ export interface ShipmentStatusTimeline {
   timestamp?: Timestamp | Date;
 }
 
+export interface HeadOfficeAddress {
+  id: string;
+  active: boolean;
+  address: string;
+  geolocation: GeoPoint;
+  location: string;
+}
+
 export interface ShipmentOrder {
+  pndofficelocationID?: string;
   id?: string;
   breadthinCM?: number;
   cancelledAt?: Timestamp | Date | null;
