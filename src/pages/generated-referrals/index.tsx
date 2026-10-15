@@ -1,7 +1,7 @@
 import { SectionHelp } from "@/components/section-help";
 import { useFirestorePagination } from "@/hooks/use-firestore-pagination";
 import { TablePagination } from "@/components/table-pagination";
-"use client";
+("use client");
 
 import { useEffect, useState } from "react";
 import {
@@ -33,7 +33,7 @@ import {
   DialogTrigger,
 } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
-import { Label } from "recharts";
+import { Label } from "@/components/ui/label";
 import { Trash2, RefreshCcw, Loader2 } from "lucide-react";
 
 const getToken = async () => {
@@ -136,7 +136,9 @@ export default function GeneratedReferralsPage() {
   const loadReferrals = async () => {
     try {
       setLoading(true);
-      const data = await generatedReferralsService.getAllGeneratedReferrals(pagination.options);
+      const data = await generatedReferralsService.getAllGeneratedReferrals(
+        pagination.options,
+      );
       setReferrals(data);
     } catch (error) {
       console.error(error);
@@ -168,10 +170,13 @@ export default function GeneratedReferralsPage() {
   };
 
   return (
-    <div className="p-6 space-y-6">
+    <div className="min-w-0 space-y-6">
       {/* Header */}
-      <div className="flex items-center justify-between">
-        <h1 className="flex items-center gap-2 text-2xl font-semibold">Generated Referrals<SectionHelp title="Generated referrals" /></h1>
+      <div className="flex flex-wrap items-center justify-between gap-4">
+        <h1 className="flex items-center gap-2 text-2xl font-semibold">
+          Generated Referrals
+          <SectionHelp title="Generated referrals" />
+        </h1>
 
         <Dialog open={open} onOpenChange={setOpen}>
           <DialogTrigger asChild>
@@ -188,7 +193,7 @@ export default function GeneratedReferralsPage() {
 
             <div className="grid gap-4 py-4">
               <div className="grid gap-2">
-                <Label>Name</Label>
+                <Label htmlFor="name">Name</Label>
                 <Input
                   id="name"
                   placeholder="e.g. Sylvester Campaign"
@@ -215,127 +220,139 @@ export default function GeneratedReferralsPage() {
       </div>
 
       {/* Table */}
-      <div className="border rounded-lg overflow-hidden bg-white">
-        <><Table>
-          <TableHeader>
-            <TableRow className="bg-muted/50">
-              <TableHead>Name</TableHead>
-              <TableHead>URL</TableHead>
-              <TableHead>Referrals</TableHead>
-              <TableHead>Created</TableHead>
-              <TableHead>Expiry</TableHead>
-              <TableHead>Status</TableHead>
-              <TableHead>Updated</TableHead>
-              <TableHead>Actions</TableHead>
-            </TableRow>
-          </TableHeader>
+      <div className="overflow-hidden rounded-xl border bg-card text-card-foreground">
+        <>
+          <Table className="min-w-[1100px]">
+            <TableHeader>
+              <TableRow className="bg-muted/50">
+                <TableHead>Name</TableHead>
+                <TableHead>URL</TableHead>
+                <TableHead>Referrals</TableHead>
+                <TableHead>Created</TableHead>
+                <TableHead>Expiry</TableHead>
+                <TableHead>Status</TableHead>
+                <TableHead>Updated</TableHead>
+                <TableHead>Actions</TableHead>
+              </TableRow>
+            </TableHeader>
 
-          <TableBody>
-            {loading ? (
-              Array.from({ length: 5 }).map((_, i) => (
-                <TableRow key={i}>
-                  <TableCell colSpan={7}>
-                    <Skeleton className="h-6 w-full" />
+            <TableBody>
+              {loading ? (
+                Array.from({ length: 5 }).map((_, i) => (
+                  <TableRow key={i}>
+                    <TableCell colSpan={8}>
+                      <Skeleton className="h-6 w-full" />
+                    </TableCell>
+                  </TableRow>
+                ))
+              ) : referrals.length === 0 ? (
+                <TableRow>
+                  <TableCell
+                    colSpan={8}
+                    className="text-center text-muted-foreground py-8"
+                  >
+                    No generated referrals found
                   </TableCell>
                 </TableRow>
-              ))
-            ) : referrals.length === 0 ? (
-              <TableRow>
-                <TableCell
-                  colSpan={7}
-                  className="text-center text-muted-foreground py-8"
-                >
-                  No generated referrals found
-                </TableCell>
-              </TableRow>
-            ) : (
-              referrals.map((ref) => (
-                <TableRow key={ref.id}>
-                  <TableCell className="font-medium">
-                    {ref.name || "N/A"}
-                  </TableCell>
+              ) : (
+                referrals.map((ref) => (
+                  <TableRow key={ref.id}>
+                    <TableCell className="font-medium">
+                      {ref.name || "N/A"}
+                    </TableCell>
 
-                  <TableCell>
-                    {ref.shortUrl ? (
-                      <div className="flex items-center gap-2">
-                        {/* Open Link */}
-                        {ref.shortUrl}
-                        {/* <Button
+                    <TableCell>
+                      {ref.shortUrl ? (
+                        <div className="flex items-center gap-2">
+                          <span className="max-w-80 break-all whitespace-normal text-primary">
+                            {ref.shortUrl}
+                          </span>
+                          {/* Copy Link */}
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            className="shrink-0 text-muted-foreground hover:text-foreground"
+                            aria-label={`Copy referral link for ${ref.name || "unnamed referral"}`}
+                            onClick={() => handleCopy(ref.shortUrl)}
+                          >
+                            <Copy className="w-4 h-4" />
+                          </Button>
+                        </div>
+                      ) : (
+                        "N/A"
+                      )}
+                    </TableCell>
+
+                    <TableCell>
+                      <Badge variant="outline">{ref.referralsCount || 0}</Badge>
+                    </TableCell>
+
+                    <TableCell>{formatDate(ref.createdAt)}</TableCell>
+
+                    <TableCell>{formatDate(ref.expirationDate)}</TableCell>
+
+                    <TableCell>
+                      {isExpired(ref.expirationDate) ? (
+                        <Badge
                           variant="outline"
-                          size="sm"
-                          onClick={() => window.open(ref.shortUrl, "_blank")}
+                          className="border-destructive/25 bg-destructive/10 text-destructive"
                         >
-                          <ExternalLink className="w-4 h-4 mr-1" />
-                          Open
-                        </Button> */}
+                          Expired
+                        </Badge>
+                      ) : (
+                        <Badge
+                          variant="outline"
+                          className="border-[var(--success)]/25 bg-[var(--success-soft)] text-[var(--success)]"
+                        >
+                          Active
+                        </Badge>
+                      )}
+                    </TableCell>
 
-                        {/* Copy Link */}
+                    <TableCell>{formatDate(ref.updatedAt)}</TableCell>
+                    <TableCell>
+                      <div className="flex items-center gap-2">
+                        {/* Delete */}
                         <Button
-                          variant="ghost"
+                          variant="outline"
                           size="icon"
-                          onClick={() => handleCopy(ref.shortUrl)}
+                          className="border-destructive/25 text-destructive hover:bg-destructive/10 hover:text-destructive"
+                          aria-label={`Delete referral ${ref.name || "unnamed referral"}`}
+                          onClick={() => handleDelete(ref.id)}
+                          disabled={deletingId === ref.id}
                         >
-                          <Copy className="w-4 h-4" />
+                          {deletingId === ref.id ? (
+                            <Loader2 className="w-4 h-4 animate-spin" />
+                          ) : (
+                            <Trash2 className="w-4 h-4" />
+                          )}
+                        </Button>
+
+                        {/* Regenerate */}
+                        <Button
+                          variant="outline"
+                          size="icon"
+                          aria-label={`Regenerate referral ${ref.name || "unnamed referral"}`}
+                          onClick={() => handleRegenerate(ref)}
+                          disabled={regeneratingId === ref.id}
+                        >
+                          {regeneratingId === ref.id ? (
+                            <Loader2 className="w-4 h-4 animate-spin" />
+                          ) : (
+                            <RefreshCcw className="w-4 h-4" />
+                          )}
                         </Button>
                       </div>
-                    ) : (
-                      "N/A"
-                    )}
-                  </TableCell>
-
-                  <TableCell>
-                    <Badge variant="outline">{ref.referralsCount || 0}</Badge>
-                  </TableCell>
-
-                  <TableCell>{formatDate(ref.createdAt)}</TableCell>
-
-                  <TableCell>{formatDate(ref.expirationDate)}</TableCell>
-
-                  <TableCell>
-                    {isExpired(ref.expirationDate) ? (
-                      <Badge variant="destructive">Expired</Badge>
-                    ) : (
-                      <Badge variant="secondary">Active</Badge>
-                    )}
-                  </TableCell>
-
-                  <TableCell>{formatDate(ref.updatedAt)}</TableCell>
-                  <TableCell>
-                    <div className="flex items-center gap-2">
-                      {/* Delete */}
-                      <Button
-                        variant="destructive"
-                        size="icon"
-                        onClick={() => handleDelete(ref.id)}
-                        disabled={deletingId === ref.id}
-                      >
-                        {deletingId === ref.id ? (
-                          <Loader2 className="w-4 h-4 animate-spin" />
-                        ) : (
-                          <Trash2 className="w-4 h-4" />
-                        )}
-                      </Button>
-
-                      {/* Regenerate */}
-                      <Button
-                        variant="outline"
-                        size="icon"
-                        onClick={() => handleRegenerate(ref)}
-                        disabled={regeneratingId === ref.id}
-                      >
-                        {regeneratingId === ref.id ? (
-                          <Loader2 className="w-4 h-4 animate-spin" />
-                        ) : (
-                          <RefreshCcw className="w-4 h-4" />
-                        )}
-                      </Button>
-                    </div>
-                  </TableCell>
-                </TableRow>
-              ))
-            )}
-          </TableBody>
-        </Table><TablePagination pagination={pagination} loading={loading} /></>
+                    </TableCell>
+                  </TableRow>
+                ))
+              )}
+            </TableBody>
+          </Table>
+          <div className="border-t bg-muted/20 px-4 pb-3">
+            <TablePagination pagination={pagination} loading={loading} />
+          </div>
+        </>
       </div>
     </div>
   );

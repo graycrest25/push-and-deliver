@@ -30,19 +30,34 @@ function percentage(value: number | null) {
     : `${value.toLocaleString(undefined, { maximumFractionDigits: 2 })}%`;
 }
 
+function defaultIssuanceWeek(now = new Date()): CouponRedemptionQuery {
+  const parts = new Intl.DateTimeFormat("en-GB", {
+    timeZone: "Africa/Lagos",
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+  }).formatToParts(now);
+  const part = (type: string) =>
+    parts.find((value) => value.type === type)!.value;
+  const endDate = `${part("year")}-${part("month")}-${part("day")}`;
+  const start = new Date(`${endDate}T00:00:00Z`);
+  start.setUTCDate(start.getUTCDate() - 6);
+  return { startDate: start.toISOString().slice(0, 10), endDate };
+}
+
 function RedemptionReport() {
-  const [startDate, setStartDate] = useState("");
-  const [endDate, setEndDate] = useState("");
+  const [defaults] = useState(defaultIssuanceWeek);
+  const [startDate, setStartDate] = useState(defaults.startDate);
+  const [endDate, setEndDate] = useState(defaults.endDate);
   const [asOfDate, setAsOfDate] = useState("");
-  const [query, setQuery] = useState<CouponRedemptionQuery | null>(null);
+  const [query, setQuery] = useState<CouponRedemptionQuery>(defaults);
   const [retry, setRetry] = useState(0);
   const [data, setData] = useState<Metrics | null>(null);
-  const [loading, setLoading] = useState(false);
+  const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
   const [formError, setFormError] = useState("");
 
   useEffect(() => {
-    if (!query) return;
     const controller = new AbortController();
     setLoading(true);
     setError("");

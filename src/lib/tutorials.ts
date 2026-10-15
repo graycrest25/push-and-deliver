@@ -282,7 +282,7 @@ export const pageTutorials: Record<string, Tutorial> = {
     "Coupon redemption metrics",
     step(
       "Select the issuance cohort",
-      "Choose inclusive issuance start and end dates. Add an optional redemption cutoff on or after the issuance end date, or leave it blank for today in Lagos. Select View metrics.",
+      "The last seven days through today in Lagos load by default. Adjust the inclusive issuance start and end dates as needed. Add an optional redemption cutoff on or after the issuance end date, or leave it blank for today in Lagos. Select View metrics.",
     ),
     step(
       "Read coupon and user rates",
