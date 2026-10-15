@@ -156,9 +156,10 @@ function UserActivationReport() {
     }));
   };
   const summary = data?.pageSummary;
+  const global = data?.globalSummary;
 
   return (
-    <div className="space-y-5">
+    <div className="min-w-0 space-y-5">
       <header className="flex flex-wrap items-start justify-between gap-4">
         <div>
           <h1 className="text-3xl font-semibold tracking-tight">
@@ -181,8 +182,9 @@ function UserActivationReport() {
       <div className="flex items-start gap-2 rounded-lg border bg-secondary/40 px-4 py-3 text-sm text-secondary-foreground">
         <AlertCircle className="mt-0.5 size-4 shrink-0" />
         <p>
-          All order statuses count. Summaries apply only to the returned page.
-          Invalid records are excluded from activation rate and average time.
+          All order statuses count. Overall metrics cover the full dataset; page
+          statistics describe only the rows shown. Invalid records are excluded
+          from activation rate and average time.
         </p>
       </div>
       <section
@@ -224,6 +226,66 @@ function UserActivationReport() {
             )}
           </form>
         </div>
+        {global && (
+          <div
+            className="space-y-4 border-b p-5"
+            aria-label="Overall activation summary"
+          >
+            <div className="flex flex-wrap items-baseline justify-between gap-3">
+              <h3 className="text-sm font-semibold">Overall activation</h3>
+              <p className="text-xs text-muted-foreground">
+                {global.eligibleUsers.toLocaleString()} eligible of{" "}
+                {global.totalUsers.toLocaleString()} users
+                {!global.isComplete && " · Partial counts"}
+              </p>
+            </div>
+            {!global.isComplete && (
+              <p
+                role="status"
+                className="flex items-start gap-2 text-sm text-muted-foreground"
+              >
+                <Loader2 className="mt-0.5 size-4 shrink-0 animate-spin motion-reduce:animate-none" />
+                Global metrics unavailable while backfill is in progress. Counts
+                may be partial. Refresh to check for updates.
+              </p>
+            )}
+            <dl className="grid grid-cols-2 gap-x-6 gap-y-5 lg:grid-cols-5">
+              {[
+                [
+                  "Overall activation rate",
+                  !global.isComplete
+                    ? "Unavailable"
+                    : global.activationRate === null
+                      ? "—"
+                      : new Intl.NumberFormat(undefined, {
+                          style: "percent",
+                          maximumFractionDigits: 2,
+                        }).format(global.activationRate),
+                ],
+                [
+                  "Overall average time",
+                  !global.isComplete
+                    ? "Unavailable"
+                    : daysLabel(global.averageTimeToFirstOrderDays),
+                ],
+                ["Activated", global.activatedUsers.toLocaleString()],
+                ["No orders", global.noOrderUsers.toLocaleString()],
+                ["Invalid records", global.invalidUsers.toLocaleString()],
+              ].map(([label, value]) => (
+                <div key={label}>
+                  <dt className="text-xs text-muted-foreground">{label}</dt>
+                  <dd className="mt-1 break-words text-xl font-semibold tabular-nums">
+                    {value}
+                  </dd>
+                </div>
+              ))}
+            </dl>
+            <p className="text-xs text-muted-foreground">
+              Live updates are eventually consistent. Last aggregate change:{" "}
+              {global.updatedAt ? dateLabel(global.updatedAt) : "Unavailable"}.
+            </p>
+          </div>
+        )}
         {summary && (
           <div className="border-b bg-muted/20 p-5">
             <div className="flex flex-wrap items-baseline justify-between gap-3">
@@ -238,7 +300,7 @@ function UserActivationReport() {
             <dl className="mt-4 grid grid-cols-2 gap-x-6 gap-y-5 lg:grid-cols-5">
               {[
                 [
-                  "Activation rate",
+                  "Page activation rate",
                   summary.activationRate === null
                     ? "—"
                     : new Intl.NumberFormat(undefined, {
@@ -247,7 +309,7 @@ function UserActivationReport() {
                       }).format(summary.activationRate),
                 ],
                 [
-                  "Average time",
+                  "Page average time",
                   daysLabel(summary.averageTimeToFirstOrderDays),
                 ],
                 ["Activated", summary.activatedUsers.toLocaleString()],
@@ -328,7 +390,10 @@ function UserActivationReport() {
                       {dateLabel(user.firstOrderAt)}
                     </TableCell>
                     <TableCell className="whitespace-nowrap tabular-nums">
-                      {firstOrderTimeLabel(user.timeToFirstOrderDays, user.firstOrderAt)}
+                      {firstOrderTimeLabel(
+                        user.timeToFirstOrderDays,
+                        user.firstOrderAt,
+                      )}
                     </TableCell>
                     <TableCell>
                       <Badge

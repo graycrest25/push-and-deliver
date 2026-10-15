@@ -372,7 +372,7 @@ export const pageTutorials: Record<string, Tutorial> = {
   ),
   "/user-activation": guide(
     "User activation",
-    step("Read the page summary", "Super admins can review activation rate, average time, and record counts for the returned page only. All order statuses count across rides, shipments, restaurant, and product orders. Invalid records are excluded from rate and average calculations."),
+    step("Read overall and page summaries", "Super admins can review overall activation rate and average time from the global summary. These cover the full dataset regardless of pagination. Global rates are unavailable during backfill, when counts may be partial. Page statistics cover only the returned rows. Invalid records are excluded from rate and average calculations."),
     step("Find a single user", "Enter an exact user ID and choose Look up. Single-user lookup does not send pagination parameters. Choose Show all users to return to the first report page."),
     step("Move through the report", "Use Next while another page is available, or Previous to revisit a page. Changing Users per page starts at page one. Dates use Lagos time. Individual times under one day show the first-order timestamp; longer durations and the average are rounded up to whole days."),
   ),

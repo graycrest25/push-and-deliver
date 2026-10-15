@@ -5,6 +5,12 @@ import ts from "typescript";
 import { z } from "zod";
 const valid = () => ({
   success: true,
+  globalSummary: {
+    isComplete: true, totalUsers: 10000, eligibleUsers: 9800,
+    activatedUsers: 3500, noOrderUsers: 6300, invalidUsers: 200,
+    activationRate: 3500 / 9800, averageTimeToFirstOrderDays: 2.4,
+    updatedAt: "2026-10-15T12:00:00.000Z",
+  },
   users: [
     {
       userid: "user_001",
@@ -94,14 +100,32 @@ assert.equal(
   new URL(requests.at(-1).url).searchParams.get("pageToken"),
   body.nextPageToken,
 );
-await service.getPage({ id: "user/with?&=characters" });
+body = { success: true, globalSummary: valid().globalSummary, ...valid().users[0] };
+const lookup = await service.getPage({ id: "user/with?&=characters" });
+assert.equal(lookup.users[0].userid, "user_001");
+assert.equal(lookup.pageSummary, null, "Flat lookup must not fabricate a page summary");
+assert.equal(lookup.nextPageToken, null);
+assert.equal(lookup.globalSummary.totalUsers, 10000);
 assert.equal(
   new URL(requests.at(-1).url).searchParams.get("id"),
   "user/with?&=characters",
 );
 assert.deepEqual([...new URL(requests.at(-1).url).searchParams.keys()], ["id"]);
+body = { success: true, globalSummary: valid().globalSummary };
+const global = await service.getSummary();
+assert.equal(new URL(requests.at(-1).url).search, "?summaryOnly=true");
+assert.equal(global.activationRate, 3500 / 9800);
+body.globalSummary = { ...global, isComplete: false, activationRate: null, averageTimeToFirstOrderDays: null, updatedAt: null };
+assert.equal((await service.getSummary()).isComplete, false);
+body = valid();
+await service.getPage({ pageSize: 25 });
+assert.equal((await service.getPage({ pageSize: 200, pageToken: "user_002" })).globalSummary.activationRate, global.activationRate, "Global summary is independent of page size/cursor");
 const before = requests.length;
 for (const params of [
+  { summaryOnly: true },
+  { summaryOnly: true, id: "x" },
+  { summaryOnly: true, pageSize: 50 },
+  { summaryOnly: "true" },
   { id: "x", pageSize: 50 },
   { id: "x", pageToken: "cursor" },
   { id: " " },
@@ -124,12 +148,13 @@ for (const adminType of [
 ]) {
   claims = { isAdmin: true, adminType };
   await assert.rejects(service.getPage(), /Super admin access/);
+  await assert.rejects(service.getSummary(), /Super admin access/);
 }
 claims = { isAdmin: false, adminType: "super" };
 await assert.rejects(service.getPage(), /Super admin access/);
 assert.equal(requests.length, before);
 claims = { isAdmin: true, adminType: "super" };
-for (const code of [400, 401, 403, 404, 405, 500]) {
+for (const code of [400, 401, 403, 404, 405, 409, 500]) {
   status = code;
   body = { success: false, error: `API error ${code}` };
   await assert.rejects(
@@ -157,6 +182,7 @@ body.users.push(
 assert.equal((await service.getPage()).users.length, 5);
 body = {
   success: true,
+  globalSummary: valid().globalSummary,
   users: [],
   pageSummary: {
     totalUsers: 0,
@@ -177,6 +203,9 @@ for (const mutate of [
   (b) => (b.nextPageToken = 42),
   (b) => (b.users[0].timeToFirstOrderDays = "0.5"),
   (b) => delete b.pageSummary,
+  (b) => delete b.globalSummary,
+  (b) => (b.globalSummary.activationRate = 35),
+  (b) => (b.globalSummary.isComplete = "false"),
 ]) {
   body = valid();
   mutate(body);
@@ -197,5 +226,5 @@ await assert.rejects(
 context.auth.currentUser = null;
 await assert.rejects(service.getPage(), /Sign in/);
 console.log(
-  "User activation tests passed: Firebase bearer auth, query encoding/defaults/limits, exclusive lookup, cursor/null handling, five statuses, nullable summaries, response validation, HTTP errors, and abort signals.",
+  "User activation tests passed: Firebase bearer auth, global/page summaries, summary-only requests, flat lookup, 409 backfill errors, pagination, five statuses, nullable/incomplete globals, response validation and cancellation.",
 );
