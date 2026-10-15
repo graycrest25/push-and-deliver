@@ -1,378 +1,789 @@
-import { SectionHelp } from "@/components/section-help";
-import { useFirestorePagination } from "@/hooks/use-firestore-pagination";
-import { TablePagination } from "@/components/table-pagination";
-"use client";
-
-import { useState, useEffect, useRef } from "react";
-import { Input } from "@/components/ui/input";
-import { Button } from "@/components/ui/button";
-import { ScrollArea } from "@/components/ui/scroll-area";
-import { Avatar, AvatarFallback } from "@/components/ui/avatar";
-import { Switch } from "@/components/ui/switch";
-import { Label } from "@/components/ui/label";
-import { supportService } from "@/services/support.service";
-import type { SupportTicket, TicketMessage } from "@/types";
-import { format, isToday, isYesterday } from "date-fns";
-import { Send, User as UserIcon, Loader2 } from "lucide-react";
-import { cn } from "@/lib/utils";
-import { toast } from "sonner";
-import { useCurrentUser } from "@/contexts/UserContext";
+import { useEffect, useState } from "react";
+import { Link } from "react-router-dom";
+import { format } from "date-fns";
 import {
-  Tooltip,
-  TooltipContent,
-  TooltipTrigger,
-} from "@/components/ui/tooltip";
-import { IconInfoCircle } from "@tabler/icons-react";
+  Archive,
+  CheckCircle2,
+  Clock3,
+  ExternalLink,
+  Headset,
+  Loader2,
+  LockKeyhole,
+  MessageSquare,
+  Search,
+  Send,
+  Tag,
+  UserRound,
+  X,
+} from "lucide-react";
+import { toast } from "sonner";
+import { SectionHelp } from "@/components/section-help";
+import { TablePagination } from "@/components/table-pagination";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import { useCurrentUser } from "@/contexts/UserContext";
+import { useFirestorePagination } from "@/hooks/use-firestore-pagination";
+import { canViewTicket, filterTickets } from "@/lib/support-tickets";
+import { cn } from "@/lib/utils";
+import { supportService } from "@/services/support.service";
+import { usersService } from "@/services/users.service";
+import type { SupportTicket, TicketMessage, User } from "@/types";
 
-// Helper function to format time WhatsApp-style
-const formatWhatsAppTime = (date: Date) => {
-  if (isToday(date)) {
-    return format(date, "h:mm a");
-  } else if (isYesterday(date)) {
-    return "Yesterday";
-  } else {
-    return format(date, "dd/MM/yy");
-  }
-};
+function dateLabel(value: SupportTicket["createdAt"]) {
+  const date = value && ("toDate" in value ? value.toDate() : value);
+  return date && !Number.isNaN(date.getTime())
+    ? format(date, "dd MMM yyyy, h:mm a")
+    : "Not recorded";
+}
+
+function StatusBadge({ status }: { status?: SupportTicket["status"] }) {
+  return (
+    <span
+      className={cn(
+        "inline-flex whitespace-nowrap rounded-full px-2.5 py-1 text-xs font-medium",
+        status === "closed"
+          ? "bg-muted text-muted-foreground"
+          : status === "resolved"
+            ? "bg-[var(--success-soft)] text-[var(--success)]"
+            : status === "open"
+              ? "bg-[var(--warning-soft)] text-[var(--warning)]"
+              : "bg-secondary text-secondary-foreground",
+      )}
+    >
+      {status === "in_progress"
+        ? "In progress"
+        : status
+          ? status.charAt(0).toUpperCase() + status.slice(1)
+          : "Unknown"}
+    </span>
+  );
+}
+
+function PlatformBadge({ platform }: { platform?: string }) {
+  return platform ? (
+    <span className="inline-flex whitespace-nowrap rounded-full bg-secondary px-2.5 py-1 text-xs font-medium text-secondary-foreground">
+      {platform}
+    </span>
+  ) : (
+    <span className="text-xs text-muted-foreground">Not tagged</span>
+  );
+}
 
 export default function SupportTicketsPage() {
+  const { user, adminType } = useCurrentUser();
   const ticketPagination = useFirestorePagination();
-  const [loadingTickets, setLoadingTickets] = useState(true);
-  const [loadingMessages, setLoadingMessages] = useState(true);
-  const { user } = useCurrentUser();
   const [tickets, setTickets] = useState<SupportTicket[]>([]);
   const [selectedTicket, setSelectedTicket] = useState<SupportTicket | null>(
-    null
+    null,
   );
+  const [profiles, setProfiles] = useState<Record<string, User | null>>({});
+  const profile = selectedTicket?.userId
+    ? profiles[selectedTicket.userId]
+    : null;
+  const profileIds = JSON.stringify([
+    ...new Set(
+      tickets
+        .filter((ticket) => !ticket.userType || ticket.userType === "user")
+        .flatMap((ticket) => (ticket.userId ? [ticket.userId] : [])),
+    ),
+  ]);
+  const [loadingTickets, setLoadingTickets] = useState(true);
+  const [ticketError, setTicketError] = useState("");
+  const [search, setSearch] = useState("");
+  const [status, setStatus] = useState("all");
+  const [platform, setPlatform] = useState("all");
+  const [conversationOpen, setConversationOpen] = useState(false);
   const messagePagination = useFirestorePagination(selectedTicket?.id ?? "");
-  const formRef = useRef<HTMLFormElement>(null);
   const [messages, setMessages] = useState<TicketMessage[]>([]);
+  const [loadingMessages, setLoadingMessages] = useState(false);
+  const [messageError, setMessageError] = useState("");
   const [newMessage, setNewMessage] = useState("");
   const [sending, setSending] = useState(false);
-  const [updatingStatus, setUpdatingStatus] = useState(false);
-  const scrollRef = useRef<HTMLDivElement>(null);
+  const [closing, setClosing] = useState(false);
+  const canRead = !!selectedTicket && canViewTicket(selectedTicket, adminType);
+  const readOnly = selectedTicket?.status === "closed";
 
-  // Subscribe to tickets
   useEffect(() => {
     setLoadingTickets(true);
-    const unsubscribe = supportService.getSupportTickets((data) => {
-      setTickets(data);
-      setLoadingTickets(false);
-    }, ticketPagination.options, (error) => {
-      setLoadingTickets(false);
-      toast.error(error.message);
-    });
-    return () => unsubscribe();
+    setTicketError("");
+    return supportService.getSupportTickets(
+      (data) => {
+        setTickets(data);
+        setSelectedTicket((current) =>
+          current
+            ? (data.find((ticket) => ticket.id === current.id) ?? current)
+            : null,
+        );
+        setLoadingTickets(false);
+      },
+      ticketPagination.options,
+      (error) => {
+        setLoadingTickets(false);
+        setTicketError(error.message);
+      },
+    );
   }, [ticketPagination.options]);
 
-  // Subscribe to messages when a ticket is selected
   useEffect(() => {
-    if (!selectedTicket?.id) return;
+    let active = true;
+    const ids: string[] = JSON.parse(profileIds);
+    Promise.all(
+      ids.map(
+        async (id) =>
+          [id, await usersService.getUserById(id).catch(() => null)] as const,
+      ),
+    ).then((entries) => {
+      if (active) setProfiles(Object.fromEntries(entries));
+    });
+    return () => {
+      active = false;
+    };
+  }, [profileIds]);
 
+  useEffect(() => {
+    setMessages([]);
+    setMessageError("");
+    if (!selectedTicket?.id || !canRead || !conversationOpen) return;
     setLoadingMessages(true);
-    const unsubscribe = supportService.getTicketMessages(
+    return supportService.getTicketMessages(
       selectedTicket.id,
       (data) => {
         setMessages(data);
         setLoadingMessages(false);
-        // Scroll to bottom on new messages
-        setTimeout(() => {
-          if (scrollRef.current) {
-            scrollRef.current.scrollIntoView({ behavior: "smooth" });
-          }
-        }, 100);
       },
       messagePagination.options,
-      (error) => { setLoadingMessages(false); toast.error(error.message); },
+      (error) => {
+        setLoadingMessages(false);
+        setMessageError(error.message);
+      },
     );
-    return () => unsubscribe();
-  }, [selectedTicket?.id, messagePagination.options]);
+  }, [
+    selectedTicket?.id,
+    canRead,
+    conversationOpen,
+    messagePagination.options,
+  ]);
 
-  const handleSendMessage = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!newMessage.trim() || !selectedTicket?.id || !user?.id) return;
+  const openTicket = (ticket: SupportTicket) => {
+    if (!canViewTicket(ticket, adminType)) return;
+    setSelectedTicket(ticket);
+    setNewMessage("");
+    setConversationOpen(false);
+  };
 
+  const sendMessage = async (event: React.FormEvent) => {
+    event.preventDefault();
+    if (
+      !selectedTicket?.id ||
+      !user?.id ||
+      !newMessage.trim() ||
+      readOnly ||
+      !canRead ||
+      sending ||
+      closing
+    )
+      return;
+    setSending(true);
     try {
-      setSending(true);
       await supportService.sendSupportMessage(
         selectedTicket.id,
         user.id,
-        newMessage
+        newMessage.trim(),
       );
       setNewMessage("");
     } catch (error) {
-      toast.error("Failed to send message");
+      toast.error(
+        error instanceof Error ? error.message : "Failed to send message",
+      );
     } finally {
       setSending(false);
     }
   };
 
-  const handleStatusToggle = async (checked: boolean) => {
-    if (!selectedTicket?.id || !user?.id) return;
-
-    const newStatus = checked ? "closed" : "open";
-
-    // Prevent reopening closed tickets
-    if (selectedTicket.status === "closed" && newStatus === "open") {
-      toast.error("Closed tickets cannot be reopened");
+  const closeTicket = async () => {
+    if (
+      !selectedTicket?.id ||
+      !user?.id ||
+      readOnly ||
+      !canRead ||
+      closing ||
+      sending
+    )
       return;
-    }
-
+    setClosing(true);
+    const ticketId = selectedTicket.id;
     try {
-      setUpdatingStatus(true);
-      await supportService.updateTicketStatus(selectedTicket.id, newStatus);
-
-      if (newStatus === "closed") {
-        // Send closing message to user
-        const closingMessage =
-          newMessage.trim() ||
-          "This ticket is now closed, I hope all your issues have been resolved. If you have any other issues, please open a new ticket.";
-
-        await supportService.sendSupportMessage(
-          selectedTicket.id,
-          user.id,
-          closingMessage
-        );
-
-        toast.success("Ticket closed");
-
-        // Clear the message input and close the ticket view after 1.5 seconds
-        setTimeout(() => {
-          setSelectedTicket(null);
-          setNewMessage("");
-        }, 1500);
-      } else {
-        toast.success("Ticket reopened");
-      }
-
-      // Update local state
-      setSelectedTicket({ ...selectedTicket, status: newStatus });
+      await supportService.closeTicket(
+        ticketId,
+        user.id,
+        newMessage.trim() ||
+          "This ticket is now closed, I hope all your issues have been resolved. If you have any other issues, please open a new ticket.",
+      );
+      setSelectedTicket((current) =>
+        current?.id === ticketId ? { ...current, status: "closed" } : current,
+      );
+      setNewMessage("");
+      toast.success("Ticket closed. Conversation retained.");
     } catch (error) {
-      toast.error("Failed to update ticket status");
+      toast.error(
+        error instanceof Error ? error.message : "Failed to close ticket",
+      );
     } finally {
-      setUpdatingStatus(false);
+      setClosing(false);
     }
   };
 
+  const enrichedTickets = tickets.map((ticket) => {
+    const account =
+      (!ticket.userType || ticket.userType === "user") && ticket.userId
+        ? profiles[ticket.userId]
+        : null;
+    return {
+      ...ticket,
+      userName: ticket.userName || account?.username,
+      userEmail: ticket.userEmail || account?.email,
+      userPhone: ticket.userPhone || account?.phonenumber,
+    };
+  });
+  const visibleTickets = filterTickets(
+    enrichedTickets,
+    search,
+    status,
+    platform,
+  );
+  const platforms = [
+    ...new Set(
+      tickets.flatMap((ticket) => (ticket.platform ? [ticket.platform] : [])),
+    ),
+  ].sort();
+  const profileBase =
+    selectedTicket?.userType === "rider"
+      ? "/riders"
+      : selectedTicket?.userType === "vendor"
+        ? "/vendors"
+        : "/users";
+  const name =
+    selectedTicket?.userName ||
+    profile?.username ||
+    selectedTicket?.userId ||
+    "Unknown account";
+
   return (
-    <div className="flex h-[85vh] overflow-hidden rounded-lg border bg-background shadow-sm">
-      {/* Left Sidebar - Ticket List */}
-      <div className="w-1/3 border-r flex flex-col min-w-[300px]">
-        <div className="p-4 border-b bg-muted/30">
-          <h2 className="flex items-center justify-between gap-2 font-semibold text-lg">Support Tickets<SectionHelp title="Support Tickets" /></h2>
+    <div className="space-y-4">
+      <div className="flex flex-wrap items-center justify-between gap-4 rounded-lg border border-[var(--success)]/30 bg-[var(--success-soft)] p-4 text-[var(--success)]">
+        <div className="flex items-start gap-3">
+          <CheckCircle2 className="mt-0.5 size-6 shrink-0" />
+          <div>
+            <h2 className="font-semibold">Keep the full support history</h2>
+            <p className="mt-1 text-sm">
+              Closing a ticket retains its conversation for review by super
+              admins.
+            </p>
+          </div>
         </div>
-        <ScrollArea className="flex-1 overflow-y-auto">
-          <div className="flex flex-col">
-            {tickets.map((ticket) => (
-              <button
-                key={ticket.id}
-                onClick={() => {
-                  if (ticket.status === "closed") {
-                    toast.error("This ticket is closed and cannot be opened");
-                    return;
-                  }
-                  setSelectedTicket(ticket);
-                }}
-                className={cn(
-                  "flex flex-col gap-1 p-4 text-left transition-colors border-b",
-                  ticket.status === "closed"
-                    ? "opacity-50 cursor-not-allowed"
-                    : "hover:bg-muted/50",
-                  selectedTicket?.id === ticket.id && "bg-muted"
+        <div className="flex items-center gap-2 text-xs font-medium">
+          <Archive className="size-4" /> Closed conversations retained
+        </div>
+      </div>
+
+      <div
+        className={cn(
+          "grid items-start gap-4",
+          selectedTicket && canRead && "xl:grid-cols-[minmax(0,1fr)_300px]",
+        )}
+      >
+        <section
+          className="min-w-0 overflow-hidden rounded-lg border bg-card"
+          aria-label="Support tickets"
+        >
+          <div className="flex flex-wrap items-center justify-between gap-4 border-b p-4">
+            <h1 className="flex items-center gap-2 text-xl font-semibold">
+              Support Tickets <SectionHelp title="Support Tickets" />
+            </h1>
+            <div className="flex w-full flex-wrap gap-2 lg:w-auto">
+              <div className="relative min-w-48 flex-1">
+                <Search className="absolute left-3 top-3 size-4 text-muted-foreground" />
+                <Input
+                  aria-label="Search tickets on this page"
+                  placeholder="Search ticket, account, or issue…"
+                  value={search}
+                  onChange={(event) => setSearch(event.target.value)}
+                  className="pl-9"
+                />
+              </div>
+              <Select value={status} onValueChange={setStatus}>
+                <SelectTrigger aria-label="Filter by status" className="w-36">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  {[
+                    ["all", "All statuses"],
+                    ["open", "Open"],
+                    ["pending", "Pending"],
+                    ["in_progress", "In progress"],
+                    ["resolved", "Resolved"],
+                    ["closed", "Closed"],
+                  ].map(([value, label]) => (
+                    <SelectItem key={value} value={value}>
+                      {label}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              <Select value={platform} onValueChange={setPlatform}>
+                <SelectTrigger aria-label="Filter by platform" className="w-40">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">All platforms</SelectItem>
+                  {platforms.map((value) => (
+                    <SelectItem key={value} value={value}>
+                      {value}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+          </div>
+          <p className="border-b px-4 py-2 text-xs text-muted-foreground">
+            Search and filters apply to the current page.{" "}
+            {adminType !== "super" &&
+              "Closed conversations are available to super admins."}
+          </p>
+          <div className="overflow-x-auto">
+            <table className="w-full text-left text-sm">
+              <thead className="bg-muted/40 text-xs text-muted-foreground">
+                <tr>
+                  {[
+                    "Ticket ID",
+                    "User / Rider / Vendor",
+                    "Platform",
+                    "Issue",
+                    "Status",
+                    "Created",
+                    "Actions",
+                  ].map((label) => (
+                    <th
+                      key={label}
+                      scope="col"
+                      className="whitespace-nowrap px-4 py-3 font-medium"
+                    >
+                      {label}
+                    </th>
+                  ))}
+                </tr>
+              </thead>
+              <tbody>
+                {loadingTickets ? (
+                  <tr>
+                    <td
+                      colSpan={7}
+                      className="p-12 text-center text-muted-foreground"
+                    >
+                      <Loader2 className="mx-auto mb-2 size-5 animate-spin" />
+                      Loading tickets…
+                    </td>
+                  </tr>
+                ) : ticketError ? (
+                  <tr>
+                    <td
+                      colSpan={7}
+                      role="alert"
+                      className="p-8 text-center text-destructive"
+                    >
+                      Unable to load tickets: {ticketError}
+                    </td>
+                  </tr>
+                ) : visibleTickets.length === 0 ? (
+                  <tr>
+                    <td
+                      colSpan={7}
+                      className="p-12 text-center text-muted-foreground"
+                    >
+                      <Headset className="mx-auto mb-3 size-8" />
+                      <p className="font-medium">No tickets found</p>
+                      <p className="mt-1 text-xs">
+                        {tickets.length
+                          ? "Try another search or reset the filters."
+                          : "Support requests will appear here."}
+                      </p>
+                      {tickets.length > 0 && (
+                        <Button
+                          variant="outline"
+                          className="mt-4"
+                          onClick={() => {
+                            setSearch("");
+                            setStatus("all");
+                            setPlatform("all");
+                          }}
+                        >
+                          Reset filters
+                        </Button>
+                      )}
+                    </td>
+                  </tr>
+                ) : (
+                  visibleTickets.map((ticket) => (
+                    <tr
+                      key={ticket.id}
+                      className={cn(
+                        "border-t hover:bg-muted/30",
+                        selectedTicket?.id === ticket.id && "bg-accent/50",
+                      )}
+                    >
+                      <td className="max-w-40 px-4 py-4">
+                        <button
+                          className="block w-full truncate text-left font-medium text-primary underline-offset-4 hover:underline disabled:cursor-not-allowed disabled:text-muted-foreground focus-visible:outline-2 focus-visible:outline-ring"
+                          title={ticket.id}
+                          disabled={!canViewTicket(ticket, adminType)}
+                          onClick={() => openTicket(ticket)}
+                        >
+                          #{ticket.id}
+                        </button>
+                      </td>
+                      <td className="px-4 py-4">
+                        <div className="flex items-center gap-2">
+                          <span className="flex size-8 shrink-0 items-center justify-center rounded-full bg-muted text-muted-foreground">
+                            <UserRound className="size-4" />
+                          </span>
+                          <div className="min-w-0">
+                            <p
+                              className="max-w-40 truncate font-medium"
+                              title={ticket.userName || ticket.userId}
+                            >
+                              {ticket.userName ||
+                                ticket.userId ||
+                                "Unknown account"}
+                            </p>
+                            <p className="max-w-40 truncate text-xs capitalize text-muted-foreground">
+                              {ticket.userType || "Account"}
+                              {ticket.userPhone ? ` · ${ticket.userPhone}` : ""}
+                            </p>
+                          </div>
+                        </div>
+                      </td>
+                      <td className="px-4 py-4">
+                        <PlatformBadge platform={ticket.platform} />
+                      </td>
+                      <td className="max-w-48 px-4 py-4">
+                        <p
+                          className="truncate"
+                          title={ticket.issue || ticket.lastMessage}
+                        >
+                          {ticket.issue || ticket.lastMessage || "No messages"}
+                        </p>
+                      </td>
+                      <td className="px-4 py-4">
+                        <StatusBadge status={ticket.status} />
+                      </td>
+                      <td className="min-w-36 px-4 py-4 text-xs tabular-nums text-muted-foreground">
+                        {dateLabel(ticket.createdAt)}
+                      </td>
+                      <td className="px-4 py-4">
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          aria-label={`View ticket ${ticket.id}`}
+                          disabled={!canViewTicket(ticket, adminType)}
+                          onClick={() => openTicket(ticket)}
+                        >
+                          {canViewTicket(ticket, adminType) ? (
+                            "View"
+                          ) : (
+                            <>
+                              <LockKeyhole className="size-3" /> Closed
+                            </>
+                          )}
+                        </Button>
+                      </td>
+                    </tr>
+                  ))
                 )}
-                disabled={ticket.status === "closed"}
+              </tbody>
+            </table>
+          </div>
+          <div className="border-t px-4 pb-4">
+            <TablePagination
+              pagination={ticketPagination}
+              loading={loadingTickets}
+            />
+          </div>
+        </section>
+
+        {selectedTicket && canRead && (
+          <aside
+            className="min-w-0 rounded-lg border bg-card"
+            aria-label="Ticket details"
+          >
+            <div className="flex items-start justify-between gap-2 border-b p-4">
+              <div className="min-w-0">
+                <p className="break-all text-sm font-semibold">
+                  #{selectedTicket.id}
+                </p>
+                <div className="mt-2">
+                  <StatusBadge status={selectedTicket.status} />
+                </div>
+                <h2 className="mt-3 break-words font-semibold">
+                  {selectedTicket.issue || "Support request"}
+                </h2>
+              </div>
+              <Button
+                variant="ghost"
+                size="icon"
+                aria-label="Close ticket details"
+                onClick={() => setSelectedTicket(null)}
               >
-                <div className="flex items-center justify-between w-full">
-                  <span className="font-mono text-xs font-medium truncate max-w-[50%] text-muted-foreground">
-                    {ticket.id}
-                  </span>
-                  <span className="text-xs text-muted-foreground whitespace-nowrap">
-                    {ticket.updatedAt
-                      ? formatWhatsAppTime(new Date(ticket.updatedAt as Date))
-                      : ""}
-                  </span>
+                <X className="size-4" />
+              </Button>
+            </div>
+            <div className="space-y-5 p-4 text-sm">
+              <div className="rounded-md bg-muted/40 p-3">
+                <div className="mb-2 flex items-center gap-2">
+                  <UserRound className="size-5 shrink-0 text-primary" />
+                  <p className="break-all font-medium">{name}</p>
                 </div>
-                <div className="flex items-center justify-between w-full mt-1">
-                  <span className="text-sm text-foreground/90 font-medium w-1/3 truncate">
-                    {ticket.lastMessage || "No messages"}
-                  </span>
+                {(selectedTicket.userPhone || profile?.phonenumber) && (
+                  <p className="break-all text-xs text-muted-foreground">
+                    {selectedTicket.userPhone || profile?.phonenumber}
+                  </p>
+                )}
+                {(selectedTicket.userEmail || profile?.email) && (
+                  <p className="mt-1 break-all text-xs text-muted-foreground">
+                    {selectedTicket.userEmail || profile?.email}
+                  </p>
+                )}
+                {selectedTicket.userId && (
+                  <Link
+                    className="mt-3 inline-flex items-center gap-1 text-xs font-medium text-primary hover:underline"
+                    to={`${profileBase}/${encodeURIComponent(selectedTicket.userId)}`}
+                  >
+                    View profile <ExternalLink className="size-3" />
+                  </Link>
+                )}
+              </div>
+              <dl className="space-y-3 text-xs">
+                <div className="flex justify-between gap-3">
+                  <dt className="flex items-center gap-1 text-muted-foreground">
+                    <Clock3 className="size-3" /> Created
+                  </dt>
+                  <dd className="text-right tabular-nums">
+                    {dateLabel(selectedTicket.createdAt)}
+                  </dd>
                 </div>
-              </button>
-            ))}
-            {tickets.length === 0 && (
-              <div className="p-8 text-center text-muted-foreground text-sm">
-                No tickets found
+                <div className="flex justify-between gap-3">
+                  <dt className="text-muted-foreground">Last updated</dt>
+                  <dd className="text-right tabular-nums">
+                    {dateLabel(selectedTicket.updatedAt)}
+                  </dd>
+                </div>
+                <div className="flex justify-between gap-3">
+                  <dt className="text-muted-foreground">Assigned to</dt>
+                  <dd className="break-all text-right">
+                    {selectedTicket.assignedTo || "Unassigned"}
+                  </dd>
+                </div>
+              </dl>
+              <div className="flex items-center justify-between gap-2 border-t pt-4">
+                <span className="text-xs text-muted-foreground">Platform</span>
+                <PlatformBadge platform={selectedTicket.platform} />
+              </div>
+              <div>
+                <h3 className="mb-2 flex items-center gap-1 text-xs font-semibold">
+                  <Tag className="size-3" /> Tags
+                </h3>
+                <div className="flex flex-wrap gap-1">
+                  {selectedTicket.tags?.length ? (
+                    selectedTicket.tags.map((tag) => (
+                      <span
+                        key={tag}
+                        className="rounded-full bg-muted px-2 py-1 text-xs"
+                      >
+                        {tag}
+                      </span>
+                    ))
+                  ) : (
+                    <p className="text-xs text-muted-foreground">
+                      No tags recorded
+                    </p>
+                  )}
+                </div>
+              </div>
+              <div>
+                <h3 className="mb-2 text-xs font-semibold">Issue details</h3>
+                <p className="whitespace-pre-wrap break-words text-xs leading-relaxed text-muted-foreground">
+                  {selectedTicket.issueDetails ||
+                    selectedTicket.issue ||
+                    selectedTicket.lastMessage ||
+                    "No details recorded"}
+                </p>
+              </div>
+              <div>
+                <h3 className="mb-2 text-xs font-semibold">Notes</h3>
+                <p className="whitespace-pre-wrap break-words text-xs leading-relaxed text-muted-foreground">
+                  {selectedTicket.notes || "No notes recorded"}
+                </p>
+              </div>
+              <Button
+                variant="outline"
+                className="w-full"
+                onClick={() => setConversationOpen(true)}
+              >
+                <MessageSquare className="size-4" />
+                View full conversation
+              </Button>
+              {readOnly && (
+                <p className="flex items-start gap-2 text-xs text-muted-foreground">
+                  <LockKeyhole className="size-4 shrink-0" />
+                  This ticket is closed. Super admins can review its
+                  conversation.
+                </p>
+              )}
+            </div>
+          </aside>
+        )}
+      </div>
+
+      <Dialog
+        open={conversationOpen && canRead}
+        onOpenChange={setConversationOpen}
+      >
+        <DialogContent className="flex max-h-[90dvh] flex-col sm:max-w-3xl">
+          <DialogHeader className="pr-6">
+            <DialogTitle className="break-all">
+              Ticket #{selectedTicket?.id}
+            </DialogTitle>
+            <DialogDescription>
+              {readOnly
+                ? "Closed conversation · read-only"
+                : "Review the conversation and reply to this request."}
+            </DialogDescription>
+          </DialogHeader>
+          <div
+            className="min-h-0 flex-1 overflow-y-auto rounded-md border p-4"
+            aria-label="Ticket messages"
+            aria-busy={loadingMessages}
+          >
+            <TablePagination
+              pagination={messagePagination}
+              loading={loadingMessages}
+            />
+            {loadingMessages ? (
+              <p
+                role="status"
+                className="py-8 text-center text-sm text-muted-foreground"
+              >
+                Loading messages…
+              </p>
+            ) : messageError ? (
+              <p role="alert" className="py-8 text-sm text-destructive">
+                Unable to load conversation: {messageError}
+              </p>
+            ) : messages.length === 0 ? (
+              <p className="py-8 text-center text-sm text-muted-foreground">
+                No messages on this page.
+              </p>
+            ) : (
+              <div className="mt-4 space-y-3">
+                {messages.map((message, index) => (
+                  <div
+                    key={message.id || index}
+                    className={cn(
+                      "w-fit max-w-[85%] rounded-lg px-3 py-2 text-sm",
+                      message.senderId === selectedTicket?.userId
+                        ? "bg-muted"
+                        : "ml-auto bg-primary text-primary-foreground",
+                    )}
+                  >
+                    <p className="mb-1 text-xs font-medium">
+                      {message.senderId === selectedTicket?.userId
+                        ? "Requester"
+                        : "Support"}
+                    </p>
+                    {message.imageurl && (
+                      <a
+                        href={message.imageurl}
+                        target="_blank"
+                        rel="noreferrer"
+                      >
+                        <img
+                          src={message.imageurl}
+                          alt="Ticket attachment; open full image"
+                          className="max-h-64 rounded object-contain"
+                        />
+                      </a>
+                    )}
+                    {message.message && (
+                      <p className="whitespace-pre-wrap break-words">
+                        {message.message}
+                      </p>
+                    )}
+                    <p className="mt-1 text-xs opacity-80">
+                      {dateLabel(message.timestamp || message.createdAt)}
+                    </p>
+                  </div>
+                ))}
               </div>
             )}
           </div>
-        </ScrollArea>
-        <TablePagination pagination={ticketPagination} loading={loadingTickets} />
-      </div>
-
-      {/* Right Main Area - Chat Interface with Grid Layout */}
-      <div className="flex-1 bg-muted/10 overflow-hidden">
-        {selectedTicket ? (
-          <div className="h-full grid grid-rows-[auto_1fr_auto]">
-            {/* Chat Header - Fixed */}
-            <div className="p-4 border-b bg-background flex items-center justify-between shadow-sm">
-              <div className="flex items-center gap-3">
-                <Avatar>
-                  <AvatarFallback>
-                    <UserIcon className="h-5 w-5" />
-                  </AvatarFallback>
-                </Avatar>
-                <div>
-                  <h3 className="font-semibold text-sm">
-                    Ticket #{selectedTicket.id}<SectionHelp title="Ticket conversation" />
-                  </h3>
-                  <p className="text-xs text-muted-foreground">
-                    User ID: {selectedTicket.userId}
-                  </p>
-                </div>
-              </div>
-
-              {/* Status Toggle */}
-              <SectionHelp title="Close ticket" />
-              <div className="flex items-center gap-2">
-                <Tooltip>
-                  <TooltipTrigger>
-                    <IconInfoCircle size={12} />
-                  </TooltipTrigger>
-                  <TooltipContent side="left">
-                    <p>
-                      Close ticket (On closing a ticket, it cannot be reopened.)
-                    </p>
-                  </TooltipContent>
-                </Tooltip>
-                <Label htmlFor="ticket-status" className="text-sm">
-                  {selectedTicket.status === "closed" ? "Closed" : "Open"}
-                </Label>
-                <Switch
-                  id="ticket-status"
-                  checked={selectedTicket.status === "closed"}
-                  onCheckedChange={handleStatusToggle}
-                  disabled={
-                    updatingStatus || selectedTicket.status === "closed"
-                  }
-                />
-              </div>
-            </div>
-
-            {/* Messages Area - Scrollable */}
-            <ScrollArea className="px-4 overflow-y-auto">
-              <div className="flex flex-col gap-4 max-w-3xl mx-auto">
-                <TablePagination pagination={messagePagination} loading={loadingMessages} />
-                {messages.map((msg, index) => {
-                  const isUser = msg.senderId === selectedTicket.userId;
-                  const isFirst = index === 0;
-                  const isLast = index === messages.length - 1;
-
-                  return (
-                    <div
-                      key={msg.id || index}
-                      className={cn(
-                        "flex w-fit max-w-[75%] flex-col gap-2 rounded-lg px-3 py-2 text-sm",
-                        !isUser
-                          ? "ml-auto bg-primary text-primary-foreground"
-                          : "bg-muted",
-                        isFirst && "mt-4",
-                        isLast && "mb-4"
-                      )}
-                    >
-                      {msg.imageurl ? (
-                        <img
-                          src={msg.imageurl}
-                          alt="attachment"
-                          className="rounded-md max-w-full max-h-[400px] w-auto object-contain bg-black/5"
-                        />
-                      ) : null}
-                      {msg.message && <p>{msg.message}</p>}
-                      <span
-                        className={cn(
-                          "text-[10px] opacity-70",
-                          !isUser
-                            ? "text-primary-foreground/70"
-                            : "text-muted-foreground"
-                        )}
-                      >
-                        {msg.timestamp
-                          ? format(new Date(msg.timestamp as Date), "h:mm a")
-                          : ""}
-                      </span>
-                    </div>
-                  );
-                })}
-                <div ref={scrollRef} />
-              </div>
-            </ScrollArea>
-
-            {/* Input Area - Fixed */}
-            <div className="p-4 bg-background border-t">
-              <form
-                ref={formRef}
-                onSubmit={handleSendMessage}
-                className="flex gap-2 max-w-3xl mx-auto"
-              >
+          {readOnly ? (
+            <p className="flex items-center gap-2 text-sm text-muted-foreground">
+              <LockKeyhole className="size-4" />
+              Closed tickets are read-only and cannot be reopened.
+            </p>
+          ) : (
+            <div className="space-y-3">
+              <form onSubmit={sendMessage} className="flex gap-2">
                 <Input
+                  aria-label="Reply to ticket"
+                  placeholder="Type a message…"
                   value={newMessage}
-                  onChange={(e) => setNewMessage(e.target.value)}
-                  placeholder="Type a message..."
-                  className="flex-1"
-                  disabled={sending}
+                  onChange={(event) => setNewMessage(event.target.value)}
+                  disabled={sending || closing}
                 />
                 <Button
                   type="submit"
-                  size="icon"
-                  disabled={sending || !newMessage.trim()}
+                  aria-label="Send reply"
+                  disabled={!newMessage.trim() || sending || closing}
                 >
                   {sending ? (
-                    <Loader2 className="h-4 w-4 animate-spin" />
+                    <Loader2 className="size-4 animate-spin" />
                   ) : (
-                    <Send className="h-4 w-4" />
+                    <Send className="size-4" />
                   )}
                 </Button>
               </form>
-            </div>
-          </div>
-        ) : (
-          <div className="h-full flex items-center justify-center text-muted-foreground bg-muted/5">
-            <div className="text-center">
-              <div className="flex justify-center items-center">
-                <svg
-                  width="100"
-                  height="100"
-                  viewBox="0 0 75 80"
-                  fill="#262626"
-                  xmlns="http://www.w3.org/2000/svg"
-                  stroke-width="1px"
-                  stroke-linecap="round"
-                  stroke-linejoin="round"
+              <div className="flex flex-wrap items-center justify-between gap-2">
+                <p className="max-w-sm text-xs text-muted-foreground">
+                  Closing is permanent. Your draft will be sent as the closing
+                  message, or a default message if empty.
+                </p>
+                <Button
+                  variant="outline"
+                  onClick={closeTicket}
+                  disabled={closing || sending}
                 >
-                  <path
-                    d="M72.9932 9.56226V67.1621L52.9932 77.1621V19.5623L72.9932 9.56226Z"
-                    stroke="#E0E0E0"
-                    stroke-linejoin="round"
-                  />
-                  <path
-                    d="M52.9934 19.5622V77.162L2.7832 48.1821C2.7832 32.1021 7.65329 21.2921 17.3733 15.7521C17.6633 15.5821 17.9534 15.4221 18.2534 15.2721L18.8733 14.9621C22.2633 13.3021 25.8934 12.452 29.7734 12.382C36.7134 12.242 44.4534 14.6422 52.9934 19.5622Z"
-                    stroke="#E0E0E0"
-                    stroke-linejoin="round"
-                  />
-                  <path
-                    d="M72.9932 9.56227L52.9932 19.5623C44.4532 14.6423 36.7132 12.2421 29.7732 12.3821C25.8932 12.4521 22.263 13.3022 18.873 14.9622L38.123 5.34205L38.1931 5.30226C47.7631 0.282258 59.3532 1.70227 72.9932 9.56227Z"
-                    stroke="#E0E0E0"
-                    stroke-linejoin="round"
-                  />
-                </svg>
+                  {closing && <Loader2 className="size-4 animate-spin" />}Close
+                  ticket
+                </Button>
               </div>
-              <h3 className="text-lg font-medium">No Ticket Selected</h3>
-              <p className="text-sm mt-1">
-                Click a support ticket to see messages sent
-              </p>
             </div>
-          </div>
-        )}
-      </div>
+          )}
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

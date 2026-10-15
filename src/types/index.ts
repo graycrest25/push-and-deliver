@@ -270,7 +270,17 @@ export interface SupportTicket {
   updatedAt?: Timestamp | Date;
   lastMessage?: string;
   lastSender?: string;
-  status?: "open" | "closed" | "pending";
+  status?: "open" | "closed" | "pending" | "in_progress" | "resolved";
+  platform?: string;
+  userType?: "user" | "rider" | "vendor";
+  userName?: string;
+  userEmail?: string;
+  userPhone?: string;
+  issue?: string;
+  issueDetails?: string;
+  assignedTo?: string;
+  tags?: string[];
+  notes?: string;
   userId?: string;
   messages?: TicketMessage[];
 }

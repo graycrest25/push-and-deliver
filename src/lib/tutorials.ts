@@ -107,12 +107,12 @@ export const pageTutorials: Record<string, Tutorial> = {
   "/support-tickets": guide(
     "Support tickets",
     step(
-      "Choose an open ticket",
-      "Select a ticket from the left list to load its conversation. The preview and time help identify recent activity. Closed tickets are disabled and cannot be reopened.",
+      "Find a ticket",
+      "Search or filter the current page of the ticket table, then choose View to inspect the details. Super admins can also view closed tickets.",
     ),
     step(
       "Read the conversation",
-      "Review the messages and user ID before replying. Use the message pagination controls to see other loaded pages of the conversation.",
+      "Choose View full conversation in the details panel. Review the messages and account before replying. Use pagination to read older messages. Closed conversations are read-only.",
     ),
     step(
       "Send a reply",
@@ -120,7 +120,7 @@ export const pageTutorials: Record<string, Tutorial> = {
     ),
     step(
       "Close a resolved ticket",
-      "Use the status switch only when the issue is resolved. Closing sends the text currently in the message box as the closing message, or a default closing message if the box is empty. Closing is permanent.",
+      "Use Close ticket only when the issue is resolved. Closing sends the text currently in the message box as the closing message, or a default closing message if the box is empty. Closing is permanent; the ticket and conversation are retained for super admin review.",
     ),
   ),
   "/users": guide(
