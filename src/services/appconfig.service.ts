@@ -1,8 +1,8 @@
-import { getPaginatedDocs, type PaginationOptions } from "@/lib/firestore-pagination";
 import {
   collection,
   doc,
   getDoc,
+  getDocs,
   updateDoc,
 } from "firebase/firestore";
 import { db } from "@/lib/firebase";
@@ -12,9 +12,9 @@ const COLLECTION_NAME = "AppConfig";
 
 export const appConfigService = {
   // Get all app configurations
-  async getAllConfigs(pagination: PaginationOptions = {}): Promise<AppConfig[]> {
+  async getAllConfigs(): Promise<AppConfig[]> {
     try {
-      const querySnapshot = await getPaginatedDocs(collection(db, COLLECTION_NAME), pagination);
+      const querySnapshot = await getDocs(collection(db, COLLECTION_NAME));
       return querySnapshot.docs.map((doc) => ({
         id: doc.id,
         ...doc.data(),
@@ -49,7 +49,7 @@ export const appConfigService = {
   async updateField(
     docId: string,
     field: string,
-    value: string | number | boolean
+    value: string | number | boolean,
   ): Promise<void> {
     try {
       const docRef = doc(db, COLLECTION_NAME, docId);
@@ -63,7 +63,7 @@ export const appConfigService = {
   // Update multiple fields in a config document
   async updateConfig(
     docId: string,
-    configData: Partial<AppConfig>
+    configData: Partial<AppConfig>,
   ): Promise<void> {
     try {
       const docRef = doc(db, COLLECTION_NAME, docId);
