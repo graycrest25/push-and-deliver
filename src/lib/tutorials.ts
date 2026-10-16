@@ -119,7 +119,7 @@ export const pageTutorials: Record<string, Tutorial> = {
     ),
     step(
       "Read the conversation",
-      "Choose View full conversation in the details panel. Review the messages and account before replying. Use pagination to read older messages. Closed conversations are read-only.",
+      "Choose View full conversation in the details panel. Review the messages and account before replying. The conversation opens in a side panel. Scroll upward to load older messages. Closed conversations are read-only.",
     ),
     step(
       "Send a reply",

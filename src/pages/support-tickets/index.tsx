@@ -22,12 +22,12 @@ import { TablePagination } from "@/components/table-pagination";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogHeader,
-  DialogTitle,
-} from "@/components/ui/dialog";
+  Sheet,
+  SheetContent,
+  SheetDescription,
+  SheetHeader,
+  SheetTitle,
+} from "@/components/ui/sheet";
 import {
   Select,
   SelectContent,
@@ -36,12 +36,13 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { useCurrentUser } from "@/contexts/UserContext";
+import { useTicketConversation } from "@/hooks/use-ticket-conversation";
 import { useFirestorePagination } from "@/hooks/use-firestore-pagination";
 import { canViewTicket, filterTickets } from "@/lib/support-tickets";
 import { cn } from "@/lib/utils";
 import { supportService } from "@/services/support.service";
 import { usersService } from "@/services/users.service";
-import type { SupportTicket, TicketMessage, User } from "@/types";
+import type { SupportTicket, User } from "@/types";
 
 function dateLabel(value: SupportTicket["createdAt"]) {
   const date = value && ("toDate" in value ? value.toDate() : value);
@@ -107,15 +108,24 @@ export default function SupportTicketsPage() {
   const [status, setStatus] = useState("all");
   const [platform, setPlatform] = useState("all");
   const [conversationOpen, setConversationOpen] = useState(false);
-  const messagePagination = useFirestorePagination(selectedTicket?.id ?? "");
-  const [messages, setMessages] = useState<TicketMessage[]>([]);
-  const [loadingMessages, setLoadingMessages] = useState(false);
-  const [messageError, setMessageError] = useState("");
   const [newMessage, setNewMessage] = useState("");
   const [sending, setSending] = useState(false);
   const [closing, setClosing] = useState(false);
   const canRead = !!selectedTicket && canViewTicket(selectedTicket, adminType);
   const readOnly = selectedTicket?.status === "closed";
+
+  const {
+    messages,
+    loading: loadingMessages,
+    error: messageError,
+    hasMore,
+    viewport: messageViewport,
+    sentinel: messageSentinel,
+    retry,
+  } = useTicketConversation(
+    selectedTicket?.id ?? "",
+    conversationOpen && canRead,
+  );
 
   useEffect(() => {
     setLoadingTickets(true);
@@ -153,30 +163,6 @@ export default function SupportTicketsPage() {
       active = false;
     };
   }, [profileIds]);
-
-  useEffect(() => {
-    setMessages([]);
-    setMessageError("");
-    if (!selectedTicket?.id || !canRead || !conversationOpen) return;
-    setLoadingMessages(true);
-    return supportService.getTicketMessages(
-      selectedTicket.id,
-      (data) => {
-        setMessages(data);
-        setLoadingMessages(false);
-      },
-      messagePagination.options,
-      (error) => {
-        setLoadingMessages(false);
-        setMessageError(error.message);
-      },
-    );
-  }, [
-    selectedTicket?.id,
-    canRead,
-    conversationOpen,
-    messagePagination.options,
-  ]);
 
   const openTicket = (ticket: SupportTicket) => {
     if (!canViewTicket(ticket, adminType)) return;
@@ -302,15 +288,15 @@ export default function SupportTicketsPage() {
 
       <div
         className={cn(
-          "grid items-start gap-4",
+          "grid items-start gap-4 [--ticket-panel-height:clamp(36rem,calc(100dvh-14rem),64rem)]",
           selectedTicket && canRead && "xl:grid-cols-[minmax(0,1fr)_300px]",
         )}
       >
         <section
-          className="min-w-0 overflow-hidden rounded-lg border bg-card"
+          className="flex h-[var(--ticket-panel-height)] min-w-0 flex-col overflow-hidden rounded-lg border bg-card"
           aria-label="Support tickets"
         >
-          <div className="flex flex-wrap items-center justify-between gap-4 border-b p-4">
+          <div className="flex shrink-0 flex-wrap items-center justify-between gap-4 border-b p-4">
             <h1 className="flex items-center gap-2 text-xl font-semibold">
               Support Tickets <SectionHelp title="Support Tickets" />
             </h1>
@@ -359,14 +345,19 @@ export default function SupportTicketsPage() {
               </Select>
             </div>
           </div>
-          <p className="border-b px-4 py-2 text-xs text-muted-foreground">
+          <p className="shrink-0 border-b px-4 py-2 text-xs text-muted-foreground">
             Search and filters apply to the current page.{" "}
             {adminType !== "super" &&
               "Closed conversations are available to super admins."}
           </p>
-          <div className="overflow-x-auto">
+          <div
+            className="min-h-0 flex-1 overflow-auto overscroll-contain"
+            tabIndex={0}
+            role="region"
+            aria-label="Scrollable support ticket table"
+          >
             <table className="w-full text-left text-sm">
-              <thead className="bg-muted/40 text-xs text-muted-foreground">
+              <thead className="text-xs text-muted-foreground">
                 <tr>
                   {[
                     "Ticket ID",
@@ -380,7 +371,7 @@ export default function SupportTicketsPage() {
                     <th
                       key={label}
                       scope="col"
-                      className="whitespace-nowrap px-4 py-3 font-medium"
+                      className="sticky top-0 z-10 whitespace-nowrap border-b bg-card px-4 py-3 font-medium"
                     >
                       {label}
                     </th>
@@ -516,7 +507,7 @@ export default function SupportTicketsPage() {
               </tbody>
             </table>
           </div>
-          <div className="border-t px-4 pb-4">
+          <div className="shrink-0 border-t px-4 pb-4">
             <TablePagination
               pagination={ticketPagination}
               loading={loadingTickets}
@@ -526,10 +517,10 @@ export default function SupportTicketsPage() {
 
         {selectedTicket && canRead && (
           <aside
-            className="min-w-0 rounded-lg border bg-card"
+            className="flex h-[var(--ticket-panel-height)] min-w-0 flex-col overflow-hidden rounded-lg border bg-card"
             aria-label="Ticket details"
           >
-            <div className="flex items-start justify-between gap-2 border-b p-4">
+            <div className="flex shrink-0 items-start justify-between gap-2 border-b p-4">
               <div className="min-w-0">
                 <p className="break-all text-sm font-semibold">
                   #{selectedTicket.id}
@@ -550,7 +541,7 @@ export default function SupportTicketsPage() {
                 <X className="size-4" />
               </Button>
             </div>
-            <div className="space-y-5 p-4 text-sm">
+            <div className="min-h-0 flex-1 space-y-5 overflow-y-auto overscroll-contain p-4 text-sm">
               <div className="rounded-md bg-muted/40 p-3">
                 <div className="mb-2 flex items-center gap-2">
                   <UserRound className="size-5 shrink-0 text-primary" />
@@ -657,44 +648,60 @@ export default function SupportTicketsPage() {
         )}
       </div>
 
-      <Dialog
+      <Sheet
         open={conversationOpen && canRead}
         onOpenChange={setConversationOpen}
       >
-        <DialogContent className="flex max-h-[90dvh] flex-col sm:max-w-3xl">
-          <DialogHeader className="pr-6">
-            <DialogTitle className="break-all">
+        <SheetContent
+          overlayClassName="backdrop-blur-sm"
+          className="h-dvh w-full gap-0 bg-card sm:max-w-xl"
+        >
+          <SheetHeader className="shrink-0 border-b p-5 pr-12 text-left">
+            <SheetTitle className="break-all">
               Ticket #{selectedTicket?.id}
-            </DialogTitle>
-            <DialogDescription>
+            </SheetTitle>
+            <SheetDescription>
               {readOnly
                 ? "Closed conversation · read-only"
                 : "Review the conversation and reply to this request."}
-            </DialogDescription>
-          </DialogHeader>
+            </SheetDescription>
+          </SheetHeader>
           <div
-            className="min-h-0 flex-1 overflow-y-auto rounded-md border p-4"
+            ref={messageViewport}
+            className="min-h-0 flex-1 overflow-y-auto overscroll-contain p-5 [overflow-anchor:none]"
+            role="region"
+            tabIndex={0}
             aria-label="Ticket messages"
             aria-busy={loadingMessages}
           >
-            <TablePagination
-              pagination={messagePagination}
-              loading={loadingMessages}
-            />
-            {loadingMessages ? (
-              <p
-                role="status"
-                className="py-8 text-center text-sm text-muted-foreground"
-              >
-                Loading messages…
-              </p>
-            ) : messageError ? (
-              <p role="alert" className="py-8 text-sm text-destructive">
-                Unable to load conversation: {messageError}
-              </p>
-            ) : messages.length === 0 ? (
+            <div
+              ref={messageSentinel}
+              className="flex min-h-10 items-center justify-center text-xs text-muted-foreground"
+              role="status"
+            >
+              {loadingMessages ? (
+                <span className="flex items-center gap-2">
+                  <Loader2 className="size-4 animate-spin" />
+                  Loading messages…
+                </span>
+              ) : messageError ? (
+                <span role="alert">
+                  Unable to load conversation: {messageError}{" "}
+                  <Button variant="link" size="sm" onClick={retry}>
+                    Try again
+                  </Button>
+                </span>
+              ) : messages.length > 0 ? (
+                hasMore ? (
+                  "Scroll up for older messages"
+                ) : (
+                  "Beginning of conversation"
+                )
+              ) : null}
+            </div>
+            {!loadingMessages && !messageError && messages.length === 0 ? (
               <p className="py-8 text-center text-sm text-muted-foreground">
-                No messages on this page.
+                No messages yet.
               </p>
             ) : (
               <div className="mt-4 space-y-3">
@@ -740,12 +747,12 @@ export default function SupportTicketsPage() {
             )}
           </div>
           {readOnly ? (
-            <p className="flex items-center gap-2 text-sm text-muted-foreground">
+            <p className="flex shrink-0 items-start gap-2 border-t p-5 text-sm text-muted-foreground">
               <LockKeyhole className="size-4" />
               Closed tickets are read-only and cannot be reopened.
             </p>
           ) : (
-            <div className="space-y-3">
+            <div className="shrink-0 space-y-3 border-t p-5 pb-[max(1.25rem,env(safe-area-inset-bottom))]">
               <form onSubmit={sendMessage} className="flex gap-2">
                 <Input
                   aria-label="Reply to ticket"
@@ -782,8 +789,8 @@ export default function SupportTicketsPage() {
               </div>
             </div>
           )}
-        </DialogContent>
-      </Dialog>
+        </SheetContent>
+      </Sheet>
     </div>
   );
 }

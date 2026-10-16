@@ -115,6 +115,49 @@ await assert.rejects(
   /not found/,
 );
 assert.equal(committed.length, 0);
+// Infinite history uses an extra document to detect the end, and returns
+// messages in chronological order without dropping their Firestore IDs.
+let subscription;
+let received;
+let receivedError;
+let unsubscribed = false;
+const conversationService = load("src/services/support.service.ts", {
+  db: {},
+  collection: (...parts) => parts,
+  query: (...parts) => parts,
+  orderBy: (...parts) => ({ orderBy: parts }),
+  limit: (count) => ({ limit: count }),
+  onSnapshot: (query, callback, onError) => {
+    subscription = { query, callback, onError };
+    return () => { unsubscribed = true; };
+  },
+}).supportService;
+const stop = conversationService.subscribeConversation(
+  "ticket-id", 25,
+  (messages, hasMore) => { received = { messages, hasMore }; },
+  (error) => { receivedError = error; },
+);
+assert.equal(subscription.query.at(-1).limit, 26);
+const docs = Array.from({ length: 26 }, (_, i) => ({
+  id: `message-${26 - i}`,
+  data: () => ({ message: `Message ${26 - i}`, timestamp: { toDate: () => new Date(2026, 0, 26 - i) } }),
+}));
+subscription.callback({ docs, size: docs.length });
+assert.equal(received.hasMore, true);
+assert.equal(received.messages.length, 25);
+assert.equal(received.messages[0].id, "message-2");
+assert.equal(received.messages.at(-1).id, "message-26");
+subscription.callback({ docs: docs.slice(0, 2), size: 2 });
+assert.equal(received.hasMore, false);
+assert.equal(received.messages.length, 2);
+subscription.callback({ docs: [], size: 0 });
+assert.equal(received.messages.length, 0);
+assert.equal(received.hasMore, false);
+const failure = new Error("offline");
+subscription.onError(failure);
+assert.equal(receivedError, failure);
+stop();
+assert.equal(unsubscribed, true);
 console.log(
-  "Support ticket tests passed: role access, search, filters, atomic replies/closure, retained history, closed reply protection, and failed writes.",
+  "Support ticket tests passed: role access, search, filters, atomic replies/closure, retained history, closed reply protection, failed writes, and infinite conversation history.",
 );

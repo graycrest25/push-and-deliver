@@ -5,6 +5,8 @@ import {
   runTransaction,
   Timestamp,
   doc,
+  limit,
+  onSnapshot,
 } from "firebase/firestore";
 import { db } from "@/lib/firebase";
 import {
@@ -17,6 +19,33 @@ const COLLECTION_NAME = "SupportTickets";
 const MESSAGES_SUBCOLLECTION = "Messages";
 
 export const supportService = {
+  // Expand the live window as older history is requested. The extra document
+  // tells the drawer whether more history exists without a collection count.
+  subscribeConversation: (
+    ticketId: string,
+    messageLimit: number,
+    callback: (messages: TicketMessage[], hasMore: boolean) => void,
+    onError: (error: Error) => void,
+  ) =>
+    onSnapshot(
+      query(
+        collection(db, COLLECTION_NAME, ticketId, MESSAGES_SUBCOLLECTION),
+        orderBy("timestamp", "desc"),
+        limit(messageLimit + 1),
+      ),
+      (snapshot) => {
+        const messages = snapshot.docs
+          .slice(0, messageLimit)
+          .map((document) => ({
+            ...document.data(),
+            id: document.id,
+            createdAt: document.data().createdAt?.toDate(),
+            timestamp: document.data().timestamp?.toDate(),
+          })) as TicketMessage[];
+        callback(messages.reverse(), snapshot.size > messageLimit);
+      },
+      onError,
+    ),
   // Get all support tickets
   getSupportTickets: (
     callback: (tickets: SupportTicket[]) => void,
