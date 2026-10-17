@@ -1,3 +1,4 @@
+import { OrderSummaryCards } from "@/components/order-summary-cards";
 import { useSearchPagination } from "@/hooks/use-search-pagination";
 import { TablePagination } from "@/components/table-pagination";
 import { useState, useEffect } from "react";
@@ -144,12 +145,14 @@ export default function ProductOrdersPage() {
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-3xl font-bold tracking-tight">Product Orders</h1>
-        <p className="text-sm text-muted-foreground">Search covers all records. Filters, summaries, and exports apply to the displayed results.</p>
+        <p className="text-sm text-muted-foreground">Search covers all records. Summary cards show all orders; table filters apply to the displayed results.</p>
           <p className="text-muted-foreground">
             View and manage unpaid orders from E-commerce Merchants
           </p>
         </div>
       </div>
+
+      <OrderSummaryCards orderType="ecommerce" />
 
       <div className="flex items-center gap-4">
         <div className="relative flex-1 max-w-sm">

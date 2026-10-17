@@ -38,37 +38,29 @@ Issuance dates are required; omitting the cutoff delegates today's Africa/Lagos 
 
 The client also supports `summaryOnly=true` through `getSummary()`, without pagination or user lookup parameters. Flat single-user responses retain the global summary; 404 and 409 errors are shown with the server's message. A 409 means the existing user's activation cache requires backfill or trigger processing. Endpoint URLs continue to use the configured Firebase environment.
 
-## Independent account summary function
+## Independent account and order summary APIs
 
-`functions/index.cjs` exports `getAdminAccountSummary`. Integrate this export and
-`account-summary.cjs` into the existing Firebase backend, using its existing Admin
-SDK initialization, region, and deployment configuration. The included
-`functions/package.json` records the Node runtime and dependencies for a standalone
-functions codebase; this repository still does not deploy the production backend.
+The web app expects `getAdminAccountSummary` for Users/Riders and
+`getAdminOrderSummary` for shipment, ride/courier, food, and ecommerce orders.
+Both endpoints use the existing `FIREBASE_BASE_URL` configuration. Implement and
+deploy them in the existing backend project; this repository does not contain
+an example functions folder or Firebase deployment configuration.
 
-Deploy the Riders `verificationStatus` + `vehicleType` and Referrals
-`referrerUid` + `createdAt` composite indexes from
-`firestore.indexes.json` alongside the function. Preserve existing indexes.
-The endpoint must be available through the existing `FIREBASE_BASE_URL` convention
-(`getAdminAccountSummary` + the Cloud Run hostname suffix).
+See [the summary API contract](../docs/summary-api-examples.md),
+[copyable HTTP requests](../docs/examples/summary-api.http), and
+[complete sample responses](../docs/examples/summary-responses.json).
+These define authorization, exact collection/field names, numeric statuses,
+count/sum calculations, errors, caching, and index guidance.
 
-Contract: authenticated `GET ?type=users|riders` with a Firebase ID token in the
-Bearer header. The function verifies the token and checks admin role claims on
-every request. Verifiers can access rider summaries only; super, regular, and
-customer-care admins can access both. The frontend has separate loading, retry,
-and error states for these summaries and does not substitute table-row counts
-when the function is unavailable.
+All six summary sections load independently of table rows and pagination,
+with separate loading, retry, and error states. Shipment summary cards remain
+global across offices, even when a head office is selected for the table.
+They do not fall back to table counts if an API is unavailable.
 
-Counts use Firestore `count()` aggregations, including missing-createdAt accounts
-in the overall total. Rider status and vehicle types use numeric schema values
-(verification: pending=0, verified=1, blocked=2; vehicle: car=0, bicycle=1, bike=2).
-Totals include accounts with unknown or missing status/vehicle fields even when
-they do not appear in a breakdown. User growth uses Lagos midnight boundaries;
-`newThisWeek` means since midnight seven days ago, and the comparison period is
-the preceding seven days. Growth is null when the comparison period is empty.
-Responses carry `calculatedAt`; a per-instance 30-second cache coalesces concurrent
-requests and never crosses a Lagos date boundary. No account documents are loaded
-for summary calculation. Separate count queries are not a transactional snapshot.
+Deploy the existing Riders `verificationStatus` + `vehicleType` and Referrals
+`referrerUid` + `createdAt` composite indexes from `firestore.indexes.json`,
+preserving existing indexes. Additional indexes for order sums depend on the
+backend query implementation; the API contract lists the corresponding fields.
 
 ## Collection search
 
@@ -90,7 +82,6 @@ large datasets should move to a maintained search index (for example an external
 search provider). Search is an on-demand snapshot; ticket lists resume their
 live Firestore subscription when search is cleared. Search caches live only in
 the mounted list, and are invalidated on local rider, vendor, withdrawal, and ticket status changes. Other list
-filters and lower-page charts still apply to the returned page; only Users and
-Riders summary cards are global. No search index or data backfill is required.
+filters and lower-page charts still apply to the returned page; Users, Riders, and the four order summary sections are global. No search index or data backfill is required.
 
 Aggregation reference: https://firebase.google.com/docs/firestore/query-data/aggregation-queries

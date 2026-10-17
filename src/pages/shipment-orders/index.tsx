@@ -1,3 +1,4 @@
+import { OrderSummaryCards } from "@/components/order-summary-cards";
 import { useCurrentUser } from "@/contexts/UserContext";
 import { useHeadOffices } from "@/hooks/use-head-offices";
 import { Button } from "@/components/ui/button";
@@ -40,13 +41,6 @@ import {
 import { format } from "date-fns";
 import { toast } from "sonner";
 import { IconPackage, IconSearch, IconFilter } from "@tabler/icons-react";
-
-const formatAmount = (amount: number) => {
-  return amount.toLocaleString("en-US", {
-    minimumFractionDigits: 2,
-    maximumFractionDigits: 2,
-  });
-};
 
 export default function ShipmentOrdersPage() {
   const { adminType } = useCurrentUser();
@@ -181,30 +175,6 @@ export default function ShipmentOrdersPage() {
     navigate(`/shipment-orders/${orderId}`);
   };
 
-  // Calculate metrics
-  const totalShipments = orders.length;
-  const activeShipments = orders.filter(
-    (o) =>
-      o.orderStatus === ShipmentOrderStatus.placed ||
-      o.orderStatus === ShipmentOrderStatus.acceptedByRider ||
-      o.orderStatus === ShipmentOrderStatus.sentToHq ||
-      o.orderStatus === ShipmentOrderStatus.onrouteToDestination ||
-      o.orderStatus === ShipmentOrderStatus.onRouteToPndHQ,
-  ).length;
-  const deliveredShipments = orders.filter(
-    (o) => o.orderStatus === ShipmentOrderStatus.deliveredToDestination,
-  ).length;
-  const deliveredRevenue = orders
-    .filter(
-      (o) =>
-        o.orderStatus === ShipmentOrderStatus.deliveredToDestination &&
-        o.ispaid,
-    )
-    .reduce((sum, o) => sum + (o.totalAmount || 0), 0);
-
-  const cancelledShipments = orders.filter(
-    (o) => o.orderStatus === ShipmentOrderStatus.cancelled,
-  ).length;
 
   return (
     <div className="flex flex-col gap-6">
@@ -212,7 +182,7 @@ export default function ShipmentOrdersPage() {
       <div>
         <h1 className="text-3xl font-bold tracking-tight">Shipment Orders</h1>
         <p className="text-sm text-muted-foreground">
-          Search covers all shipments in the selected office. Shipment type filters and summaries apply to the displayed results.{" "}
+          Search covers all shipments in the selected office. Summary cards show all shipments across every office. Shipment type filters apply to the displayed results.{" "}
           {isSuperAdmin &&
             "Head office filters all shipments before pagination."}
         </p>
@@ -221,96 +191,7 @@ export default function ShipmentOrdersPage() {
         </p>
       </div>
 
-      {/* Metrics Cards */}
-      {orderError ? null : loading ? (
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-          {Array.from({ length: 4 }).map((_, i) => (
-            <Card key={i}>
-              <CardHeader className="pb-2">
-                <Skeleton className="h-4 w-24" />
-              </CardHeader>
-              <CardContent>
-                <Skeleton className="h-8 w-16" />
-              </CardContent>
-            </Card>
-          ))}
-        </div>
-      ) : (
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-          <Card className="metric-card">
-            <CardHeader className="pb-2">
-              <CardTitle className="text-sm font-medium text-muted-foreground">
-                Total Shipments
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div
-                className="text-3xl font-bold"
-                style={{ color: "var(--primary)" }}
-              >
-                {totalShipments}
-              </div>
-              <p className="text-xs text-muted-foreground mt-1">
-                All shipment orders
-              </p>
-            </CardContent>
-          </Card>
-
-          <Card className="metric-card">
-            <CardHeader className="pb-2">
-              <CardTitle className="text-sm font-medium text-muted-foreground">
-                Active Shipments
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div
-                className="text-3xl font-bold"
-                style={{ color: "var(--warning)" }}
-              >
-                {activeShipments}
-              </div>
-              <p className="text-xs text-muted-foreground mt-1">
-                Currently in progress
-              </p>
-            </CardContent>
-          </Card>
-
-          <Card className="metric-card">
-            <CardHeader className="pb-2">
-              <CardTitle className="text-sm font-medium text-muted-foreground">
-                Delivered Shipments
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div
-                className="text-3xl font-bold"
-                style={{ color: "var(--success)" }}
-              >
-                {deliveredShipments}
-              </div>
-              <p className="text-xs text-primary font-bold mt-1">
-                ₦{formatAmount(deliveredRevenue)} earned
-              </p>
-            </CardContent>
-          </Card>
-
-          <Card className="metric-card">
-            <CardHeader className="pb-2">
-              <CardTitle className="text-sm font-medium text-muted-foreground">
-                Cancelled Shipments
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="text-3xl font-bold" style={{ color: "var(--destructive)" }}>
-                {cancelledShipments}
-              </div>
-              <p className="text-xs text-muted-foreground mt-1">
-                From all shipments
-              </p>
-            </CardContent>
-          </Card>
-        </div>
-      )}
+      <OrderSummaryCards orderType="shipment" />
 
       {/* Orders Table */}
       <Card>

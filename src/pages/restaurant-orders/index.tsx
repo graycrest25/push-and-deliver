@@ -1,3 +1,4 @@
+import { OrderSummaryCards } from "@/components/order-summary-cards";
 import { useSearchPagination } from "@/hooks/use-search-pagination";
 import { TablePagination } from "@/components/table-pagination";
 import { useState, useEffect } from "react";
@@ -25,11 +26,8 @@ import type { RestaurantOrder } from "@/types";
 import { format } from "date-fns";
 import { toast } from "sonner";
 import {
-  IconShoppingCart,
   IconCash,
   IconWallet,
-  IconCheck,
-  IconX,
   IconSearch,
 } from "@tabler/icons-react";
 
@@ -62,14 +60,6 @@ export default function RestaurantOrdersPage() {
   // Filter orders by customer name
   const filteredOrders = orders;
 
-  // Calculate metrics
-  const totalOrders = orders.length;
-  const paidOrders = orders.filter((o) => o.ispaid).length;
-  const unpaidOrders = orders.filter((o) => !o.ispaid).length;
-  const totalRevenue = orders
-    .filter((o) => o.ispaid)
-    .reduce((sum, o) => sum + (o.totalAmount || 0), 0);
-
   const handleRowClick = (orderId: string) => {
     navigate(`/restaurant-orders/${orderId}`);
   };
@@ -79,70 +69,13 @@ export default function RestaurantOrdersPage() {
       {/* Header */}
       <div>
         <h1 className="text-3xl font-bold tracking-tight">Restaurant Orders</h1>
-        <p className="text-sm text-muted-foreground">Search covers all records. Filters, summaries, and exports apply to the displayed results.</p>
+        <p className="text-sm text-muted-foreground">Search covers all records. Summary cards show all orders; table filters apply to the displayed results.</p>
         <p className="text-muted-foreground mt-2">
           Manage and track all restaurant orders from customers
         </p>
       </div>
 
-      {/* Metrics Cards */}
-      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Total Orders</CardTitle>
-            <IconShoppingCart className="h-4 w-4 text-muted-foreground" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">{totalOrders}</div>
-            <p className="text-xs text-muted-foreground">All time orders</p>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Paid Orders</CardTitle>
-            <IconCheck className="h-4 w-4 text-green-600" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">{paidOrders}</div>
-            <p className="text-xs text-muted-foreground">
-              {totalOrders > 0
-                ? Math.round((paidOrders / totalOrders) * 100)
-                : 0}
-              % of total
-            </p>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Unpaid Orders</CardTitle>
-            <IconX className="h-4 w-4 text-red-600" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">{unpaidOrders}</div>
-            <p className="text-xs text-muted-foreground">
-              {totalOrders > 0
-                ? Math.round((unpaidOrders / totalOrders) * 100)
-                : 0}
-              % of total
-            </p>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Total Revenue</CardTitle>
-            <IconWallet className="h-4 w-4 text-muted-foreground" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">
-              ₦{totalRevenue.toLocaleString()}
-            </div>
-            <p className="text-xs text-muted-foreground">From paid orders</p>
-          </CardContent>
-        </Card>
-      </div>
+      <OrderSummaryCards orderType="food" />
 
       {/* Orders Table */}
       <Card>

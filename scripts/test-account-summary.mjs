@@ -1,154 +1,84 @@
 import assert from "node:assert/strict";
-import { createRequire } from "node:module";
 import fs from "node:fs";
 import vm from "node:vm";
-const require = createRequire(import.meta.url);
-const {
-  calculateAccountSummary,
-} = require("../firebase/functions/account-summary.cjs");
-const now = new Date("2026-10-17T01:00:00Z");
-const rows = {
-  Users: [
-    { createdAt: new Date("2026-10-16T23:00:00Z") }, // Lagos midnight today
-    { createdAt: new Date("2026-10-16T22:59:59Z") },
-    { createdAt: new Date("2026-10-09T23:00:00Z") }, // week boundary
-    { createdAt: new Date("2026-10-09T22:59:59Z") },
-    { createdAt: new Date("2026-10-02T23:00:00Z") }, // previous week boundary
-    { createdAt: new Date("2026-10-02T22:59:59Z") },
-    {}, // missing date must still contribute to total
-  ],
-  Riders: Array.from({ length: 58 }, (_, i) => ({
-    verificationStatus: i % 3,
-    vehicleType: Math.floor(i / 3) % 3,
-  })).concat([{}]),
-};
-let queries = 0;
-function collection(name, filters = []) {
-  return {
-    where: (field, operator, value) =>
-      collection(name, [...filters, { field, operator, value }]),
-    count: () => ({
-      get: async () => {
-        queries++;
-        return {
-          data: () => ({
-            count: rows[name].filter((row) =>
-              filters.every(({ field, operator, value }) =>
-                operator === "=="
-                  ? row[field] === value
-                  : operator === ">="
-                    ? row[field] >= value
-                    : row[field] < value,
-              ),
-            ).length,
-          }),
-        };
-      },
-    }),
-    get: () => {
-      throw new Error("Summary must never download account documents");
-    },
-  };
-}
-const db = { collection };
-const users = await calculateAccountSummary(db, "users", now);
-assert.deepEqual(
-  [
-    users.total,
-    users.newToday,
-    users.newThisWeek,
-    users.newLastWeek,
-    users.growthRate,
-  ],
-  [7, 1, 3, 2, 50],
-);
-assert.equal(queries, 4);
-const riders = await calculateAccountSummary(db, "riders", now);
-assert.equal(riders.total, 59);
-assert.equal(riders.verified.total, 19);
-assert.equal(riders.pending.total, 20);
-assert.equal(riders.blocked.total, 19);
-assert.equal(
-  Object.values(riders.byVehicle).reduce((a, b) => a + b),
-  58,
-);
-assert.equal(
-  Object.values(riders.pending.byVehicle).reduce((a, b) => a + b),
-  20,
-);
-assert.equal(queries, 20, "Rider summary uses sixteen count aggregations");
-rows.Users = [{}];
-assert.equal(
-  (await calculateAccountSummary(db, "users", now)).growthRate,
-  null,
-);
+import ts from "typescript";
 
-// Execute the actual HTTP handler with mocked Firebase adapters.
-let claims = { isAdmin: true, adminType: "super" };
-let calculations = 0;
+const examples = JSON.parse(
+  fs.readFileSync("docs/examples/summary-responses.json", "utf8"),
+);
+let body;
+let ok = true;
+const requests = [];
+const user = { uid: "admin", getIdToken: async () => "firebase-id-token" };
 const context = vm.createContext({
-  exports: {},
-  console,
+  URL,
   Date,
-  Map,
-  require: (name) =>
-    ({
-      "firebase-functions/v2/https": { onRequest: (_, handler) => handler },
-      "firebase-admin/app": { getApps: () => [{}], initializeApp() {} },
-      "firebase-admin/auth": {
-        getAuth: () => ({ verifyIdToken: async () => claims }),
-      },
-      "firebase-admin/firestore": { getFirestore: () => db },
-      "./account-summary.cjs": {
-        calculateAccountSummary: async () => {
-          calculations++;
-          return users;
-        },
-      },
-    })[name],
+  Number,
+  AbortController,
+  auth: { currentUser: user },
+  endpoints: {
+    getAdminAccountSummary: "https://example.com/getAdminAccountSummary",
+  },
+  fetch: async (url, options) => {
+    requests.push({ url, options });
+    return { ok, json: async () => body };
+  },
 });
+const source = fs
+  .readFileSync("src/services/account-summary.service.ts", "utf8")
+  .replace(/^import[\s\S]*?from ["'][^"']+["'];\n/gm, "");
 vm.runInContext(
-  fs.readFileSync("firebase/functions/index.cjs", "utf8"),
+  ts
+    .transpileModule(source, {
+      compilerOptions: {
+        target: ts.ScriptTarget.ES2022,
+        module: ts.ModuleKind.ESNext,
+      },
+    })
+    .outputText.replace(/export /g, ""),
   context,
 );
-async function request(type, token = "Bearer valid", method = "GET") {
-  const response = {
-    code: 200,
-    set() {},
-    status(value) {
-      this.code = value;
-      return this;
-    },
-    json(value) {
-      this.body = value;
-      return this;
-    },
-  };
-  await context.exports.getAdminAccountSummary(
-    { method, query: { type }, get: () => token },
-    response,
+const signal = new AbortController().signal;
+for (const type of ["users", "riders"]) {
+  body = examples[type];
+  const data = await context.getAccountSummary(type, signal);
+  assert.deepEqual(JSON.parse(JSON.stringify(data)), body);
+  assert.equal(new URL(requests.at(-1).url).searchParams.get("type"), type);
+  assert.equal(
+    requests.at(-1).options.headers.Authorization,
+    "Bearer firebase-id-token",
   );
-  return response;
+  assert.equal(requests.at(-1).options.signal, signal);
+  assert.equal(requests.at(-1).options.cache, "no-store");
 }
-assert.equal((await request("users", "")).code, 401);
-assert.equal((await request("invalid")).code, 400);
-assert.equal((await request("users", undefined, "POST")).code, 405);
-claims = { isAdmin: true, adminType: "verifier" };
-assert.equal((await request("users")).code, 403);
-assert.equal((await request("riders")).code, 200);
-claims = { isAdmin: true, adminType: "regular" };
-await Promise.all([request("users"), request("users"), request("users")]);
+body = { ...examples.users, growthRate: null };
 assert.equal(
-  calculations,
-  2,
-  "Concurrent summary requests must share cached calculation",
+  (await context.getAccountSummary("users", signal)).growthRate,
+  null,
 );
-claims = { isAdmin: false, adminType: "super" };
+body = { ...examples.users, total: -1 };
+await assert.rejects(
+  context.getAccountSummary("users", signal),
+  /invalid account summary/,
+);
+body = { ...examples.riders, verified: { total: 2, byVehicle: {} } };
+await assert.rejects(
+  context.getAccountSummary("riders", signal),
+  /invalid account summary/,
+);
+ok = false;
+body = { error: "Backend summary unavailable" };
+await assert.rejects(
+  context.getAccountSummary("users", signal),
+  /Backend summary unavailable/,
+);
+context.auth.currentUser = null;
+await assert.rejects(context.getAccountSummary("users", signal), /Sign in/);
 assert.equal(
-  (await request("users")).code,
-  403,
-  "Cached responses must still enforce authorization",
+  fs.existsSync("firebase/functions"),
+  false,
+  "The example functions folder must be removed",
 );
 console.log(
-  "Account summary passed: global counts, Lagos date boundaries, growth, numeric status/vehicle breakdowns, missing fields, authentication, roles, and concurrent cache reuse.",
+  "Account summary API tests passed: documented user/rider examples, authentication, request shape, nullable growth, invalid responses, and API errors.",
 );

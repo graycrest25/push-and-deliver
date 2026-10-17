@@ -17,7 +17,7 @@ const guide = (title: string, ...steps: TutorialStep[]): Tutorial => ({
 });
 const pageScope = step(
   "Search across all records",
-  "Search covers the complete authorized list and returns matching records in pages. Changing the search starts at page one. Other filters, lower-page charts, and exports use the displayed records unless the screen specifies otherwise. Users and Riders summary cards show global counts from an independent Firebase function.",
+  "Search covers the complete authorized list and returns matching records in pages. Changing the search starts at page one. Other filters, lower-page charts, and exports use the displayed records unless the screen specifies otherwise. Users, Riders, and order summary cards show global totals from independent APIs.",
 );
 const permissions = step(
   "Check your available actions",
@@ -854,7 +854,7 @@ export function tutorialForSection(
         ? "These overview figures report platform totals. Use Refresh to request the latest figures; an unavailable figure should be refreshed before you rely on it."
         : pathname === "/dhl-zones"
           ? "Compare the summary with the destination table and current search results."
-          : "Users and Riders summary cards show global counts from an independent Firebase function. Other summaries and charts use the returned page’s records. Check the list and its filters before interpreting the figure.",
+          : "Users, Riders, and order summary cards show global totals from independent APIs. Other summaries and charts use the returned page’s records. Order summary cards stay global when table filters change. Check the list and its filters before interpreting the figure.",
       pathname === "/dashboard"
         ? "Follow the related area’s link to inspect individual records. Your role determines which destinations are available."
         : "Use the related table to inspect individual records. When pagination is available, move to another page to review more records rather than treating this summary as a platform-wide total.",

@@ -10,6 +10,9 @@ const firebaseEndpoint = (name: string): string => {
 };
 
 export const endpoints = {
+  get getAdminOrderSummary() {
+    return firebaseEndpoint("getAdminOrderSummary");
+  },
   get getAdminAccountSummary() {
     return firebaseEndpoint("getAdminAccountSummary");
   },

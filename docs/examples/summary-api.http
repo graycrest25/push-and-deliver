@@ -1,0 +1,28 @@
+# Replace these placeholders with your deployed Cloud Run suffix and a signed-in
+# admin's Firebase ID token. Tokens must not be committed to this file.
+@firebaseSuffix = -YOUR-CLOUD-RUN-SUFFIX.a.run.app
+@idToken = YOUR_FIREBASE_ID_TOKEN
+
+### Global user summary
+GET https://getAdminAccountSummary{{firebaseSuffix}}?type=users
+Authorization: Bearer {{idToken}}
+
+### Global rider summary
+GET https://getAdminAccountSummary{{firebaseSuffix}}?type=riders
+Authorization: Bearer {{idToken}}
+
+### Global shipment summary (every head office)
+GET https://getAdminOrderSummary{{firebaseSuffix}}?type=shipment
+Authorization: Bearer {{idToken}}
+
+### Global rides and courier summary (shared RideHaulingOrders collection)
+GET https://getAdminOrderSummary{{firebaseSuffix}}?type=ride-courier
+Authorization: Bearer {{idToken}}
+
+### Global food order summary
+GET https://getAdminOrderSummary{{firebaseSuffix}}?type=food
+Authorization: Bearer {{idToken}}
+
+### Global ecommerce order summary
+GET https://getAdminOrderSummary{{firebaseSuffix}}?type=ecommerce
+Authorization: Bearer {{idToken}}

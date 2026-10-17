@@ -1,3 +1,4 @@
+import { OrderSummaryCards } from "@/components/order-summary-cards";
 import { useSearchPagination } from "@/hooks/use-search-pagination";
 import { TablePagination } from "@/components/table-pagination";
 import { useState, useEffect } from "react";
@@ -33,13 +34,6 @@ import { RideHaulingType, RideHaulingStatus } from "@/types";
 import { format } from "date-fns";
 import { toast } from "sonner";
 import { IconSearch, IconFilter } from "@tabler/icons-react";
-
-const formatAmount = (amount: number) => {
-  return amount.toLocaleString("en-US", {
-    minimumFractionDigits: 2,
-    maximumFractionDigits: 2,
-  });
-};
 
 export default function RideHailingPage() {
   const navigate = useNavigate();
@@ -137,26 +131,6 @@ export default function RideHailingPage() {
     navigate(`/ride-hailing/${orderId}`);
   };
 
-  // Calculate metrics
-  const totalRides = orders.length;
-  const activeRides = orders.filter(
-    (o) =>
-      o.orderStatus === RideHaulingStatus.requested ||
-      o.orderStatus === RideHaulingStatus.accepted ||
-      o.orderStatus === RideHaulingStatus.onroute,
-  ).length;
-  const completedRides = orders.filter(
-    (o) => o.orderStatus === RideHaulingStatus.completed,
-  ).length;
-  const totalRevenue = orders
-    .filter((o) => o.ispaid)
-    .reduce((sum, o) => sum + (o.totalAmount || 0), 0);
-  const completedRevenue = orders
-    .filter((o) => o.orderStatus === RideHaulingStatus.completed && o.ispaid)
-    .reduce((sum, o) => sum + (o.totalAmount || 0), 0);
-  const canceledRides = orders.filter(
-    (o) => o.orderStatus === RideHaulingStatus.cancelled,
-  ).length;
 
   return (
     <div className="flex flex-col gap-6">
@@ -165,102 +139,13 @@ export default function RideHailingPage() {
         <h1 className="text-3xl font-bold tracking-tight">
           Ride Hailing Orders
         </h1>
-        <p className="text-sm text-muted-foreground">Search covers all records. Filters, summaries, and exports apply to the displayed results.</p>
+        <p className="text-sm text-muted-foreground">Search covers all records. Summary cards show all orders; table filters apply to the displayed results.</p>
         <p className="text-muted-foreground mt-2">
           Manage and track all ride hailing requests
         </p>
       </div>
 
-      {/* Metrics Cards */}
-      {loading ? (
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-          {Array.from({ length: 4 }).map((_, i) => (
-            <Card key={i}>
-              <CardHeader className="pb-2">
-                <Skeleton className="h-4 w-24" />
-              </CardHeader>
-              <CardContent>
-                <Skeleton className="h-8 w-16" />
-              </CardContent>
-            </Card>
-          ))}
-        </div>
-      ) : (
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-          <Card className="metric-card">
-            <CardHeader className="pb-2">
-              <CardTitle className="text-sm font-medium text-muted-foreground">
-                Total Rides
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div
-                className="text-3xl font-bold"
-                style={{ color: "var(--primary)" }}
-              >
-                {totalRides}
-              </div>
-              <p className="text-xs text-muted-foreground mt-1">
-                All ride requests
-              </p>
-            </CardContent>
-          </Card>
-
-          <Card className="metric-card">
-            <CardHeader className="pb-2">
-              <CardTitle className="text-sm font-medium text-muted-foreground">
-                Active Rides
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div
-                className="text-3xl font-bold"
-                style={{ color: "var(--warning)" }}
-              >
-                {activeRides}
-              </div>
-              <p className="text-xs text-muted-foreground mt-1">
-                Currently in progress
-              </p>
-            </CardContent>
-          </Card>
-
-          <Card className="metric-card">
-            <CardHeader className="pb-2">
-              <CardTitle className="text-sm font-medium text-muted-foreground">
-                Completed Rides
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div
-                className="text-3xl font-bold"
-                style={{ color: "var(--success)" }}
-              >
-                {completedRides}
-              </div>
-              <p className="text-xs text-primary font-bold mt-1">
-                ₦{formatAmount(completedRevenue)} earned
-              </p>
-            </CardContent>
-          </Card>
-
-          <Card className="metric-card">
-            <CardHeader className="pb-2">
-              <CardTitle className="text-sm font-medium text-muted-foreground">
-                Canceled Rides
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="text-3xl font-bold" style={{ color: "#e7000b" }}>
-                {canceledRides}
-              </div>
-              <p className="text-xs text-muted-foreground mt-1">
-                From all rides
-              </p>
-            </CardContent>
-          </Card>
-        </div>
-      )}
+      <OrderSummaryCards orderType="ride-courier" />
 
       {/* Orders Table */}
       <Card>
