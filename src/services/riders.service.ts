@@ -22,7 +22,7 @@ export const ridersService = {
     try {
       const q = query(
         collection(db, COLLECTION_NAME),
-        orderBy("createdAt", "desc"),
+        ...(pagination.search?.term.trim() ? [] : [orderBy("createdAt", "desc")]),
       );
       const querySnapshot = await getPaginatedDocs(q, pagination);
 

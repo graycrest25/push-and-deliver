@@ -1,11 +1,22 @@
 import { useCallback, useMemo, useRef, useState } from "react";
 import type {
+  CollectionSearch,
+  SearchCache,
   PageInfo,
   PageSize,
   PaginationOptions,
 } from "@/lib/firestore-pagination";
 
-export function useFirestorePagination(queryKey = "") {
+export function useFirestorePagination(
+  queryKey = "",
+  search?: CollectionSearch,
+) {
+  const searchKey = JSON.stringify([
+    search?.term.trim().toLowerCase(),
+    search?.fields,
+  ]);
+  queryKey = `${queryKey}:${searchKey}`;
+  const searchCache = useMemo<SearchCache>(() => ({}), [queryKey]);
   const [pageSize, setSize] = useState<PageSize>(10);
   const [pageIndex, setIndex] = useState(0);
   const [total, setTotal] = useState(0);
@@ -39,6 +50,9 @@ export function useFirestorePagination(queryKey = "") {
     () => ({
       pageSize,
       cursor,
+      search,
+      searchCache,
+      isCurrent: () => requestKey === latestRequest.current,
       onPage: (info) => {
         if (requestKey !== latestRequest.current) return;
         setTotal(info.total);
@@ -58,7 +72,7 @@ export function useFirestorePagination(queryKey = "") {
         setCursor(confirmed.current.cursor);
       },
     }),
-    [pageSize, cursor, pageIndex, requestKey],
+    [pageSize, cursor, pageIndex, requestKey, searchCache],
   );
   const totalPages = Math.ceil(total / pageSize);
   const next = () => {

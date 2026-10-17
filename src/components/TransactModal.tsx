@@ -1,4 +1,4 @@
-import { useFirestorePagination } from "@/hooks/use-firestore-pagination";
+import { useSearchPagination } from "@/hooks/use-search-pagination";
 import { TablePagination } from "@/components/table-pagination";
 import { useState, useEffect } from "react";
 import {
@@ -47,8 +47,14 @@ interface TransactModalProps {
 }
 
 export function TransactModal({ open, onOpenChange }: TransactModalProps) {
-  const userPagination = useFirestorePagination();
-  const riderPagination = useFirestorePagination();
+  const [userSearch, setUserSearch] = useState("");
+  const [riderSearch, setRiderSearch] = useState("");
+  const userPagination = useSearchPagination(userSearch, [
+    "id",
+    "username",
+    "email",
+  ]);
+  const riderPagination = useSearchPagination(riderSearch, ["id", "fullname"]);
   const { user: currentAdmin, refetchUser } = useCurrentUser();
   const [transactionMode, setTransactionMode] = useState<"credit" | "debit">(
     "credit",
@@ -90,13 +96,27 @@ export function TransactModal({ open, onOpenChange }: TransactModalProps) {
         usersService.getAllUsers(userPagination.options),
         ridersService.getAllRiders(riderPagination.options),
       ]);
+      if (
+        !userPagination.options.isCurrent?.() ||
+        !riderPagination.options.isCurrent?.()
+      )
+        return;
       setUsers(usersData);
       setRiders(ridersData);
     } catch (error) {
+      if (
+        !userPagination.options.isCurrent?.() ||
+        !riderPagination.options.isCurrent?.()
+      )
+        return;
       console.error("Error loading data:", error);
       toast.error("Failed to load users and riders");
     } finally {
-      setLoadingData(false);
+      if (
+        userPagination.options.isCurrent?.() &&
+        riderPagination.options.isCurrent?.()
+      )
+        setLoadingData(false);
     }
   };
 
@@ -254,14 +274,17 @@ export function TransactModal({ open, onOpenChange }: TransactModalProps) {
                     className="w-75 p-0"
                     onWheel={(e) => e.stopPropagation()}
                   >
-                    <Command>
-                      {/* 🔥 search happens here */}
+                    <Command shouldFilter={false}>
                       <CommandInput
-                        placeholder="Search by username, email or ID..."
+                        placeholder="Search all users by username, email or ID..."
+                        value={userSearch}
+                        onValueChange={setUserSearch}
                         className="h-10"
                       />
 
-                      <CommandEmpty>No user found.</CommandEmpty>
+                      <CommandEmpty>
+                        {loadingData ? "Searching users…" : "No user found."}
+                      </CommandEmpty>
 
                       <CommandGroup className="max-h-64 overflow-y-auto">
                         {users.map((user) => (
@@ -296,7 +319,10 @@ export function TransactModal({ open, onOpenChange }: TransactModalProps) {
                         ))}
                       </CommandGroup>
                     </Command>
-                    <TablePagination pagination={userPagination} loading={loadingData} />
+                    <TablePagination
+                      pagination={userPagination}
+                      loading={loadingData}
+                    />
                   </PopoverContent>
                 </Popover>
               </div>
@@ -330,13 +356,17 @@ export function TransactModal({ open, onOpenChange }: TransactModalProps) {
                     className="w-75 p-0"
                     onWheel={(e) => e.stopPropagation()}
                   >
-                    <Command>
+                    <Command shouldFilter={false}>
                       <CommandInput
-                        placeholder="Search by name or ID..."
+                        placeholder="Search all riders by name or ID..."
+                        value={riderSearch}
+                        onValueChange={setRiderSearch}
                         className="h-10"
                       />
 
-                      <CommandEmpty>No rider found.</CommandEmpty>
+                      <CommandEmpty>
+                        {loadingData ? "Searching riders…" : "No rider found."}
+                      </CommandEmpty>
 
                       <CommandGroup className="max-h-64 overflow-y-auto">
                         {riders.map((rider) => (
@@ -370,7 +400,10 @@ export function TransactModal({ open, onOpenChange }: TransactModalProps) {
                         ))}
                       </CommandGroup>
                     </Command>
-                    <TablePagination pagination={riderPagination} loading={loadingData} />
+                    <TablePagination
+                      pagination={riderPagination}
+                      loading={loadingData}
+                    />
                   </PopoverContent>
                 </Popover>
               </div>

@@ -1,6 +1,6 @@
-import { useFirestorePagination } from "@/hooks/use-firestore-pagination";
+import { useSearchPagination } from "@/hooks/use-search-pagination";
 import { TablePagination } from "@/components/table-pagination";
-"use client";
+("use client");
 
 import { useState, useEffect } from "react";
 import {
@@ -35,11 +35,11 @@ import { startOfDay, endOfDay, isWithinInterval } from "date-fns";
 import { useNavigate } from "react-router-dom";
 
 export default function ReferralsPage() {
-  const pagination = useFirestorePagination();
   const [referrals, setReferrals] = useState<Referral[]>([]);
   const [users, setUsers] = useState<Map<string, User>>(new Map());
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState("");
+  const pagination = useSearchPagination(searchTerm, ["referrerUid"]);
   const [dateRange, setDateRange] = useState<DateRange | undefined>();
   const navigate = useNavigate();
 
@@ -50,18 +50,28 @@ export default function ReferralsPage() {
   const loadData = async () => {
     try {
       setLoading(true);
-      const referralsData = await referralsService.getAllReferrals(pagination.options);
-      const ids = [...new Set(referralsData.map((ref) => ref.referrerUid).filter(Boolean))];
-      const usersData = await Promise.all(ids.map((id) => usersService.getUserById(id!)));
+      const referralsData = await referralsService.getAllReferrals(
+        pagination.options,
+      );
+      const ids = [
+        ...new Set(referralsData.map((ref) => ref.referrerUid).filter(Boolean)),
+      ];
+      const usersData = await Promise.all(
+        ids.map((id) => usersService.getUserById(id!)),
+      );
+      if (!pagination.options.isCurrent?.()) return;
       setReferrals(referralsData);
       const usersMap = new Map<string, User>();
-      usersData.forEach((user) => { if (user?.id) usersMap.set(user.id, user); });
+      usersData.forEach((user) => {
+        if (user?.id) usersMap.set(user.id, user);
+      });
       setUsers(usersMap);
     } catch (error) {
+      if (!pagination.options.isCurrent?.()) return;
       console.error("Error loading data:", error);
       toast.error("Failed to load referrals. Check console for details.");
     } finally {
-      setLoading(false);
+      if (pagination.options.isCurrent?.()) setLoading(false);
     }
   };
 
@@ -109,9 +119,7 @@ export default function ReferralsPage() {
   const referrerList = Object.values(referrerStats);
 
   const filteredReferrers = referrerList.filter((r) => {
-    const matchesSearch =
-      r.referrerName.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      r.referrerId.toLowerCase().includes(searchTerm.toLowerCase());
+
 
     // Date range filter on referrer's createdAt
     let createdDate: Date | undefined;
@@ -140,7 +148,7 @@ export default function ReferralsPage() {
       }
     }
 
-    return matchesSearch && matchesDateRange;
+    return matchesDateRange;
   });
 
   const totalReferrers = referrerList.length;
@@ -151,12 +159,15 @@ export default function ReferralsPage() {
   const handleRowClick = (referralId: string) => {
     navigate(`/referrals/${referralId}`);
   };
-  if (loading) {
+  if (loading && !searchTerm && referrals.length === 0) {
     return (
       <div className="space-y-6">
         <div>
           <h1 className="text-3xl font-bold tracking-tight">Referrals</h1>
-        <p className="text-sm text-muted-foreground">Search, filters, summaries, and exports apply to the current page.</p>
+          <p className="text-sm text-muted-foreground">
+            Search covers all referrers. Filters, summaries, and exports apply
+            to the displayed results.
+          </p>
           <p className="text-muted-foreground">Track user referrals</p>
         </div>
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
@@ -233,7 +244,7 @@ export default function ReferralsPage() {
             <div className="relative flex-1 min-w-[250px]">
               <Search className="absolute left-2 top-3 h-4 w-4 text-muted-foreground" />
               <Input
-                placeholder="Search this page: by name or user ID..."
+                placeholder="Search all referrers: by name or user ID..."
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
                 className="pl-8"
@@ -301,79 +312,83 @@ export default function ReferralsPage() {
 
           {/* Table */}
           <div className="border rounded-lg overflow-hidden">
-            <><Table>
-              <TableHeader>
-                <TableRow className="bg-muted/50">
-                  <TableHead>Referrer Name</TableHead>
-                  <TableHead>Referrer UID</TableHead>
-                  <TableHead>User</TableHead>
-                  <TableHead>Rider</TableHead>
-                  <TableHead>Total Referrer Count</TableHead>
-                  <TableHead>Status</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {filteredReferrers.length === 0 ? (
-                  <TableRow>
-                    <TableCell
-                      colSpan={6}
-                      className="text-center text-muted-foreground py-8"
-                    >
-                      No referrers found
-                    </TableCell>
+            <>
+              <Table>
+                <TableHeader>
+                  <TableRow className="bg-muted/50">
+                    <TableHead>Referrer Name</TableHead>
+                    <TableHead>Referrer UID</TableHead>
+                    <TableHead>User</TableHead>
+                    <TableHead>Rider</TableHead>
+                    <TableHead>Total Referrer Count</TableHead>
+                    <TableHead>Status</TableHead>
                   </TableRow>
-                ) : (
-                  filteredReferrers.map((referrer) => (
-                    <TableRow
-                      key={referrer.referrerId}
-                      className="hover:bg-muted/50"
-                      onClick={() => handleRowClick(`${referrer.referrerId}`)}
-                    >
-                      <TableCell className="font-medium">
-                        {referrer.referrerName}
-                      </TableCell>
-                      <TableCell className="font-mono text-sm">
-                        {referrer.referrerId}
-                      </TableCell>
-                      <TableCell>
-                        <Badge variant="outline">
-                          {(() => {
-                            const userCount = referrer.referredUserTypes.filter(
-                              (type) => type === "user",
-                            ).length;
-                            const unspecifiedCount =
-                              referrer.referralCount -
-                              referrer.referredUserTypes.length;
-                            return userCount + unspecifiedCount;
-                          })()}
-                        </Badge>
-                      </TableCell>
-                      <TableCell>
-                        <Badge variant="outline">
-                          {
-                            referrer.referredUserTypes.filter(
-                              (type) => type === "rider",
-                            ).length
-                          }
-                        </Badge>
-                      </TableCell>
-                      <TableCell>
-                        <Badge variant="outline">
-                          {referrer.referralCount}
-                        </Badge>
-                      </TableCell>
-                      <TableCell>
-                        <Badge variant="default">
-                          {referrer.referralCount > 5
-                            ? "Top Referrer"
-                            : "Active"}
-                        </Badge>
+                </TableHeader>
+                <TableBody>
+                  {filteredReferrers.length === 0 ? (
+                    <TableRow>
+                      <TableCell
+                        colSpan={6}
+                        className="text-center text-muted-foreground py-8"
+                      >
+                        No referrers found
                       </TableCell>
                     </TableRow>
-                  ))
-                )}
-              </TableBody>
-            </Table><TablePagination pagination={pagination} loading={loading} /></>
+                  ) : (
+                    filteredReferrers.map((referrer) => (
+                      <TableRow
+                        key={referrer.referrerId}
+                        className="hover:bg-muted/50"
+                        onClick={() => handleRowClick(`${referrer.referrerId}`)}
+                      >
+                        <TableCell className="font-medium">
+                          {referrer.referrerName}
+                        </TableCell>
+                        <TableCell className="font-mono text-sm">
+                          {referrer.referrerId}
+                        </TableCell>
+                        <TableCell>
+                          <Badge variant="outline">
+                            {(() => {
+                              const userCount =
+                                referrer.referredUserTypes.filter(
+                                  (type) => type === "user",
+                                ).length;
+                              const unspecifiedCount =
+                                referrer.referralCount -
+                                referrer.referredUserTypes.length;
+                              return userCount + unspecifiedCount;
+                            })()}
+                          </Badge>
+                        </TableCell>
+                        <TableCell>
+                          <Badge variant="outline">
+                            {
+                              referrer.referredUserTypes.filter(
+                                (type) => type === "rider",
+                              ).length
+                            }
+                          </Badge>
+                        </TableCell>
+                        <TableCell>
+                          <Badge variant="outline">
+                            {referrer.referralCount}
+                          </Badge>
+                        </TableCell>
+                        <TableCell>
+                          <Badge variant="default">
+                            {referrer.referralCount > 5
+                              ? "Top Referrer"
+                              : "Active"}
+                          </Badge>
+                        </TableCell>
+                      </TableRow>
+                    ))
+                  )}
+                </TableBody>
+              </Table>
+              <TablePagination pagination={pagination} loading={loading} />
+            </>
           </div>
         </CardContent>
       </Card>

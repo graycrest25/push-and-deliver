@@ -20,7 +20,7 @@ export const productOrdersService = {
       const q = query(
         collection(db, COLLECTION_NAME),
         // where("ispaid", "==", false),
-        orderBy("createdAt", "desc")
+        ...(pagination.search?.term.trim() ? [] : [orderBy("createdAt", "desc")])
       );
       const snapshot = await getPaginatedDocs(q, pagination);
 

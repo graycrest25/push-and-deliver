@@ -1,4 +1,4 @@
-import { useFirestorePagination } from "@/hooks/use-firestore-pagination";
+import { useSearchPagination } from "@/hooks/use-search-pagination";
 import { TablePagination } from "@/components/table-pagination";
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
@@ -31,12 +31,12 @@ const EcomOrderStatus = {
 } as const;
 
 export default function ProductOrdersPage() {
-  const pagination = useFirestorePagination();
   const navigate = useNavigate();
   const [orders, setOrders] = useState<ProductOrder[]>([]);
   const [filteredOrders, setFilteredOrders] = useState<ProductOrder[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState("");
+  const pagination = useSearchPagination(searchQuery, ["id", "orderId", "customerName", "customerPhoneNumber"]);
   const [currentTab, setCurrentTab] = useState("all");
 
   useEffect(() => {
@@ -51,13 +51,15 @@ export default function ProductOrdersPage() {
     try {
       setLoading(true);
       const data = await productOrdersService.getAllOrders(pagination.options);
+      if (!pagination.options.isCurrent?.()) return;
       setOrders(data);
       setFilteredOrders(data);
     } catch (error) {
+      if (!pagination.options.isCurrent?.()) return;
       console.error("Error loading orders:", error);
       toast.error("Failed to load product orders");
     } finally {
-      setLoading(false);
+      if (pagination.options.isCurrent?.()) setLoading(false);
     }
   };
 
@@ -81,17 +83,6 @@ export default function ProductOrdersPage() {
           (order) => order.orderstatus === targetStatus,
         );
       }
-    }
-
-    // Filter by Search
-    if (searchQuery) {
-      const lowercaseQuery = searchQuery.toLowerCase();
-      filtered = filtered.filter(
-        (order) =>
-          order.orderId?.toLowerCase().includes(lowercaseQuery) ||
-          order.customerName?.toLowerCase().includes(lowercaseQuery) ||
-          order.customerPhoneNumber?.includes(searchQuery),
-      );
     }
 
     setFilteredOrders(filtered);
@@ -153,7 +144,7 @@ export default function ProductOrdersPage() {
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-3xl font-bold tracking-tight">Product Orders</h1>
-        <p className="text-sm text-muted-foreground">Search, filters, summaries, and exports apply to the current page.</p>
+        <p className="text-sm text-muted-foreground">Search covers all records. Filters, summaries, and exports apply to the displayed results.</p>
           <p className="text-muted-foreground">
             View and manage unpaid orders from E-commerce Merchants
           </p>
@@ -164,7 +155,7 @@ export default function ProductOrdersPage() {
         <div className="relative flex-1 max-w-sm">
           <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
           <Input
-            placeholder="Search this page: by Order ID, Customer Name..."
+            placeholder="Search all records: by Order ID, Customer Name..."
             className="pl-8"
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}

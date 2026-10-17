@@ -69,7 +69,7 @@ assert.match(
 );
 assert.match(
   tutorialForSection("Table pagination", "/users").steps[2].description,
-  /currently loaded/,
+  /complete authorized list/,
 );
 assert.match(
   tutorialForSection("Order Items ( 2 )", "/product-orders/one").steps[0]

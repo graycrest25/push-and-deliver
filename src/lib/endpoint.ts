@@ -10,6 +10,9 @@ const firebaseEndpoint = (name: string): string => {
 };
 
 export const endpoints = {
+  get getAdminAccountSummary() {
+    return firebaseEndpoint("getAdminAccountSummary");
+  },
   get getAdminCouponRedemptionMetrics() {
     return firebaseEndpoint("getAdminCouponRedemptionMetrics");
   },

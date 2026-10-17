@@ -80,7 +80,7 @@ export const shipmentOrdersService = {
       const q = query(
         collection(db, COLLECTION_NAME),
         ...(headOfficeId ? [where("pndofficelocationID", "==", headOfficeId)] : []),
-        orderBy("createdAt", "desc")
+        ...(pagination.search?.term.trim() ? [] : [orderBy("createdAt", "desc")])
       );
       const snapshot = await getPaginatedDocs(q, pagination);
 

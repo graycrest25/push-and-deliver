@@ -54,7 +54,7 @@ export const supportService = {
   ) => {
     const q = query(
       collection(db, COLLECTION_NAME),
-      orderBy("updatedAt", "desc"),
+      ...(pagination.search?.term.trim() ? [] : [orderBy("updatedAt", "desc")]),
     );
 
     return subscribePaginatedDocs(

@@ -1,4 +1,5 @@
-import { useFirestorePagination } from "@/hooks/use-firestore-pagination";
+import { AccountSummaryCards } from "@/components/account-summary-cards";
+import { useSearchPagination } from "@/hooks/use-search-pagination";
 import { TablePagination } from "@/components/table-pagination";
 
 import { useState, useEffect } from "react";
@@ -21,12 +22,11 @@ import {
 } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Search, TrendingUp } from "lucide-react";
+import { Search } from "lucide-react";
 import { usersService } from "@/services/users.service";
 import { referralsService } from "@/services/referrals.service";
 import type { User } from "@/types";
 import { toast } from "sonner";
-import { Skeleton } from "@/components/ui/skeleton";
 import { ExportButton } from "@/components/ExportButton";
 import { exportAdminAccountsCsv } from "@/services/account-export.service";
 import {
@@ -90,7 +90,6 @@ const balanceDistributionConfig = {
 } satisfies ChartConfig;
 
 export default function UsersPage() {
-  const pagination = useFirestorePagination();
   const navigate = useNavigate();
   const [users, setUsers] = useState<User[]>([]);
   const [referralCounts, setReferralCounts] = useState<Map<string, number>>(
@@ -98,6 +97,12 @@ export default function UsersPage() {
   );
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState("");
+  const pagination = useSearchPagination(searchTerm, [
+    "id",
+    "username",
+    "email",
+    "phonenumber",
+  ]);
   const [exporting, setExporting] = useState(false);
   const [dateRange, setDateRange] = useState<DateRange | undefined>();
 
@@ -109,6 +114,7 @@ export default function UsersPage() {
     try {
       setLoading(true);
       const usersData = await usersService.getAllUsers(pagination.options);
+      if (!pagination.options.isCurrent?.()) return;
       const entries = await Promise.all(
         usersData.map(
           async (user) =>
@@ -118,13 +124,15 @@ export default function UsersPage() {
             ] as const,
         ),
       );
+      if (!pagination.options.isCurrent?.()) return;
       setUsers(usersData);
       setReferralCounts(new Map(entries));
     } catch (error) {
+      if (!pagination.options.isCurrent?.()) return;
       console.error("Error loading users:", error);
       toast.error("Failed to load users");
     } finally {
-      setLoading(false);
+      if (pagination.options.isCurrent?.()) setLoading(false);
     }
   };
 
@@ -134,61 +142,7 @@ export default function UsersPage() {
     }
   };
 
-  const filteredUsers = users.filter((u) => {
-    const matchesSearch =
-      u.username?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      u.email?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      u.id?.toLowerCase().includes(searchTerm.toLowerCase());
-
-    return matchesSearch;
-  });
-
-  const totalUsers = users.length;
-  const totalReferrals = Array.from(referralCounts.values()).reduce(
-    (sum, count) => sum + count,
-    0,
-  );
-
-  // Calculate user growth statistics
-  const today = new Date();
-  today.setHours(0, 0, 0, 0);
-
-  const yesterday = new Date(today);
-  yesterday.setDate(yesterday.getDate() - 1);
-
-  const weekAgo = new Date(today);
-  weekAgo.setDate(weekAgo.getDate() - 7);
-
-  const newUsersToday = users.filter((u) => {
-    if (!u.createdAt) return false;
-    const userDate =
-      u.createdAt instanceof Date ? u.createdAt : u.createdAt.toDate();
-    return userDate >= today;
-  }).length;
-
-  const newUsersThisWeek = users.filter((u) => {
-    if (!u.createdAt) return false;
-    const userDate =
-      u.createdAt instanceof Date ? u.createdAt : u.createdAt.toDate();
-    return userDate >= weekAgo;
-  }).length;
-
-  const newUsersLastWeek = users.filter((u) => {
-    if (!u.createdAt) return false;
-    const userDate =
-      u.createdAt instanceof Date ? u.createdAt : u.createdAt.toDate();
-    const twoWeeksAgo = new Date(weekAgo);
-    twoWeeksAgo.setDate(twoWeeksAgo.getDate() - 7);
-    return userDate >= twoWeeksAgo && userDate < weekAgo;
-  }).length;
-
-  const growthRate =
-    newUsersLastWeek > 0
-      ? (
-          ((newUsersThisWeek - newUsersLastWeek) / newUsersLastWeek) *
-          100
-        ).toFixed(1)
-      : "0.0";
+  const filteredUsers = users;
 
   // Prepare chart data (still based on all users, not filtered)
   const walletDistributionData = [
@@ -212,7 +166,7 @@ export default function UsersPage() {
     },
   ];
 
-  const topUsersByBalance = users
+  const topUsersByBalance = [...users]
     .sort((a, b) => (b.walletbalance || 0) - (a.walletbalance || 0))
     .slice(0, 10)
     .map((u) => ({
@@ -234,122 +188,25 @@ export default function UsersPage() {
       };
     });
 
-  if (loading) {
-    return (
-      <div className="space-y-6">
-        <div>
-          <h1 className="text-3xl font-bold tracking-tight">Users</h1>
-          <p className="text-sm text-muted-foreground">
-            Search, filters, and summaries apply to the current page. The date range applies only to CSV exports, which include all users in the selected date range. Select a date range to export.
-          </p>
-          <p className="text-muted-foreground">
-            View user wallets and referral information
-          </p>
-        </div>
-        <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-          {[1, 2, 3, 4].map((i) => (
-            <Card key={i}>
-              <CardHeader className="pb-2">
-                <Skeleton className="h-4 w-24" />
-              </CardHeader>
-              <CardContent>
-                <Skeleton className="h-8 w-16" />
-              </CardContent>
-            </Card>
-          ))}
-        </div>
-      </div>
-    );
-  }
-
   return (
     <div className="space-y-6">
       {/* Header */}
       <div>
         <h1 className="text-3xl font-bold tracking-tight">Users</h1>
         <p className="text-sm text-muted-foreground">
-          Search, filters, and summaries apply to the current page. The date range applies only to CSV exports, which include all users in the selected date range. Select a date range to export.
+          Search covers all records. Summary cards show all accounts. The date
+          range applies only to CSV exports, which include all users in the
+          selected date range. Select a date range to export.
         </p>
         <p className="text-muted-foreground">
           View user wallets and referral information
         </p>
       </div>
 
-      {/* Stats Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-        <Card className="metric-card">
-          <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium text-muted-foreground">
-              Total Users
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div
-              className="text-3xl font-bold"
-              style={{ color: "var(--primary)" }}
-            >
-              {totalUsers}
-            </div>
-            <p className="text-xs text-muted-foreground mt-1">
-              Registered users
-            </p>
-          </CardContent>
-        </Card>
-        <Card className="metric-card">
-          <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium text-muted-foreground">
-              New Today
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div
-              className="text-3xl font-bold"
-              style={{ color: "var(--success)" }}
-            >
-              {newUsersToday}
-            </div>
-            <p className="text-xs text-muted-foreground mt-1">
-              Users joined today
-            </p>
-          </CardContent>
-        </Card>
-        <Card className="metric-card">
-          <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium text-muted-foreground">
-              New This Week
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div
-              className="text-3xl font-bold"
-              style={{ color: "var(--success)" }}
-            >
-              {newUsersThisWeek}
-            </div>
-            <p className="text-xs text-muted-foreground mt-1">Last 7 days</p>
-          </CardContent>
-        </Card>
-        <Card className="metric-card">
-          <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium text-muted-foreground">
-              Growth Rate
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div
-              className="text-3xl font-bold flex items-center gap-2"
-              style={{ color: "var(--primary)" }}
-            >
-              {growthRate}%
-              <TrendingUp className="h-5 w-5" />
-            </div>
-            <p className="text-xs text-muted-foreground mt-1">Week over week</p>
-          </CardContent>
-        </Card>
-      </div>
+      <AccountSummaryCards accountType="users" />
 
       {/* Users Table */}
-      <Card>
+      <Card aria-busy={loading}>
         <CardHeader>
           <CardTitle>User Details</CardTitle>
           <CardDescription>
@@ -357,12 +214,17 @@ export default function UsersPage() {
           </CardDescription>
         </CardHeader>
         <CardContent>
+          {loading && (
+            <p role="status" className="mb-3 text-sm text-muted-foreground">
+              Loading records…
+            </p>
+          )}
           {/* Search, Date Picker, Export */}
           <div className="mb-6 flex flex-wrap gap-2 items-center">
             <div className="relative flex-1 min-w-[250px]">
               <Search className="absolute left-2 top-3 h-4 w-4 text-muted-foreground" />
               <Input
-                placeholder="Search this page: by name, email, or user ID..."
+                placeholder="Search all records: by name, email, or user ID..."
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
                 className="pl-8"
@@ -392,10 +254,18 @@ export default function UsersPage() {
                 if (!dateRange?.from || exporting) return;
                 setExporting(true);
                 try {
-                  await exportAdminAccountsCsv("users", dateRange.from, dateRange.to ?? dateRange.from);
+                  await exportAdminAccountsCsv(
+                    "users",
+                    dateRange.from,
+                    dateRange.to ?? dateRange.from,
+                  );
                   toast.success("Users exported successfully");
                 } catch (error) {
-                  toast.error(error instanceof Error ? error.message : "Failed to export users.");
+                  toast.error(
+                    error instanceof Error
+                      ? error.message
+                      : "Failed to export users.",
+                  );
                 } finally {
                   setExporting(false);
                 }

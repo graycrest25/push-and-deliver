@@ -1,4 +1,7 @@
-import { getPaginatedDocs, type PaginationOptions } from "@/lib/firestore-pagination";
+import {
+  getPaginatedDocs,
+  type PaginationOptions,
+} from "@/lib/firestore-pagination";
 // Referrals Service - Read only
 import {
   collection,
@@ -6,98 +9,143 @@ import {
   doc,
   query,
   where,
-  orderBy
-} from 'firebase/firestore';
-import { db } from '@/lib/firebase';
+  orderBy,
+} from "firebase/firestore";
+import { db } from "@/lib/firebase";
 import { getCountFromServer } from "firebase/firestore";
-import type { Referral } from '@/types';
+import type { Referral } from "@/types";
 
-const COLLECTION_NAME = 'Referrals';
+const COLLECTION_NAME = "Referrals";
 
 export const referralsService = {
   async getReferralCountByReferrerId(referrerId: string): Promise<number> {
-    const result = await getCountFromServer(query(collection(db, COLLECTION_NAME), where("referrerUid", "==", referrerId)));
+    const result = await getCountFromServer(
+      query(
+        collection(db, COLLECTION_NAME),
+        where("referrerUid", "==", referrerId),
+      ),
+    );
     return result.data().count;
   },
   // Read all referrals
-  async getAllReferrals(pagination: PaginationOptions = {}): Promise<Referral[]> {
+  async getAllReferrals(
+    pagination: PaginationOptions = {},
+  ): Promise<Referral[]> {
     try {
-      const querySnapshot = await getPaginatedDocs(collection(db, COLLECTION_NAME), pagination);
+      const profiles = new Map<string, Promise<boolean>>();
+      const term = pagination.search?.term.trim().toLowerCase();
+      const options = term
+        ? {
+            ...pagination,
+            search: {
+              ...pagination.search!,
+              matches: async (
+                document: import("firebase/firestore").QueryDocumentSnapshot,
+              ) => {
+                const uid = document.data().referrerUid;
+                if (typeof uid !== "string" || !uid) return false;
+                if (!profiles.has(uid))
+                  profiles.set(
+                    uid,
+                    getDoc(doc(db, "Users", uid)).then((profile) =>
+                      String(profile.data()?.username ?? "")
+                        .toLowerCase()
+                        .includes(term),
+                    ),
+                  );
+                return profiles.get(uid)!;
+              },
+            },
+          }
+        : pagination;
+      const querySnapshot = await getPaginatedDocs(
+        collection(db, COLLECTION_NAME),
+        options,
+      );
 
-      return querySnapshot.docs.map(doc => ({
+      return querySnapshot.docs.map((doc) => ({
         id: doc.id,
         ...doc.data(),
         createdAt: doc.data().createdAt?.toDate?.(),
         completedAt: doc.data().completedAt?.toDate?.(),
       })) as Referral[];
     } catch (error) {
-      console.error('Error fetching referrals:', error);
+      console.error("Error fetching referrals:", error);
       throw error;
     }
   },
 
   // Read referrals by referrer ID
-  async getReferralsByReferrerId(referrerId: string, pagination: PaginationOptions = {}): Promise<Referral[]> {
+  async getReferralsByReferrerId(
+    referrerId: string,
+    pagination: PaginationOptions = {},
+  ): Promise<Referral[]> {
     try {
       const q = query(
         collection(db, COLLECTION_NAME),
-        where('referrerId', '==', referrerId),
-        orderBy('createdAt', 'desc')
+        where("referrerUid", "==", referrerId),
+        ...(pagination.search?.term.trim() ? [] : [orderBy("createdAt", "desc")]),
       );
       const querySnapshot = await getPaginatedDocs(q, pagination);
 
-      return querySnapshot.docs.map(doc => ({
+      return querySnapshot.docs.map((doc) => ({
         id: doc.id,
         ...doc.data(),
         createdAt: doc.data().createdAt?.toDate(),
         completedAt: doc.data().completedAt?.toDate(),
       })) as Referral[];
     } catch (error) {
-      console.error('Error fetching referrals by referrer:', error);
+      console.error("Error fetching referrals by referrer:", error);
       throw error;
     }
   },
 
   // Read referrals by referred ID
-  async getReferralsByReferredId(referredId: string, pagination: PaginationOptions = {}): Promise<Referral[]> {
+  async getReferralsByReferredId(
+    referredId: string,
+    pagination: PaginationOptions = {},
+  ): Promise<Referral[]> {
     try {
       const q = query(
         collection(db, COLLECTION_NAME),
-        where('referredId', '==', referredId),
-        orderBy('createdAt', 'desc')
+        where("referredId", "==", referredId),
+        orderBy("createdAt", "desc"),
       );
       const querySnapshot = await getPaginatedDocs(q, pagination);
 
-      return querySnapshot.docs.map(doc => ({
+      return querySnapshot.docs.map((doc) => ({
         id: doc.id,
         ...doc.data(),
         createdAt: doc.data().createdAt?.toDate(),
         completedAt: doc.data().completedAt?.toDate(),
       })) as Referral[];
     } catch (error) {
-      console.error('Error fetching referrals by referred:', error);
+      console.error("Error fetching referrals by referred:", error);
       throw error;
     }
   },
 
   // Read referrals by status
-  async getReferralsByStatus(status: 'pending' | 'completed' | 'expired', pagination: PaginationOptions = {}): Promise<Referral[]> {
+  async getReferralsByStatus(
+    status: "pending" | "completed" | "expired",
+    pagination: PaginationOptions = {},
+  ): Promise<Referral[]> {
     try {
       const q = query(
         collection(db, COLLECTION_NAME),
-        where('status', '==', status),
-        orderBy('createdAt', 'desc')
+        where("status", "==", status),
+        orderBy("createdAt", "desc"),
       );
       const querySnapshot = await getPaginatedDocs(q, pagination);
 
-      return querySnapshot.docs.map(doc => ({
+      return querySnapshot.docs.map((doc) => ({
         id: doc.id,
         ...doc.data(),
         createdAt: doc.data().createdAt?.toDate(),
         completedAt: doc.data().completedAt?.toDate(),
       })) as Referral[];
     } catch (error) {
-      console.error('Error fetching referrals by status:', error);
+      console.error("Error fetching referrals by status:", error);
       throw error;
     }
   },
@@ -119,7 +167,7 @@ export const referralsService = {
 
       return null;
     } catch (error) {
-      console.error('Error fetching referral:', error);
+      console.error("Error fetching referral:", error);
       throw error;
     }
   },
@@ -127,10 +175,12 @@ export const referralsService = {
   // Get total referral count
   async getTotalReferralCount(): Promise<number> {
     try {
-      const querySnapshot = await getCountFromServer(collection(db, COLLECTION_NAME));
+      const querySnapshot = await getCountFromServer(
+        collection(db, COLLECTION_NAME),
+      );
       return querySnapshot.data().count;
     } catch (error) {
-      console.error('Error fetching referral count:', error);
+      console.error("Error fetching referral count:", error);
       throw error;
     }
   },

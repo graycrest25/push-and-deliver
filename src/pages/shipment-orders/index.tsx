@@ -1,7 +1,7 @@
 import { useCurrentUser } from "@/contexts/UserContext";
 import { useHeadOffices } from "@/hooks/use-head-offices";
 import { Button } from "@/components/ui/button";
-import { useFirestorePagination } from "@/hooks/use-firestore-pagination";
+import { useSearchPagination } from "@/hooks/use-search-pagination";
 import { TablePagination } from "@/components/table-pagination";
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
@@ -54,7 +54,6 @@ export default function ShipmentOrdersPage() {
   const [headOfficeFilter, setHeadOfficeFilter] = useState("all");
   const headOfficeId =
     isSuperAdmin && headOfficeFilter !== "all" ? headOfficeFilter : undefined;
-  const pagination = useFirestorePagination(headOfficeId ?? "");
   const {
     offices,
     loading: loadingOffices,
@@ -68,6 +67,7 @@ export default function ShipmentOrdersPage() {
   const [orderError, setOrderError] = useState("");
   const [reloadOrders, setReloadOrders] = useState(0);
   const [searchQuery, setSearchQuery] = useState("");
+  const pagination = useSearchPagination(searchQuery, ["id", "shipmentID"], headOfficeId ?? "");
   const [shipmentTypeFilter, setShipmentTypeFilter] = useState<string>("all");
   const [clearanceTypeFilter, setClearanceTypeFilter] = useState<string>("all");
 
@@ -116,11 +116,6 @@ export default function ShipmentOrdersPage() {
 
   // Filter orders
   const filteredOrders = orders.filter((order) => {
-    const matchesSearch =
-      !searchQuery.trim() ||
-      (order.shipmentID || order.id || "")
-        .toLowerCase()
-        .includes(searchQuery.trim().toLowerCase());
     const matchesShipmentType =
       shipmentTypeFilter === "all" ||
       order.shipmentType?.toString() === shipmentTypeFilter;
@@ -129,7 +124,7 @@ export default function ShipmentOrdersPage() {
       (order.shipmentType === IntlShipmentType.customclearance &&
         order.clearanceType?.toString() === clearanceTypeFilter);
 
-    return matchesSearch && matchesShipmentType && matchesClearanceType;
+    return matchesShipmentType && matchesClearanceType;
   });
 
   const getShipmentTypeLabel = (type?: number) => {
@@ -217,8 +212,7 @@ export default function ShipmentOrdersPage() {
       <div>
         <h1 className="text-3xl font-bold tracking-tight">Shipment Orders</h1>
         <p className="text-sm text-muted-foreground">
-          Search, shipment type filters, and summaries apply to the current
-          page.{" "}
+          Search covers all shipments in the selected office. Shipment type filters and summaries apply to the displayed results.{" "}
           {isSuperAdmin &&
             "Head office filters all shipments before pagination."}
         </p>
@@ -333,7 +327,7 @@ export default function ShipmentOrdersPage() {
               <div className="relative w-64">
                 <IconSearch className="absolute left-2 top-2.5 h-4 w-4 text-muted-foreground" />
                 <Input
-                  placeholder="Search this page: by Shipment ID..."
+                  placeholder="Search all records: by Shipment ID..."
                   value={searchQuery}
                   onChange={(e) => setSearchQuery(e.target.value)}
                   className="pl-8"

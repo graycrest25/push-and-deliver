@@ -1,4 +1,4 @@
-import { useFirestorePagination } from "@/hooks/use-firestore-pagination";
+import { useSearchPagination } from "@/hooks/use-search-pagination";
 import { TablePagination } from "@/components/table-pagination";
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
@@ -42,11 +42,11 @@ const formatAmount = (amount: number) => {
 };
 
 export default function RideHailingPage() {
-  const pagination = useFirestorePagination();
   const navigate = useNavigate();
   const [orders, setOrders] = useState<RideHaulingOrder[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState("");
+  const pagination = useSearchPagination(searchQuery, ["id"]);
   const [paymentFilter, setPaymentFilter] = useState<string>("all");
 
   useEffect(() => {
@@ -57,26 +57,25 @@ export default function RideHailingPage() {
     try {
       setLoading(true);
       const data = await rideHailingService.getAllOrders(pagination.options);
+      if (!pagination.options.isCurrent?.()) return;
       setOrders(data);
     } catch (error) {
+      if (!pagination.options.isCurrent?.()) return;
       console.error("Error loading orders:", error);
       toast.error("Failed to load ride hailing orders");
     } finally {
-      setLoading(false);
+      if (pagination.options.isCurrent?.()) setLoading(false);
     }
   };
 
   // Filter orders
   const filteredOrders = orders.filter((order) => {
-    const matchesSearch = order.id
-      ?.toLowerCase()
-      .includes(searchQuery.toLowerCase());
     const matchesPayment =
       paymentFilter === "all" ||
       (paymentFilter === "paid" && order.ispaid) ||
       (paymentFilter === "unpaid" && !order.ispaid);
 
-    return matchesSearch && matchesPayment;
+    return matchesPayment;
   });
 
   const getRideTypeLabel = (type?: number) => {
@@ -166,7 +165,7 @@ export default function RideHailingPage() {
         <h1 className="text-3xl font-bold tracking-tight">
           Ride Hailing Orders
         </h1>
-        <p className="text-sm text-muted-foreground">Search, filters, summaries, and exports apply to the current page.</p>
+        <p className="text-sm text-muted-foreground">Search covers all records. Filters, summaries, and exports apply to the displayed results.</p>
         <p className="text-muted-foreground mt-2">
           Manage and track all ride hailing requests
         </p>
@@ -278,7 +277,7 @@ export default function RideHailingPage() {
               <div className="relative w-64">
                 <IconSearch className="absolute left-2 top-2.5 h-4 w-4 text-muted-foreground" />
                 <Input
-                  placeholder="Search this page: by Order ID..."
+                  placeholder="Search all records: by Order ID..."
                   value={searchQuery}
                   onChange={(e) => setSearchQuery(e.target.value)}
                   className="pl-8"

@@ -1,6 +1,6 @@
 import { SectionHelp } from "@/components/section-help";
 import { AdminAccountsList } from "./admin-accounts-list";
-import { useFirestorePagination } from "@/hooks/use-firestore-pagination";
+import { useSearchPagination } from "@/hooks/use-search-pagination";
 import { TablePagination } from "@/components/table-pagination";
 import { useState, useEffect } from "react";
 import { usersService } from "@/services/users.service";
@@ -33,11 +33,11 @@ import { Navigate } from "react-router-dom";
 import { Skeleton } from "@/components/ui/skeleton";
 
 export default function UserManagementPage() {
-  const pagination = useFirestorePagination();
   const { user: currentUser, loading: authLoading } = useCurrentUser();
   const [users, setUsers] = useState<User[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState("");
+  const pagination = useSearchPagination(searchTerm, ["id", "username", "email"]);
   const [activeTab, setActiveTab] = useState("users");
   const [updatingUid, setUpdatingUid] = useState<string | null>(null);
 
@@ -126,12 +126,7 @@ export default function UserManagementPage() {
     return <Navigate to="/dashboard" replace />;
   }
 
-  const filteredUsers = users.filter(
-    (user) =>
-      !searchTerm ||
-      user.username?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      user.email?.toLowerCase().includes(searchTerm.toLowerCase()),
-  );
+  const filteredUsers = users;
 
   return (
     <div className="p-4 space-y-6 sm:p-8">
@@ -155,7 +150,7 @@ export default function UserManagementPage() {
           <div className="flex items-center gap-2">
             <IconSearch className="h-5 w-5 shrink-0 text-muted-foreground" />
             <Input
-              placeholder="Search this page by name or email..."
+              placeholder="Search all records by name or email..."
               value={searchTerm}
               onChange={(event) => setSearchTerm(event.target.value)}
               className="max-w-sm"

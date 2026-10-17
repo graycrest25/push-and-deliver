@@ -25,6 +25,8 @@ const same = (a, b) =>
 const context = vm.createContext({
   Error,
   AbortController,
+  setTimeout: (callback) => setImmediate(callback),
+  clearTimeout: (timer) => clearImmediate(timer),
   PAGE_SIZES: [10, 25, 50],
   React: {
     createElement: (type, props, ...children) => ({
@@ -205,6 +207,12 @@ assert.equal(
   false,
   "Removing an admin must preserve continuation through Auth accounts",
 );
+nodes(tree, "Input")[0].props.onChange({ target: { value: "Jane" } });
+render();
+await settle();
+assert.equal(requests.at(-1).searchTerm, "Jane", "Search must reach the data service");
+assert.equal(requests.at(-1).pageToken, undefined, "New search must reset the cursor");
+assert.equal(requests.at(-1).pageSize, 25, "Search must preserve the selected page size");
 for (const slot of slots) slot?.cleanup?.();
 assert.equal(
   requests.at(-1).signal.aborted,

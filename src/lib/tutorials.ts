@@ -16,8 +16,8 @@ const guide = (title: string, ...steps: TutorialStep[]): Tutorial => ({
   steps,
 });
 const pageScope = step(
-  "Work with the current page",
-  "Search, filters, summaries, and exports on paginated lists apply to the records currently loaded. Use the pagination controls to move to another page, then search or filter again.",
+  "Search across all records",
+  "Search covers the complete authorized list and returns matching records in pages. Changing the search starts at page one. Other filters, lower-page charts, and exports use the displayed records unless the screen specifies otherwise. Users and Riders summary cards show global counts from an independent Firebase function.",
 );
 const permissions = step(
   "Check your available actions",
@@ -48,11 +48,11 @@ export const pageTutorials: Record<string, Tutorial> = {
     "Shipment orders",
     step(
       "Find a shipment",
-      "Use the search field and shipment or clearance filters to narrow the loaded records. Check the shipment ID, sender, amount, and status before opening a row.",
+      "Search across shipments, then use shipment or clearance filters on the returned page. Check the shipment ID, sender, amount, and status before opening a row.",
     ),
     step(
       "Understand filter scope",
-      "Super admins can filter by a head office before pagination using its document ID, including inactive offices. Search and shipment or clearance type filters apply to the current page of that office’s shipments. Changing the office starts at page one.",
+      "Super admins can filter by a head office before pagination using its document ID, including inactive offices. Search covers all shipments in that office. Shipment and clearance type filters apply to the returned page. Changing the office starts at page one.",
     ),
     step(
       "Review the shipment",
@@ -83,7 +83,7 @@ export const pageTutorials: Record<string, Tutorial> = {
     "Product orders",
     step(
       "Choose the order status",
-      "Use the All, Pending, Confirmed, Accepted, On Route, Completed, or Cancelled tabs to view the matching loaded orders. Search the current page to locate a specific order.",
+      "Use the All, Pending, Confirmed, Accepted, On Route, Completed, or Cancelled tabs to view the matching loaded orders. Search all orders to locate a specific order.",
     ),
     pageScope,
     step(
@@ -99,7 +99,7 @@ export const pageTutorials: Record<string, Tutorial> = {
     "Ride hailing",
     step(
       "Find the ride or courier order",
-      "Search the loaded records and use the available type and payment filters. Compare the rider, customer, route, amount, and current status before opening a row.",
+      "Search all records and use the available type and payment filters on the returned page. Compare the rider, customer, route, amount, and current status before opening a row.",
     ),
     pageScope,
     step(
@@ -115,7 +115,7 @@ export const pageTutorials: Record<string, Tutorial> = {
     "Support tickets",
     step(
       "Find a ticket",
-      "Search or filter the current page of the ticket table, then choose View to inspect the details. Super admins can also view closed tickets.",
+      "Search all tickets or filter the returned page, then choose View to inspect the details. Super admins can also view closed tickets.",
     ),
     step(
       "Read the conversation",
@@ -134,7 +134,7 @@ export const pageTutorials: Record<string, Tutorial> = {
     "Users",
     step(
       "Find a customer",
-      "Search the current page by the available customer details. Review the summary figures and open a matching user row to inspect the account.",
+      "Search all users by the available customer details. Review the summary figures and open a matching user row to inspect the account.",
     ),
     pageScope,
     step(
@@ -409,7 +409,7 @@ export const pageTutorials: Record<string, Tutorial> = {
     "Admin accounts",
     step(
       "Choose Users or Admins",
-      "Users lists customer accounts that can be assigned admin access. Admins lists existing admin accounts. Search applies to the currently loaded records in the active list.",
+      "Users lists customer accounts that can be assigned admin access. Admins lists existing admin accounts. Search covers all accounts in the active list, with matching results shown in pages.",
     ),
     pageScope,
     step(
@@ -854,7 +854,7 @@ export function tutorialForSection(
         ? "These overview figures report platform totals. Use Refresh to request the latest figures; an unavailable figure should be refreshed before you rely on it."
         : pathname === "/dhl-zones"
           ? "Compare the summary with the destination table and current search results."
-          : "On paginated lists, these summaries and charts use the current page’s loaded records. Check the list and its filters before interpreting the figure.",
+          : "Users and Riders summary cards show global counts from an independent Firebase function. Other summaries and charts use the returned page’s records. Check the list and its filters before interpreting the figure.",
       pathname === "/dashboard"
         ? "Follow the related area’s link to inspect individual records. Your role determines which destinations are available."
         : "Use the related table to inspect individual records. When pagination is available, move to another page to review more records rather than treating this summary as a platform-wide total.",

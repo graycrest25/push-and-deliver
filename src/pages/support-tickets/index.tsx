@@ -37,7 +37,7 @@ import {
 } from "@/components/ui/select";
 import { useCurrentUser } from "@/contexts/UserContext";
 import { useTicketConversation } from "@/hooks/use-ticket-conversation";
-import { useFirestorePagination } from "@/hooks/use-firestore-pagination";
+import { useSearchPagination } from "@/hooks/use-search-pagination";
 import { canViewTicket, filterTickets } from "@/lib/support-tickets";
 import { cn } from "@/lib/utils";
 import { supportService } from "@/services/support.service";
@@ -86,7 +86,6 @@ function PlatformBadge({ platform }: { platform?: string }) {
 
 export default function SupportTicketsPage() {
   const { user, adminType } = useCurrentUser();
-  const ticketPagination = useFirestorePagination();
   const [tickets, setTickets] = useState<SupportTicket[]>([]);
   const [selectedTicket, setSelectedTicket] = useState<SupportTicket | null>(
     null,
@@ -105,6 +104,7 @@ export default function SupportTicketsPage() {
   const [loadingTickets, setLoadingTickets] = useState(true);
   const [ticketError, setTicketError] = useState("");
   const [search, setSearch] = useState("");
+  const ticketPagination = useSearchPagination(search, ["id", "userId", "userName", "userEmail", "userPhone", "issue", "lastMessage", "tags"]);
   const [status, setStatus] = useState("all");
   const [platform, setPlatform] = useState("all");
   const [conversationOpen, setConversationOpen] = useState(false);
@@ -219,6 +219,8 @@ export default function SupportTicketsPage() {
         newMessage.trim() ||
           "This ticket is now closed, I hope all your issues have been resolved. If you have any other issues, please open a new ticket.",
       );
+      setTickets((current) => current.map((ticket) => ticket.id === ticketId ? { ...ticket, status: "closed" } : ticket));
+      ticketPagination.options.searchCache!.result = undefined;
       setSelectedTicket((current) =>
         current?.id === ticketId ? { ...current, status: "closed" } : current,
       );
@@ -304,7 +306,7 @@ export default function SupportTicketsPage() {
               <div className="relative min-w-48 flex-1">
                 <Search className="absolute left-3 top-3 size-4 text-muted-foreground" />
                 <Input
-                  aria-label="Search tickets on this page"
+                  aria-label="Search all tickets"
                   placeholder="Search ticket, account, or issue…"
                   value={search}
                   onChange={(event) => setSearch(event.target.value)}
@@ -346,7 +348,7 @@ export default function SupportTicketsPage() {
             </div>
           </div>
           <p className="shrink-0 border-b px-4 py-2 text-xs text-muted-foreground">
-            Search and filters apply to the current page.{" "}
+            Search covers all tickets. Filters apply to the displayed results.{" "}
             {adminType !== "super" &&
               "Closed conversations are available to super admins."}
           </p>

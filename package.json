@@ -25,7 +25,9 @@
     "test:tutorials": "node scripts/test-tutorials.mjs",
     "test:game-rules": "node scripts/test-game-rules.mjs",
     "test:withdrawals": "node scripts/test-withdrawals.mjs",
-    "test:coupon-redemption-metrics": "node scripts/test-coupon-redemption-metrics.mjs"
+    "test:coupon-redemption-metrics": "node scripts/test-coupon-redemption-metrics.mjs",
+    "test:collection-search": "node scripts/test-collection-search.mjs",
+    "test:account-summary": "node scripts/test-account-summary.mjs"
   },
   "dependencies": {
     "@clerk/clerk-react": "^5.55.0",

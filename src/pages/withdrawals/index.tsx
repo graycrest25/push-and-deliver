@@ -1,5 +1,5 @@
 import { getUserTypeLabel, isUserTypeEqual, canEditWithdrawal } from "@/lib/withdrawal-utils";
-import { useFirestorePagination } from "@/hooks/use-firestore-pagination";
+import { useSearchPagination } from "@/hooks/use-search-pagination";
 import { TablePagination } from "@/components/table-pagination";
 
 import { useState, useEffect } from "react";
@@ -115,10 +115,10 @@ const userTypeChartConfig = {
 } satisfies ChartConfig;
 
 export default function WithdrawalsPage() {
-  const pagination = useFirestorePagination();
   const [withdrawals, setWithdrawals] = useState<Withdrawal[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState("");
+  const pagination = useSearchPagination(searchTerm, ["id", "accountname", "bankname", "userID"]);
   const [statusFilter, setStatusFilter] = useState<string>("all");
   const [actionLoading, setActionLoading] = useState<string | null>(null);
   const [editingWithdrawal, setEditingWithdrawal] = useState<Withdrawal | null>(
@@ -138,20 +138,18 @@ export default function WithdrawalsPage() {
       const data = await withdrawalsService.getAllWithdrawals(
         pagination.options,
       );
+      if (!pagination.options.isCurrent?.()) return;
       setWithdrawals(data);
     } catch (error) {
+      if (!pagination.options.isCurrent?.()) return;
       console.error("Error loading withdrawals:", error);
       toast.error("Failed to load withdrawals");
     } finally {
-      setLoading(false);
+      if (pagination.options.isCurrent?.()) setLoading(false);
     }
   };
 
   const filteredWithdrawals = withdrawals.filter((w) => {
-    const matchesSearch = !searchTerm ||
-      w.accountname?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      w.bankname?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      w.userID?.toLowerCase().includes(searchTerm.toLowerCase());
 
     const matchesStatus =
       statusFilter === "all" ||
@@ -159,7 +157,7 @@ export default function WithdrawalsPage() {
       w.status?.toString() === statusFilter ||
       getStatusLabel(w.status) === statusFilter;
 
-    return matchesSearch && matchesStatus;
+    return matchesStatus;
   });
 
   const handleEditClick = (withdrawal: Withdrawal) => {
@@ -182,6 +180,7 @@ export default function WithdrawalsPage() {
         `Withdrawal status updated to ${getStatusLabel(statusValue)}`,
       );
       setEditingWithdrawal(null);
+      pagination.options.searchCache!.result = undefined;
       await loadWithdrawals();
     } catch (error) {
       console.error("Error updating withdrawal:", error);
@@ -254,13 +253,13 @@ export default function WithdrawalsPage() {
     },
   ];
 
-  if (loading) {
+  if (loading && !searchTerm && withdrawals.length === 0) {
     return (
       <div className="space-y-6">
         <div>
           <h1 className="text-3xl font-bold tracking-tight">Withdrawals</h1>
           <p className="text-sm text-muted-foreground">
-            Search, filters, and summaries apply to the current page. The date range applies only to CSV exports. Select a status and date range to export all matching withdrawals.
+            Search covers all records. Filters and summaries apply to the displayed results. The date range applies only to CSV exports. Select a status and date range to export all matching withdrawals.
           </p>
           <p className="text-muted-foreground">Manage withdrawal requests</p>
         </div>
@@ -286,7 +285,7 @@ export default function WithdrawalsPage() {
       <div>
         <h1 className="text-3xl font-bold tracking-tight">Withdrawals</h1>
         <p className="text-sm text-muted-foreground">
-          Search, filters, and summaries apply to the current page. The date range applies only to CSV exports. Select a status and date range to export all matching withdrawals.
+          Search covers all records. Filters and summaries apply to the displayed results. The date range applies only to CSV exports. Select a status and date range to export all matching withdrawals.
         </p>
         <p className="text-muted-foreground">
           Manage withdrawal requests and update their status
@@ -379,7 +378,7 @@ export default function WithdrawalsPage() {
             <div className="relative flex-1">
               <Search className="absolute left-2 top-3 h-4 w-4 text-muted-foreground" />
               <Input
-                placeholder="Search this page: by account name, bank, or user ID..."
+                placeholder="Search all records: by account name, bank, or user ID..."
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
                 className="pl-8"

@@ -1,4 +1,4 @@
-import { useFirestorePagination } from "@/hooks/use-firestore-pagination";
+import { useSearchPagination } from "@/hooks/use-search-pagination";
 import { TablePagination } from "@/components/table-pagination";
 // app/referrals/[referrerId, pagination.options]/page.tsx
 "use client";
@@ -38,13 +38,13 @@ export default function ReferralDetailsPage() {
   const params = useParams();
   // const router = useRouter();
   const referrerId = params.id as string;
-  const pagination = useFirestorePagination(referrerId);
   const navigate = useNavigate();
 
   const [referrals, setReferrals] = useState<Referral[]>([]);
   const [referrerInfo, setReferrerInfo] = useState<User | null>(null);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState("");
+  const pagination = useSearchPagination(searchTerm, ["id", "normalizedEmail", "referredUid", "referrerUid"], referrerId);
   const [dateRange, setDateRange] = useState<DateRange | undefined>();
 
   const handleBack = () => {
@@ -53,7 +53,7 @@ export default function ReferralDetailsPage() {
 
   useEffect(() => {
     loadData();
-  }, [referrerId]);
+  }, [referrerId, pagination.options]);
 
   const loadData = async () => {
     try {
@@ -62,27 +62,20 @@ export default function ReferralDetailsPage() {
         referralsService.getReferralsByReferrerId(referrerId, pagination.options),
         usersService.getUserById(referrerId),
       ]);
+      if (!pagination.options.isCurrent?.()) return;
       setReferrals(referralsData);
       setReferrerInfo(referrer);
     } catch (error) {
+      if (!pagination.options.isCurrent?.()) return;
       console.error("Error loading referral details:", error);
       toast.error("Failed to load referral details");
     } finally {
-      setLoading(false);
+      if (pagination.options.isCurrent?.()) setLoading(false);
     }
   };
 
   // Filter referrals
   const filteredReferrals = referrals.filter((ref) => {
-    const email = ref.normalizedEmail || "";
-    const referredUid = ref.referredUid || "";
-    const referrerUid = ref.referrerUid || "";
-
-    const matchesSearch =
-      email.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      referredUid.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      referrerUid.toLowerCase().includes(searchTerm.toLowerCase());
-
     // Date range filter
     let matchesDateRange = true;
     if (dateRange?.from && ref.createdAt) {
@@ -106,7 +99,7 @@ export default function ReferralDetailsPage() {
       }
     }
 
-    return matchesSearch && matchesDateRange;
+    return matchesDateRange;
   });
 
   const formatDate = (date: any) => {
@@ -115,7 +108,7 @@ export default function ReferralDetailsPage() {
     return dateObj ? format(dateObj, "MMM dd, yyyy hh:mm a") : "N/A";
   };
 
-  if (loading) {
+  if (loading && !searchTerm && referrals.length === 0) {
     return (
       <div className="space-y-6">
         <Skeleton className="h-10 w-64" />
@@ -142,7 +135,7 @@ export default function ReferralDetailsPage() {
           <h1 className="text-3xl font-bold tracking-tight">
             Referral Details
           </h1>
-        <p className="text-sm text-muted-foreground">Search, filters, summaries, and exports apply to the current page.</p>
+        <p className="text-sm text-muted-foreground">Search covers all referrals for this referrer. Filters, summaries, and exports apply to the displayed results.</p>
           <p className="text-muted-foreground">
             {referrerInfo?.username || "Unknown Referrer"} (
             {referrerInfo?.email || referrerId})
@@ -164,7 +157,7 @@ export default function ReferralDetailsPage() {
             <div className="relative flex-1 min-w-[250px]">
               <Search className="absolute left-2 top-3 h-4 w-4 text-muted-foreground" />
               <Input
-                placeholder="Search this page: by email or UID..."
+                placeholder="Search all referrals: by email or UID..."
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
                 className="pl-8"

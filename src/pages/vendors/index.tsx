@@ -1,4 +1,4 @@
-import { useFirestorePagination } from "@/hooks/use-firestore-pagination";
+import { useSearchPagination } from "@/hooks/use-search-pagination";
 import { TablePagination } from "@/components/table-pagination";
 "use client";
 
@@ -50,11 +50,11 @@ const formatAmount = (amount: number) => {
 };
 
 export default function VendorsPage() {
-  const pagination = useFirestorePagination();
   const navigate = useNavigate();
   const [restaurants, setRestaurants] = useState<Restaurant[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState("");
+  const pagination = useSearchPagination(searchTerm, ["id", "legalname", "email", "phonenumber"]);
   const [statusFilter, setStatusFilter] = useState<string>("all");
   const [actionLoading, setActionLoading] = useState<string | null>(null);
 
@@ -66,25 +66,23 @@ export default function VendorsPage() {
     try {
       setLoading(true);
       const data = await restaurantsService.getAllRestaurants(pagination.options);
+      if (!pagination.options.isCurrent?.()) return;
       setRestaurants(data);
     } catch (error) {
+      if (!pagination.options.isCurrent?.()) return;
       console.error("Error loading restaurants:", error);
       toast.error("Failed to load restaurants");
     } finally {
-      setLoading(false);
+      if (pagination.options.isCurrent?.()) setLoading(false);
     }
   };
 
   const filteredRestaurants = restaurants.filter((r) => {
-    const matchesSearch =
-      r.legalname?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      r.email?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      r.phonenumber?.toLowerCase().includes(searchTerm.toLowerCase());
 
     const matchesStatus =
-      statusFilter === "all" || r.verificationStatus === statusFilter;
+      statusFilter === "all" || r.verificationStatus === Number(statusFilter);
 
-    return matchesSearch && matchesStatus;
+    return matchesStatus;
   });
 
   const handleVerify = async (id: string) => {
@@ -92,6 +90,7 @@ export default function VendorsPage() {
       setActionLoading(id);
       await restaurantsService.verifyRestaurant(id);
       toast.success("Restaurant verified successfully");
+      pagination.options.searchCache!.result = undefined;
       await loadRestaurants();
     } catch (error) {
       console.error("Error verifying restaurant:", error);
@@ -106,6 +105,7 @@ export default function VendorsPage() {
       setActionLoading(id);
       await restaurantsService.blockRestaurant(id);
       toast.success("Restaurant blocked successfully");
+      pagination.options.searchCache!.result = undefined;
       await loadRestaurants();
     } catch (error) {
       console.error("Error blocking restaurant:", error);
@@ -120,6 +120,7 @@ export default function VendorsPage() {
       setActionLoading(id);
       await restaurantsService.unblockRestaurant(id);
       toast.success("Restaurant unblocked successfully");
+      pagination.options.searchCache!.result = undefined;
       await loadRestaurants();
     } catch (error) {
       console.error("Error unblocking restaurant:", error);
@@ -162,12 +163,12 @@ export default function VendorsPage() {
     }
   };
 
-  if (loading) {
+  if (loading && !searchTerm && restaurants.length === 0) {
     return (
       <div className="space-y-6">
         <div>
           <h1 className="text-3xl font-bold tracking-tight">Restaurants</h1>
-        <p className="text-sm text-muted-foreground">Search, filters, summaries, and exports apply to the current page.</p>
+        <p className="text-sm text-muted-foreground">Search covers all records. Filters, summaries, and exports apply to the displayed results.</p>
           <p className="text-muted-foreground">Manage restaurants</p>
         </div>
         <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
@@ -256,7 +257,7 @@ export default function VendorsPage() {
             <div className="relative flex-1">
               <Search className="absolute left-2 top-3 h-4 w-4 text-muted-foreground" />
               <Input
-                placeholder="Search this page: by name, email, or phone..."
+                placeholder="Search all records: by name, email, or phone..."
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
                 className="pl-8"
@@ -268,13 +269,13 @@ export default function VendorsPage() {
               </SelectTrigger>
               <SelectContent>
                 <SelectItem value="all">All Status</SelectItem>
-                <SelectItem value={VerificationStatus.verified}>
+                <SelectItem value={String(VerificationStatus.verified)}>
                   Verified
                 </SelectItem>
-                <SelectItem value={VerificationStatus.unverified}>
+                <SelectItem value={String(VerificationStatus.unverified)}>
                   Pending
                 </SelectItem>
-                <SelectItem value={VerificationStatus.blocked}>
+                <SelectItem value={String(VerificationStatus.blocked)}>
                   Blocked
                 </SelectItem>
               </SelectContent>

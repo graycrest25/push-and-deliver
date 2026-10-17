@@ -1,4 +1,4 @@
-import { useFirestorePagination } from "@/hooks/use-firestore-pagination";
+import { useSearchPagination } from "@/hooks/use-search-pagination";
 import { TablePagination } from "@/components/table-pagination";
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
@@ -34,11 +34,11 @@ import {
 } from "@tabler/icons-react";
 
 export default function RestaurantOrdersPage() {
-  const pagination = useFirestorePagination();
   const navigate = useNavigate();
   const [orders, setOrders] = useState<RestaurantOrder[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState("");
+  const pagination = useSearchPagination(searchQuery, ["id", "customer.name"]);
 
   useEffect(() => {
     loadOrders();
@@ -48,19 +48,19 @@ export default function RestaurantOrdersPage() {
     try {
       setLoading(true);
       const data = await restaurantOrdersService.getAllOrders(pagination.options);
+      if (!pagination.options.isCurrent?.()) return;
       setOrders(data);
     } catch (error) {
+      if (!pagination.options.isCurrent?.()) return;
       console.error("Error loading orders:", error);
       toast.error("Failed to load restaurant orders");
     } finally {
-      setLoading(false);
+      if (pagination.options.isCurrent?.()) setLoading(false);
     }
   };
 
   // Filter orders by customer name
-  const filteredOrders = orders.filter((order) =>
-    order.customer?.name?.toLowerCase().includes(searchQuery.toLowerCase())
-  );
+  const filteredOrders = orders;
 
   // Calculate metrics
   const totalOrders = orders.length;
@@ -79,7 +79,7 @@ export default function RestaurantOrdersPage() {
       {/* Header */}
       <div>
         <h1 className="text-3xl font-bold tracking-tight">Restaurant Orders</h1>
-        <p className="text-sm text-muted-foreground">Search, filters, summaries, and exports apply to the current page.</p>
+        <p className="text-sm text-muted-foreground">Search covers all records. Filters, summaries, and exports apply to the displayed results.</p>
         <p className="text-muted-foreground mt-2">
           Manage and track all restaurant orders from customers
         </p>
@@ -157,7 +157,7 @@ export default function RestaurantOrdersPage() {
             <div className="relative w-64">
               <IconSearch className="absolute left-2 top-2.5 h-4 w-4 text-muted-foreground" />
               <Input
-                placeholder="Search this page: by customer name..."
+                placeholder="Search all records: by customer name..."
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
                 className="pl-8"

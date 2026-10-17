@@ -73,6 +73,7 @@ export function AdminAccountsList({
         const data = await listAdminUsers({
           pageSize: size,
           pageToken,
+          searchTerm,
           signal: controller.signal,
         });
         if (controller.signal.aborted || version !== revision.current) return;
@@ -94,12 +95,13 @@ export function AdminAccountsList({
           setLoading(false);
       }
     },
-    [],
+    [searchTerm],
   );
 
   useEffect(() => {
-    void loadPage(0, 10);
+    const timer = setTimeout(() => void loadPage(0, pageSize), 300);
     return () => {
+      clearTimeout(timer);
       revision.current++;
       request.current?.abort();
     };
@@ -120,22 +122,15 @@ export function AdminAccountsList({
     });
   };
 
-  const filtered =
-    result?.users.filter(
-      (user) =>
-        !searchTerm ||
-        [user.name, user.email, user.userid].some((value) =>
-          value?.toLowerCase().includes(searchTerm.toLowerCase()),
-        ),
-    ) ?? [];
+  const filtered = result?.users ?? [];
   const busy = loading || Boolean(updatingUid);
 
   return (
     <div className="space-y-4">
       <div className="flex flex-wrap items-center justify-between gap-3">
         <Input
-          aria-label="Search admin accounts on this page"
-          placeholder="Search this page by name, email, or ID..."
+          aria-label="Search all admin accounts"
+          placeholder="Search all admins by name, email, or ID..."
           value={searchTerm}
           onChange={(event) => setSearchTerm(event.target.value)}
           className="max-w-sm"
@@ -208,7 +203,7 @@ export function AdminAccountsList({
                   {error && !result
                     ? "Admin accounts could not be loaded."
                     : searchTerm
-                      ? "No admins match your search on this page."
+                      ? "No admins match your search."
                       : result?.nextPageToken
                         ? "No admins on this page. Select Next to continue."
                         : "No admin accounts on this page."}

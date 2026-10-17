@@ -1,6 +1,6 @@
 import { TablePagination } from "@/components/table-pagination";
-import { useFirestorePagination } from "@/hooks/use-firestore-pagination";
-import { useState, useEffect, useMemo } from "react";
+import { useSearchPagination } from "@/hooks/use-search-pagination";
+import { useState, useEffect } from "react";
 import {
   Card,
   CardContent,
@@ -18,10 +18,10 @@ import { StateAccordionItem } from "./components/state-accordion";
 import { IconMapPin, IconSearch } from "@tabler/icons-react";
 
 export default function DeliveryZonesPage() {
-  const pagination = useFirestorePagination();
   const [states, setStates] = useState<State[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState("");
+  const pagination = useSearchPagination(searchQuery, ["id", "name"]);
 
   useEffect(() => {
     loadStates();
@@ -31,26 +31,22 @@ export default function DeliveryZonesPage() {
     try {
       setLoading(true);
       const data = await deliveryZonesService.getAllStates(pagination.options);
+      if (!pagination.options.isCurrent?.()) return;
       // Sort alphabetically
       data.sort((a, b) => a.name.localeCompare(b.name));
       setStates(data);
     } catch (error) {
+      if (!pagination.options.isCurrent?.()) return;
       console.error("Error loading states:", error);
       toast.error("Failed to load states");
     } finally {
-      setLoading(false);
+      if (pagination.options.isCurrent?.()) setLoading(false);
     }
   };
 
-  const filteredStates = useMemo(() => {
-    if (!searchQuery) return states;
-    const lowerQuery = searchQuery.toLowerCase();
-    return states.filter((state) =>
-      state.name.toLowerCase().includes(lowerQuery)
-    );
-  }, [states, searchQuery]);
+  const filteredStates = states;
 
-  if (loading) {
+  if (loading && !searchQuery && states.length === 0) {
     return <LoadingModal />;
   }
 
@@ -59,7 +55,7 @@ export default function DeliveryZonesPage() {
       {/* Header */}
       <div>
         <h1 className="text-3xl font-bold tracking-tight">Delivery Zones</h1>
-        <p className="text-sm text-muted-foreground">Search, filters, summaries, and exports apply to the current page.</p>
+        <p className="text-sm text-muted-foreground">Search covers all records. Filters, summaries, and exports apply to the displayed results.</p>
         <p className="text-muted-foreground mt-2">
           Manage delivery fees for States and LGAs
         </p>
@@ -73,7 +69,7 @@ export default function DeliveryZonesPage() {
             <div className="relative w-64">
               <IconSearch className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
               <Input
-                placeholder="Search this page: states..."
+                placeholder="Search all records: states..."
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
                 className="pl-9"

@@ -1,4 +1,4 @@
-import { useFirestorePagination } from "@/hooks/use-firestore-pagination";
+import { useSearchPagination } from "@/hooks/use-search-pagination";
 import { TablePagination } from "@/components/table-pagination";
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
@@ -56,7 +56,6 @@ const truncateText = (text: string | undefined, maxLength: number = 30) => {
 };
 
 export default function EcommerceMerchantsPage() {
-  const pagination = useFirestorePagination();
   const navigate = useNavigate();
   const [merchants, setMerchants] = useState<EcommerceMerchant[]>([]);
   const [filteredMerchants, setFilteredMerchants] = useState<
@@ -64,6 +63,7 @@ export default function EcommerceMerchantsPage() {
   >([]);
   const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState("");
+  const pagination = useSearchPagination(searchQuery, ["id", "displayName", "email", "phonenumber"]);
   const [activeTab, setActiveTab] = useState("all");
   const [merchantsWithTransactions, setMerchantsWithTransactions] = useState<
     Set<string>
@@ -81,6 +81,7 @@ export default function EcommerceMerchantsPage() {
     try {
       setLoading(true);
       const data = await ecommerceMerchantsService.getAllMerchants(pagination.options);
+      if (!pagination.options.isCurrent?.()) return;
       setMerchants(data);
 
       // Check which merchants have transactions
@@ -99,12 +100,14 @@ export default function EcommerceMerchantsPage() {
           .filter((check) => check.hasTransactions)
           .map((check) => check.id)
       );
+      if (!pagination.options.isCurrent?.()) return;
       setMerchantsWithTransactions(merchantsWithTxns);
     } catch (error) {
+      if (!pagination.options.isCurrent?.()) return;
       console.error("Error loading merchants:", error);
       toast.error("Failed to load merchants");
     } finally {
-      setLoading(false);
+      if (pagination.options.isCurrent?.()) setLoading(false);
     }
   };
 
@@ -116,17 +119,6 @@ export default function EcommerceMerchantsPage() {
       filtered = filtered.filter((m) => m.verificationStatus === 1);
     } else if (activeTab === "unverified") {
       filtered = filtered.filter((m) => m.verificationStatus === 0);
-    }
-
-    // Filter by search query
-    if (searchQuery) {
-      const query = searchQuery.toLowerCase();
-      filtered = filtered.filter(
-        (m) =>
-          m.displayName?.toLowerCase().includes(query) ||
-          m.email?.toLowerCase().includes(query) ||
-          m.phonenumber?.toLowerCase().includes(query)
-      );
     }
 
     setFilteredMerchants(filtered);
@@ -144,7 +136,7 @@ export default function EcommerceMerchantsPage() {
     navigate(`/ecommerce-merchants/${merchantId}/transactions`);
   };
 
-  if (loading) {
+  if (loading && !searchQuery && merchants.length === 0) {
     return (
       <div className="space-y-6">
         <Skeleton className="h-12 w-96" />
@@ -160,7 +152,7 @@ export default function EcommerceMerchantsPage() {
         <h1 className="text-3xl font-bold tracking-tight">
           E-commerce Merchants
         </h1>
-        <p className="text-sm text-muted-foreground">Search, filters, summaries, and exports apply to the current page.</p>
+        <p className="text-sm text-muted-foreground">Search covers all records. Filters, summaries, and exports apply to the displayed results.</p>
         <p className="text-muted-foreground">
           Manage merchant accounts and verification status
         </p>
@@ -189,7 +181,7 @@ export default function EcommerceMerchantsPage() {
               <div className="relative w-80">
                 <Search className="absolute left-2 top-2.5 h-4 w-4 text-muted-foreground" />
                 <Input
-                  placeholder="Search this page: by name, email, or phone..."
+                  placeholder="Search all records: by name, email, or phone..."
                   value={searchQuery}
                   onChange={(e) => setSearchQuery(e.target.value)}
                   className="pl-8"
