@@ -312,19 +312,11 @@ export const pageTutorials: Record<string, Tutorial> = {
   ),
   "/referrals": guide(
     "Referrals",
-    step(
-      "Find a referral record",
-      "Search the loaded referral records and compare the summary figures. Open a referral row to inspect the users associated with it.",
-    ),
-    pageScope,
-    step(
-      "Review referred users",
-      "On the detail page, inspect Referred Users to understand who is linked to the referral. Use the displayed identifiers and account details to distinguish similar names.",
-    ),
-    step(
-      "Export the loaded records",
-      "Use the export action when you need a copy of the loaded referral results. Move through additional pages separately when reviewing more records.",
-    ),
+    step("Find a referral record", "Search by the exact referred user ID (referredUid), then filter by referred user type or referral code. All filters apply across the full collection before pagination."),
+    step("Page and scroll through referrals", "Each row represents one referral. Choose 10, 20, 30, or 50 rows per page. Previous and Next use saved cursors; changing a filter or page size starts at page one. Scroll inside the fixed-height table while its headers and pagination remain visible."),
+    step("Review global counts", "Referral summary cards load independently of the table and report all referrals and distinct referrers. They update as backend referral changes are processed. A missing backfill is shown as unavailable, not as zero."),
+    step("Inspect a referrer", "Choose a referrer UID link to review that referrer's referred users. User ID search targets the referred account, while the referrer link identifies the account that made the referral."),
+    step("Export referrals", "Choose a start and end date to export all referrals created in that inclusive Lagos date range and the selected user type. The current table page, referred user ID search, and referral code filter do not restrict exports."),
   ),
   "/generated": guide(
     "Generated referrals",

@@ -82,6 +82,23 @@ large datasets should move to a maintained search index (for example an external
 search provider). Search is an on-demand snapshot; ticket lists resume their
 live Firestore subscription when search is cleared. Search caches live only in
 the mounted list, and are invalidated on local rider, vendor, withdrawal, and ticket status changes. Other list
-filters and lower-page charts still apply to the returned page; Users, Riders, and the four order summary sections are global. No search index or data backfill is required.
+filters and lower-page charts still apply to the returned page; Users, Riders, order, and referral summary sections are global. No search index or data backfill is required.
 
 Aggregation reference: https://firebase.google.com/docs/firestore/query-data/aggregation-queries
+
+## Referral list, summary, and export APIs
+
+See [the referral API function examples](../docs/referrals-api-examples.md),
+[backend handler source](../docs/examples/referrals-api.cjs), and
+[HTTP requests](../docs/examples/referrals-api.http). The Referrals screen calls
+`listAdminReferrals`, `getAdminReferralSummary`, and `exportAdminReferralsCsv`.
+Deploy these in the existing backend, deploy `syncAdminReferralSummary`, set
+`REFERRAL_CURSOR_SECRET`, and run `backfillReferralSummary(db)` before relying
+on the global summary. Merge the new Referrals indexes, preserving existing ones.
+
+The list searches by exact `referredUid` and filters by `referreduserType` and
+`referralCodeUsed` before cursor pagination. Limits are 10 (default), 20, 30, or 50.
+The table shows individual referral documents in a fixed 32rem scroll area with
+sticky headers; pagination remains outside the scroll area. Exports cover all
+records matching the chosen Lagos date range and user type. Referral summary
+cards now read a global maintained aggregate independently of the table.

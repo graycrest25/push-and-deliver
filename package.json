@@ -28,7 +28,9 @@
     "test:coupon-redemption-metrics": "node scripts/test-coupon-redemption-metrics.mjs",
     "test:collection-search": "node scripts/test-collection-search.mjs",
     "test:account-summary": "node scripts/test-account-summary.mjs",
-    "test:order-summary": "node scripts/test-order-summary.mjs"
+    "test:order-summary": "node scripts/test-order-summary.mjs",
+    "test:referrals-api": "node scripts/test-referrals-api.mjs",
+    "test:admin-referrals": "node scripts/test-admin-referrals.mjs"
   },
   "dependencies": {
     "@clerk/clerk-react": "^5.55.0",

@@ -1,0 +1,22 @@
+@firebaseSuffix = -YOUR-CLOUD-RUN-SUFFIX.a.run.app
+@idToken = YOUR_FIREBASE_ID_TOKEN
+
+### First page: limit defaults to 10
+GET https://listAdminReferrals{{firebaseSuffix}}
+Authorization: Bearer {{idToken}}
+
+### Exact referred user ID and AND filters; limit can be 10, 20, 30, 50
+GET https://listAdminReferrals{{firebaseSuffix}}?limit=20&referredUid=USER_ID&referreduserType=rider&referralCodeUsed=WELCOME123
+Authorization: Bearer {{idToken}}
+
+### Next page: retain identical filters and limit; URL-encode the returned cursor
+GET https://listAdminReferrals{{firebaseSuffix}}?limit=20&referredUid=USER_ID&referreduserType=rider&referralCodeUsed=WELCOME123&cursor=RETURNED_CURSOR
+Authorization: Bearer {{idToken}}
+
+### Global summary, independent of list filters
+GET https://getAdminReferralSummary{{firebaseSuffix}}
+Authorization: Bearer {{idToken}}
+
+### Export all riders in the inclusive Lagos date range
+GET https://exportAdminReferralsCsv{{firebaseSuffix}}?startDate=2026-10-01&endDate=2026-10-17&referreduserType=rider
+Authorization: Bearer {{idToken}}

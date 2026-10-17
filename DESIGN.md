@@ -251,6 +251,8 @@ The page finder searches only allowed destinations. Cmd/Ctrl K toggles its dialo
 
 ### Tables / Pagination
 
+The Referrals screen shows one referral per row in a fixed 32rem scroll region, with sticky headers and pagination below it. Exact referred-user-ID search and type/code filters run on the API before cursor pagination. Its page-size choices are 10, 20, 30, and 50; filters and size changes return to page one. Global referral summary cards load independently. CSV exports cover the selected Lagos date range and user type across all pages.
+
 Support tickets and ticket details share a viewport-based fixed height. Each panel scrolls independently; table column headers stay pinned and pagination remains below the scroll area. Conversations open in a right-side drawer with a blurred backdrop, filling the width on mobile. The newest messages appear first on opening; scrolling upward expands the live history in batches of 25 while preserving the reading position. The header and reply controls remain visible.
 
 Headers are 46px high with 16px horizontal padding and 12px semibold muted text. Cells use 14px records, approximately 14.4px 16px padding, and tabular numerals. Clickable rows are keyboard reachable and activate with Enter or Space when focus is on the row itself; child controls keep their own interactions. Focus supplies an inset outline and accent background.

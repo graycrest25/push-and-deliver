@@ -10,6 +10,15 @@ const firebaseEndpoint = (name: string): string => {
 };
 
 export const endpoints = {
+  get listAdminReferrals() {
+    return firebaseEndpoint("listAdminReferrals");
+  },
+  get getAdminReferralSummary() {
+    return firebaseEndpoint("getAdminReferralSummary");
+  },
+  get exportAdminReferralsCsv() {
+    return firebaseEndpoint("exportAdminReferralsCsv");
+  },
   get getAdminOrderSummary() {
     return firebaseEndpoint("getAdminOrderSummary");
   },

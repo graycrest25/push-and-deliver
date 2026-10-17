@@ -1,8 +1,6 @@
-import { useSearchPagination } from "@/hooks/use-search-pagination";
-import { TablePagination } from "@/components/table-pagination";
-("use client");
-
-import { useState, useEffect } from "react";
+import { useEffect, useRef, useState } from "react";
+import { Link } from "react-router-dom";
+import { Search } from "lucide-react";
 import {
   Card,
   CardContent,
@@ -11,6 +9,16 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import {
   Table,
   TableBody,
@@ -19,376 +27,329 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
-import { Search } from "lucide-react";
-import { referralsService } from "@/services/referrals.service";
-import { usersService } from "@/services/users.service";
-import type { Referral, User } from "@/types";
-import { toast } from "sonner";
 import { Skeleton } from "@/components/ui/skeleton";
 import { ExportButton } from "@/components/ExportButton";
-import { exportToCSV } from "@/lib/csv-export";
-import { DateRangePicker } from "@/components/ui/date-range-picker";
-import type { DateRange } from "react-day-picker";
-import { startOfDay, endOfDay, isWithinInterval } from "date-fns";
-import { useNavigate } from "react-router-dom";
+import { ReferralSummaryCards } from "@/components/referral-summary-cards";
+import { useReferralList } from "@/hooks/use-referral-list";
+import {
+  adminReferralsService,
+  REFERRAL_LIMITS,
+  type ReferralLimit,
+} from "@/services/admin-referrals.service";
+import { toast } from "sonner";
+
+const createdDate = (value: string | null) =>
+  value
+    ? new Intl.DateTimeFormat("en-NG", {
+        dateStyle: "medium",
+        timeStyle: "short",
+        timeZone: "Africa/Lagos",
+      }).format(new Date(value))
+    : "Not recorded";
 
 export default function ReferralsPage() {
-  const [referrals, setReferrals] = useState<Referral[]>([]);
-  const [users, setUsers] = useState<Map<string, User>>(new Map());
-  const [loading, setLoading] = useState(true);
-  const [searchTerm, setSearchTerm] = useState("");
-  const pagination = useSearchPagination(searchTerm, ["referrerUid"]);
-  const [dateRange, setDateRange] = useState<DateRange | undefined>();
-  const navigate = useNavigate();
-
-  useEffect(() => {
-    loadData();
-  }, [pagination.options]);
-
-  const loadData = async () => {
-    try {
-      setLoading(true);
-      const referralsData = await referralsService.getAllReferrals(
-        pagination.options,
-      );
-      const ids = [
-        ...new Set(referralsData.map((ref) => ref.referrerUid).filter(Boolean)),
-      ];
-      const usersData = await Promise.all(
-        ids.map((id) => usersService.getUserById(id!)),
-      );
-      if (!pagination.options.isCurrent?.()) return;
-      setReferrals(referralsData);
-      const usersMap = new Map<string, User>();
-      usersData.forEach((user) => {
-        if (user?.id) usersMap.set(user.id, user);
-      });
-      setUsers(usersMap);
-    } catch (error) {
-      if (!pagination.options.isCurrent?.()) return;
-      console.error("Error loading data:", error);
-      toast.error("Failed to load referrals. Check console for details.");
-    } finally {
-      if (pagination.options.isCurrent?.()) setLoading(false);
-    }
-  };
-
-  // Group referrals by referrer
-  const referrerStats = referrals.reduce(
-    (acc, ref) => {
-      const referrerId = ref.referrerUid;
-      if (!referrerId) return acc;
-
-      if (!acc[referrerId]) {
-        const referrerUser = users.get(referrerId);
-        acc[referrerId] = {
-          referrerId,
-          referrerName: referrerUser?.username || "Unknown",
-          referralCount: 0,
-          referredUsers: [],
-          referredUserTypes: [],
-          createdAt: referrerUser?.createdAt, // ← Add for date filtering
-        };
-      }
-
-      acc[referrerId].referralCount++;
-      if (ref.referredUid) {
-        acc[referrerId].referredUsers.push(ref.referredUid);
-      }
-      if (ref.referreduserType) {
-        acc[referrerId].referredUserTypes.push(ref.referreduserType);
-      }
-
-      return acc;
-    },
-    {} as Record<
-      string,
-      {
-        referrerId: string;
-        referrerName: string;
-        referralCount: number;
-        referredUsers: string[];
-        referredUserTypes: string[];
-        createdAt?: Date | any; // Firestore Timestamp or Date
-      }
-    >,
-  );
-
-  const referrerList = Object.values(referrerStats);
-
-  const filteredReferrers = referrerList.filter((r) => {
-
-
-    // Date range filter on referrer's createdAt
-    let createdDate: Date | undefined;
-    if (r.createdAt) {
-      if (r.createdAt instanceof Date) {
-        createdDate = r.createdAt;
-      } else if (typeof r.createdAt.toDate === "function") {
-        createdDate = r.createdAt.toDate();
-      }
-    }
-    let matchesDateRange = true;
-    if (dateRange?.from && createdDate) {
-      const createdDate =
-        r.createdAt instanceof Date ? r.createdAt : r.createdAt.toDate?.();
-
-      if (dateRange.to) {
-        matchesDateRange = isWithinInterval(createdDate, {
-          start: startOfDay(dateRange.from),
-          end: endOfDay(dateRange.to),
-        });
-      } else {
-        matchesDateRange = isWithinInterval(createdDate, {
-          start: startOfDay(dateRange.from),
-          end: endOfDay(dateRange.from),
-        });
-      }
-    }
-
-    return matchesDateRange;
+  const [referredUid, setReferredUid] = useState("");
+  const [referralCodeUsed, setReferralCodeUsed] = useState("");
+  const [referreduserType, setReferreduserType] = useState("all");
+  const [search, setSearch] = useState({
+    referredUid: "",
+    referralCodeUsed: "",
   });
-
-  const totalReferrers = referrerList.length;
-  const totalReferralCount = referrals.length;
-  const avgReferrals =
-    totalReferrers > 0 ? (totalReferralCount / totalReferrers).toFixed(1) : "0";
-
-  const handleRowClick = (referralId: string) => {
-    navigate(`/referrals/${referralId}`);
-  };
-  if (loading && !searchTerm && referrals.length === 0) {
-    return (
-      <div className="space-y-6">
-        <div>
-          <h1 className="text-3xl font-bold tracking-tight">Referrals</h1>
-          <p className="text-sm text-muted-foreground">
-            Search covers all referrers. Filters, summaries, and exports apply
-            to the displayed results.
-          </p>
-          <p className="text-muted-foreground">Track user referrals</p>
-        </div>
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-          {[1, 2, 3].map((i) => (
-            <Card key={i}>
-              <CardHeader className="pb-2">
-                <Skeleton className="h-4 w-24" />
-              </CardHeader>
-              <CardContent>
-                <Skeleton className="h-8 w-16" />
-              </CardContent>
-            </Card>
-          ))}
-        </div>
-      </div>
+  useEffect(() => {
+    const timer = setTimeout(
+      () =>
+        setSearch({
+          referredUid: referredUid.trim(),
+          referralCodeUsed: referralCodeUsed.trim(),
+        }),
+      300,
     );
-  }
-
+    return () => clearTimeout(timer);
+  }, [referredUid, referralCodeUsed]);
+  const list = useReferralList({
+    ...search,
+    referreduserType: referreduserType === "all" ? undefined : referreduserType,
+  });
+  const [startDate, setStartDate] = useState("");
+  const [endDate, setEndDate] = useState("");
+  const [exporting, setExporting] = useState(false);
+  const viewport = useRef<HTMLDivElement>(null);
+  useEffect(() => {
+    if (viewport.current) viewport.current.scrollTop = 0;
+  }, [list.requestKey]);
+  const exportCsv = async () => {
+    try {
+      setExporting(true);
+      await adminReferralsService.exportCsv(
+        startDate,
+        endDate,
+        referreduserType === "all" ? undefined : referreduserType,
+      );
+      toast.success("Referrals exported successfully");
+    } catch (cause) {
+      toast.error(
+        cause instanceof Error ? cause.message : "Unable to export referrals",
+      );
+    } finally {
+      setExporting(false);
+    }
+  };
+  const hasFilters =
+    !!referredUid || !!referralCodeUsed || referreduserType !== "all";
   return (
     <div className="space-y-6">
-      {/* Header */}
       <div>
         <h1 className="text-3xl font-bold tracking-tight">Referrals</h1>
         <p className="text-muted-foreground">
-          Track user referrals and referral activity
+          Track individual referrals by referred user, user type, and referral
+          code.
         </p>
       </div>
-
-      {/* Stats Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-        <Card>
-          <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium text-muted-foreground">
-              Total Referrers
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">{totalReferrers}</div>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium text-muted-foreground">
-              Total Referrals
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">{totalReferralCount}</div>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium text-muted-foreground">
-              Avg Referrals per User
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">{avgReferrals}</div>
-          </CardContent>
-        </Card>
-      </div>
-
-      {/* Referrals Table */}
+      <ReferralSummaryCards />
       <Card>
         <CardHeader>
           <CardTitle>Referral Details</CardTitle>
           <CardDescription>
-            View all referrers and their referred users
+            Each row is one referral. Search and filters cover all records.
           </CardDescription>
         </CardHeader>
-        <CardContent>
-          {/* Search, Date Picker, Export */}
-          <div className="mb-6 flex flex-wrap gap-2 items-center">
-            <div className="relative flex-1 min-w-[250px]">
-              <Search className="absolute left-2 top-3 h-4 w-4 text-muted-foreground" />
+        <CardContent className="space-y-4">
+          <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+            <div className="space-y-2">
+              <Label htmlFor="referral-user-id">Referred user ID</Label>
+              <div className="relative">
+                <Search
+                  aria-hidden="true"
+                  className="absolute left-3 top-3 h-4 w-4 text-muted-foreground"
+                />
+                <Input
+                  id="referral-user-id"
+                  placeholder="Enter the exact referred user ID"
+                  value={referredUid}
+                  onChange={(event) => setReferredUid(event.target.value)}
+                  className="pl-9"
+                />
+              </div>
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="referral-user-type">Referred user type</Label>
+              <Select
+                value={referreduserType}
+                onValueChange={setReferreduserType}
+              >
+                <SelectTrigger id="referral-user-type" className="w-full">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">All types</SelectItem>
+                  <SelectItem value="user">User</SelectItem>
+                  <SelectItem value="rider">Rider</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="referral-code">Referral code used</Label>
               <Input
-                placeholder="Search all referrers: by name or user ID..."
-                value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
-                className="pl-8"
+                id="referral-code"
+                placeholder="Enter the exact referral code"
+                value={referralCodeUsed}
+                onChange={(event) => setReferralCodeUsed(event.target.value)}
               />
             </div>
-
-            <DateRangePicker
-              dateRange={dateRange}
-              onDateRangeChange={setDateRange}
-              className="w-full sm:w-auto"
-            />
-
-            {dateRange?.from && (
+          </div>
+          {hasFilters && (
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => {
+                setReferredUid("");
+                setReferralCodeUsed("");
+                setReferreduserType("all");
+                setSearch({ referredUid: "", referralCodeUsed: "" });
+              }}
+            >
+              Clear filters
+            </Button>
+          )}
+          {list.error && (
+            <div
+              role="alert"
+              className="flex flex-wrap items-center gap-3 text-sm text-destructive"
+            >
+              <span>{list.error}</span>
+              <Button variant="outline" size="sm" onClick={list.retry}>
+                Retry list
+              </Button>
+            </div>
+          )}
+          <div
+            ref={viewport}
+            role="region"
+            aria-label="Referrals table"
+            tabIndex={0}
+            aria-busy={list.loading}
+            className="h-[32rem] overflow-auto rounded-lg border [scrollbar-gutter:stable] [&>div]:overflow-visible [&>div]:border-0 [&>div]:rounded-none"
+          >
+            <Table className="min-w-[900px]">
+              <TableHeader className="sticky top-0 z-10">
+                <TableRow>
+                  <TableHead>Referral ID</TableHead>
+                  <TableHead>Referred UID</TableHead>
+                  <TableHead>Referrer UID</TableHead>
+                  <TableHead>User type</TableHead>
+                  <TableHead>Referral code</TableHead>
+                  <TableHead>Created (Lagos)</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {list.loading ? (
+                  Array.from({ length: list.limit }).map((_, index) => (
+                    <TableRow key={index}>
+                      {Array.from({ length: 6 }).map((_, cell) => (
+                        <TableCell key={cell}>
+                          <Skeleton className="h-4 w-24" />
+                        </TableCell>
+                      ))}
+                    </TableRow>
+                  ))
+                ) : list.data?.items.length ? (
+                  list.data.items.map((item) => (
+                    <TableRow key={item.id}>
+                      <TableCell className="font-mono text-xs">
+                        {item.id}
+                      </TableCell>
+                      <TableCell>
+                        {item.referredUid || "Not recorded"}
+                      </TableCell>
+                      <TableCell>
+                        {item.referrerUid ? (
+                          <Link
+                            className="text-primary underline underline-offset-4"
+                            to={`/referrals/${encodeURIComponent(item.referrerUid)}`}
+                          >
+                            {item.referrerUid}
+                          </Link>
+                        ) : (
+                          "Not recorded"
+                        )}
+                      </TableCell>
+                      <TableCell>
+                        <Badge variant="outline">
+                          {item.referreduserType || "Unknown"}
+                        </Badge>
+                      </TableCell>
+                      <TableCell>
+                        {item.referralCodeUsed || "Not recorded"}
+                      </TableCell>
+                      <TableCell>{createdDate(item.createdAt)}</TableCell>
+                    </TableRow>
+                  ))
+                ) : (
+                  <TableRow>
+                    <TableCell
+                      colSpan={6}
+                      className="py-12 text-center text-muted-foreground"
+                    >
+                      {list.error
+                        ? "Referral records are unavailable. Retry the list to continue."
+                        : hasFilters
+                          ? "No referrals match these filters."
+                          : "No referrals found."}
+                    </TableCell>
+                  </TableRow>
+                )}
+              </TableBody>
+            </Table>
+          </div>
+          <nav
+            aria-label="Referral pagination"
+            className="flex flex-wrap items-center justify-between gap-3"
+          >
+            <div className="flex items-center gap-2 text-sm text-muted-foreground">
+              <Label htmlFor="referral-page-size">Rows per page</Label>
+              <Select
+                value={String(list.limit)}
+                onValueChange={(value) =>
+                  list.setLimit(Number(value) as ReferralLimit)
+                }
+                disabled={list.loading}
+              >
+                <SelectTrigger id="referral-page-size" className="w-20">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  {REFERRAL_LIMITS.map((limit) => (
+                    <SelectItem key={limit} value={String(limit)}>
+                      {limit}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            <p
+              role="status"
+              className="text-sm tabular-nums text-muted-foreground"
+            >
+              {list.loading
+                ? "Loading referrals…"
+                : list.error
+                  ? "Unable to load referrals"
+                  : `Page ${list.pageIndex + 1} · ${list.data?.items.length ?? 0} referrals`}
+            </p>
+            <div className="flex gap-2">
               <Button
                 variant="outline"
                 size="sm"
-                onClick={() => setDateRange(undefined)}
+                disabled={list.loading || list.pageIndex === 0}
+                onClick={list.previous}
               >
-                Clear Date
+                Previous
               </Button>
-            )}
-
-            <ExportButton
-              onClick={() => {
-                const exportData = filteredReferrers.map((r) => {
-                  const userCount =
-                    r.referredUserTypes.filter((type) => type === "user")
-                      .length +
-                    (r.referralCount - r.referredUserTypes.length);
-
-                  const riderCount = r.referredUserTypes.filter(
-                    (type) => type === "rider",
-                  ).length;
-
-                  return {
-                    referrerName: r.referrerName,
-                    referrerId: r.referrerId,
-                    userCount,
-                    riderCount,
-                    totalReferralCount: r.referralCount,
-                    status: r.referralCount > 5 ? "Top Referrer" : "Active",
-                  };
-                });
-
-                exportToCSV(
-                  exportData,
-                  [
-                    { header: "Referrer Name", accessor: "referrerName" },
-                    { header: "Referrer UID", accessor: "referrerId" },
-                    { header: "User", accessor: "userCount" },
-                    { header: "Rider", accessor: "riderCount" },
-                    {
-                      header: "Total Referrals",
-                      accessor: "totalReferralCount",
-                    },
-                    { header: "Status", accessor: "status" },
-                  ],
-                  "referrals_export",
-                );
-                toast.success("Referrals exported successfully");
-              }}
-              disabled={filteredReferrers.length === 0}
-            />
-          </div>
-
-          {/* Table */}
-          <div className="border rounded-lg overflow-hidden">
-            <>
-              <Table>
-                <TableHeader>
-                  <TableRow className="bg-muted/50">
-                    <TableHead>Referrer Name</TableHead>
-                    <TableHead>Referrer UID</TableHead>
-                    <TableHead>User</TableHead>
-                    <TableHead>Rider</TableHead>
-                    <TableHead>Total Referrer Count</TableHead>
-                    <TableHead>Status</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {filteredReferrers.length === 0 ? (
-                    <TableRow>
-                      <TableCell
-                        colSpan={6}
-                        className="text-center text-muted-foreground py-8"
-                      >
-                        No referrers found
-                      </TableCell>
-                    </TableRow>
-                  ) : (
-                    filteredReferrers.map((referrer) => (
-                      <TableRow
-                        key={referrer.referrerId}
-                        className="hover:bg-muted/50"
-                        onClick={() => handleRowClick(`${referrer.referrerId}`)}
-                      >
-                        <TableCell className="font-medium">
-                          {referrer.referrerName}
-                        </TableCell>
-                        <TableCell className="font-mono text-sm">
-                          {referrer.referrerId}
-                        </TableCell>
-                        <TableCell>
-                          <Badge variant="outline">
-                            {(() => {
-                              const userCount =
-                                referrer.referredUserTypes.filter(
-                                  (type) => type === "user",
-                                ).length;
-                              const unspecifiedCount =
-                                referrer.referralCount -
-                                referrer.referredUserTypes.length;
-                              return userCount + unspecifiedCount;
-                            })()}
-                          </Badge>
-                        </TableCell>
-                        <TableCell>
-                          <Badge variant="outline">
-                            {
-                              referrer.referredUserTypes.filter(
-                                (type) => type === "rider",
-                              ).length
-                            }
-                          </Badge>
-                        </TableCell>
-                        <TableCell>
-                          <Badge variant="outline">
-                            {referrer.referralCount}
-                          </Badge>
-                        </TableCell>
-                        <TableCell>
-                          <Badge variant="default">
-                            {referrer.referralCount > 5
-                              ? "Top Referrer"
-                              : "Active"}
-                          </Badge>
-                        </TableCell>
-                      </TableRow>
-                    ))
-                  )}
-                </TableBody>
-              </Table>
-              <TablePagination pagination={pagination} loading={loading} />
-            </>
+              <Button
+                variant="outline"
+                size="sm"
+                disabled={list.loading || !list.data?.hasMore}
+                onClick={list.next}
+              >
+                Next
+              </Button>
+            </div>
+          </nav>
+          <div className="space-y-3 border-t pt-4">
+            <p className="text-sm font-medium">Export referrals</p>
+            <p className="text-sm text-muted-foreground">
+              Export all referrals in the date range and selected user type.
+              User ID and referral code filters do not restrict exports. Dates
+              include the full day in Lagos.
+            </p>
+            <div className="flex flex-wrap items-end gap-3">
+              <div className="space-y-2">
+                <Label htmlFor="referral-export-start">Start date</Label>
+                <Input
+                  id="referral-export-start"
+                  type="date"
+                  value={startDate}
+                  onChange={(event) => setStartDate(event.target.value)}
+                  disabled={exporting}
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="referral-export-end">End date</Label>
+                <Input
+                  id="referral-export-end"
+                  type="date"
+                  value={endDate}
+                  min={startDate || undefined}
+                  onChange={(event) => setEndDate(event.target.value)}
+                  disabled={exporting}
+                />
+              </div>
+              <ExportButton
+                onClick={exportCsv}
+                loading={exporting}
+                disabled={!startDate || !endDate || startDate > endDate}
+              />
+            </div>
           </div>
         </CardContent>
       </Card>
