@@ -102,3 +102,19 @@ The table shows individual referral documents in a fixed 32rem scroll area with
 sticky headers; pagination remains outside the scroll area. Exports cover all
 records matching the chosen Lagos date range and user type. Referral summary
 cards now read a global maintained aggregate independently of the table.
+
+## DHL Local rates
+
+The `/dhl-local` screen uses the same role access as `/dhl-zones` (currently
+super admins). It reads only `DHL_LOCAL/abv`, `iba`, `kad`, `los`, `phc`, and
+`qrw`, and edits `currency`, `weightUnit`, and the `rates` array of numeric
+`weight`/`amount` maps. Missing or invalid documents show an error rather than
+fabricated default rates. Updates use a transaction to reject concurrent edits
+and preserve unrelated fields. No documents are created or deleted.
+
+Merge `dhl-local.rules` into the deployed Firestore rules to enforce this access
+on the server. Check overlapping collection or wildcard rules: Firestore grants
+access if any matching rule allows it. This repository has rule fragments, not
+a complete deployed ruleset, and this change does not deploy rules. The fragment
+checks role, document IDs, editable fields, and top-level field types; per-rate
+numeric and duplicate-weight validation is performed by the admin service.

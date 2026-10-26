@@ -141,6 +141,13 @@ export const navigation: NavigationItem[] = [
     group: "Administration",
   },
   {
+    title: "DHL Local",
+    url: "/dhl-local",
+    icon: IconTruckDelivery,
+    group: "Administration",
+    parentUrl: "/dhl-zones",
+  },
+  {
     title: "App configuration",
     url: "/app-config",
     icon: IconSettings,

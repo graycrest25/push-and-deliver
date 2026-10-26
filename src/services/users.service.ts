@@ -1,3 +1,4 @@
+import { accountDate } from "@/lib/account-date";
 import { getPaginatedDocs, type PaginationOptions } from "@/lib/firestore-pagination";
 // Users Service - Read only
 import {
@@ -31,7 +32,7 @@ export const usersService = {
       return querySnapshot.docs.map((doc) => ({
         id: doc.id,
         ...doc.data(),
-        createdAt: doc.data().createdAt?.toDate?.(),
+        createdAt: accountDate(doc.data().createdAt),
         updatedAt: doc.data().updatedAt?.toDate?.(),
       })) as User[];
     } catch (error) {
@@ -50,7 +51,7 @@ export const usersService = {
         return {
           id: docSnap.id,
           ...docSnap.data(),
-          createdAt: docSnap.data().createdAt?.toDate?.(),
+          createdAt: accountDate(docSnap.data().createdAt),
           updatedAt: docSnap.data().updatedAt?.toDate?.(),
         } as User;
       }
@@ -91,7 +92,7 @@ export const usersService = {
       return querySnapshot.docs.map((doc) => ({
         id: doc.id,
         ...doc.data(),
-        createdAt: doc.data().createdAt?.toDate?.(),
+        createdAt: accountDate(doc.data().createdAt),
         updatedAt: doc.data().updatedAt?.toDate?.(),
       })) as User[];
     } catch (error) {
@@ -115,7 +116,7 @@ export const usersService = {
         return {
           id: docSnap.id,
           ...docSnap.data(),
-          createdAt: docSnap.data().createdAt?.toDate?.(),
+          createdAt: accountDate(docSnap.data().createdAt),
           updatedAt: docSnap.data().updatedAt?.toDate?.(),
         } as User;
       }

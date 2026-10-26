@@ -34,6 +34,7 @@ import ProductOrderDetailsPage from "@/pages/product-orders/details";
 import WithdrawalsPage from "@/pages/withdrawals";
 import GeneralNotificationsPage from "@/pages/general-notifications";
 import DHLZonesPage from "@/pages/dhl-zones";
+import DHLLocalPage from "@/pages/dhl-local";
 import AppConfigPage from "@/pages/app-config";
 import { BrowserRouter, Navigate, Route, Routes } from "react-router-dom";
 import ProtectedRoutes from "./ProtectedRoutes";
@@ -122,6 +123,7 @@ function Router() {
                     element={<GeneralNotificationsPage />}
                   />
                   <Route path="/dhl-zones" element={<DHLZonesPage />} />
+                  <Route path="/dhl-local" element={<DHLLocalPage />} />
                   <Route path="/app-config" element={<AppConfigPage />} />
                   <Route
                     path="/support-tickets"

@@ -1,6 +1,8 @@
 import { AccountSummaryCards } from "@/components/account-summary-cards";
 import { useSearchPagination } from "@/hooks/use-search-pagination";
 import { TablePagination } from "@/components/table-pagination";
+import { TableSkeleton } from "@/components/table-skeleton";
+import { formatAccountCreatedAt } from "@/lib/account-date";
 ("use client");
 
 import { useState, useEffect } from "react";
@@ -324,14 +326,17 @@ export default function RidersPage() {
                     <TableHead>Vehicle</TableHead>
                     <TableHead>Status</TableHead>
                     <TableHead>Online</TableHead>
+                    <TableHead>Created At</TableHead>
                     <TableHead className="text-right">Actions</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {filteredRiders.length === 0 ? (
+                  {loading ? (
+                    <TableSkeleton columns={["w-32", "w-48", "w-28", "w-20", "w-20", "w-16", "w-44", "w-8"]} />
+                  ) : filteredRiders.length === 0 ? (
                     <TableRow>
                       <TableCell
-                        colSpan={7}
+                        colSpan={8}
                         className="text-center text-muted-foreground py-8"
                       >
                         No riders found
@@ -373,6 +378,9 @@ export default function RidersPage() {
                           >
                             {rider.onlineStatus ? "Online" : "Offline"}
                           </Badge>
+                        </TableCell>
+                        <TableCell className="text-sm text-muted-foreground">
+                          {formatAccountCreatedAt(rider.createdAt)}
                         </TableCell>
                         <TableCell
                           className="text-right"

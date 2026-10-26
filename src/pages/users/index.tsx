@@ -1,6 +1,8 @@
 import { AccountSummaryCards } from "@/components/account-summary-cards";
 import { useSearchPagination } from "@/hooks/use-search-pagination";
 import { TablePagination } from "@/components/table-pagination";
+import { TableSkeleton } from "@/components/table-skeleton";
+import { formatAccountCreatedAt } from "@/lib/account-date";
 
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
@@ -284,11 +286,13 @@ export default function UsersPage() {
                     <TableHead>Email</TableHead>
                     <TableHead>Wallet Balance</TableHead>
                     <TableHead>Referral Count</TableHead>
-                    <TableHead>Joined</TableHead>
+                    <TableHead>Created At</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {filteredUsers.length === 0 ? (
+                  {loading ? (
+                    <TableSkeleton columns={["w-32", "w-48", "w-48", "w-24", "w-12", "w-44"]} />
+                  ) : filteredUsers.length === 0 ? (
                     <TableRow>
                       <TableCell
                         colSpan={6}
@@ -322,9 +326,7 @@ export default function UsersPage() {
                           </Badge>
                         </TableCell>
                         <TableCell className="text-sm text-muted-foreground">
-                          {user.createdAt instanceof Date
-                            ? user.createdAt.toLocaleDateString()
-                            : "N/A"}
+                          {formatAccountCreatedAt(user.createdAt)}
                         </TableCell>
                       </TableRow>
                     ))

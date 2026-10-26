@@ -11,7 +11,7 @@ const regularScreens = [
 ];
 
 export const adminScreens: Record<AdminType, readonly string[]> = {
-  super: [...regularScreens, "/coupon-redemption-metrics", "/weekly-concentration", "/rider-weekly-deliveries", "/user-activation", "/head-offices", "/admin/users", "/fees", "/export-rates", "/delivery-zones", "/dhl-zones"],
+  super: [...regularScreens, "/coupon-redemption-metrics", "/weekly-concentration", "/rider-weekly-deliveries", "/user-activation", "/head-offices", "/admin/users", "/fees", "/export-rates", "/delivery-zones", "/dhl-zones", "/dhl-local"],
   regular: regularScreens,
   customercare: customerCareScreens,
   verifier: ["/riders"],

@@ -878,6 +878,26 @@
   }
 }
 
+.table-skeleton-shimmer {
+  position: relative;
+  overflow: hidden;
+  animation: none;
+}
+.table-skeleton-shimmer::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(90deg, transparent, var(--background), transparent);
+  transform: translateX(-100%);
+  animation: table-skeleton-shimmer 1.6s ease-in-out infinite;
+}
+@keyframes table-skeleton-shimmer {
+  to { transform: translateX(100%); }
+}
+@media (prefers-reduced-motion: reduce) {
+  .table-skeleton-shimmer::after { animation: none; }
+}
+
 /* Account records keep long IDs and contact details within their field columns. */
 .account-details .grid > div {
   min-width: 0;

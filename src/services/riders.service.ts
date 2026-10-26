@@ -1,3 +1,4 @@
+import { accountDate } from "@/lib/account-date";
 import { getPaginatedDocs, type PaginationOptions } from "@/lib/firestore-pagination";
 // Riders Service - Read and Update (verify & block)
 import {
@@ -29,7 +30,7 @@ export const ridersService = {
       return querySnapshot.docs.map((doc) => ({
         id: doc.id,
         ...doc.data(),
-        createdAt: doc.data().createdAt?.toDate?.(),
+        createdAt: accountDate(doc.data().createdAt),
         updatedAt: doc.data().updatedAt?.toDate?.(),
       })) as Rider[];
     } catch (error) {
@@ -51,7 +52,7 @@ export const ridersService = {
       return querySnapshot.docs.map((doc) => ({
         id: doc.id,
         ...doc.data(),
-        createdAt: doc.data().createdAt?.toDate?.(),
+        createdAt: accountDate(doc.data().createdAt),
         updatedAt: doc.data().updatedAt?.toDate?.(),
       })) as Rider[];
     } catch (error) {
@@ -73,7 +74,7 @@ export const ridersService = {
       return querySnapshot.docs.map((doc) => ({
         id: doc.id,
         ...doc.data(),
-        createdAt: doc.data().createdAt?.toDate?.(),
+        createdAt: accountDate(doc.data().createdAt),
         updatedAt: doc.data().updatedAt?.toDate?.(),
       })) as Rider[];
     } catch (error) {
@@ -95,7 +96,7 @@ export const ridersService = {
       return querySnapshot.docs.map((doc) => ({
         id: doc.id,
         ...doc.data(),
-        createdAt: doc.data().createdAt?.toDate?.(),
+        createdAt: accountDate(doc.data().createdAt),
         updatedAt: doc.data().updatedAt?.toDate?.(),
       })) as Rider[];
     } catch (error) {
@@ -114,7 +115,7 @@ export const ridersService = {
         return {
           id: docSnap.id,
           ...docSnap.data(),
-          createdAt: docSnap.data().createdAt?.toDate?.(),
+          createdAt: accountDate(docSnap.data().createdAt),
           updatedAt: docSnap.data().updatedAt?.toDate?.(),
         } as Rider;
       }

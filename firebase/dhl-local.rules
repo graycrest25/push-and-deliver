@@ -1,0 +1,23 @@
+// Merge inside the existing /databases/{database}/documents block.
+// This fragment is not a replacement for the deployed rules.
+match /DHL_LOCAL/{locationId} {
+  function dhlLocalAdmin() {
+    return request.auth != null
+      && request.auth.token.isAdmin == true
+      && request.auth.token.adminType == 'super';
+  }
+  function knownDhlLocalDocument() {
+    return locationId in ['abv', 'iba', 'kad', 'los', 'phc', 'qrw'];
+  }
+  allow read: if dhlLocalAdmin() && knownDhlLocalDocument();
+  allow update: if dhlLocalAdmin() && knownDhlLocalDocument()
+    && request.resource.data.diff(resource.data).affectedKeys()
+      .hasOnly(['currency', 'weightUnit', 'rates'])
+    && request.resource.data.currency is string
+    && request.resource.data.currency.matches('^[A-Z]{3}$')
+    && request.resource.data.weightUnit is string
+    && request.resource.data.weightUnit.size() > 0
+    && request.resource.data.rates is list
+    && request.resource.data.rates.size() > 0;
+  allow create, delete: if false;
+}
