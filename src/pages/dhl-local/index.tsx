@@ -149,6 +149,37 @@ function LocalRates({
             </div>
           )}
         </div>
+        {error && (
+          <p role="alert" className="text-sm text-destructive">
+            {error}
+          </p>
+        )}
+        {editing && (
+          <div className="flex flex-wrap gap-2">
+            <Button
+              type="button"
+              variant="outline"
+              onClick={() =>
+                setRates((previous) => [
+                  ...previous,
+                  { weight: "", amount: "" },
+                ])
+              }
+            >
+              <Plus className="size-4" />
+              Add rate
+            </Button>
+            <Button
+              type="button"
+              variant="outline"
+              className="sm:ml-auto"
+              onClick={reset}
+            >
+              Cancel
+            </Button>
+            <Button type="submit">{saving ? "Saving…" : "Save changes"}</Button>
+          </div>
+        )}
         <div className="rounded-lg border overflow-hidden">
           <Table>
             <TableHeader>
@@ -241,37 +272,6 @@ function LocalRates({
             </TableBody>
           </Table>
         </div>
-        {error && (
-          <p role="alert" className="text-sm text-destructive">
-            {error}
-          </p>
-        )}
-        {editing && (
-          <div className="flex flex-wrap gap-2">
-            <Button
-              type="button"
-              variant="outline"
-              onClick={() =>
-                setRates((previous) => [
-                  ...previous,
-                  { weight: "", amount: "" },
-                ])
-              }
-            >
-              <Plus className="size-4" />
-              Add rate
-            </Button>
-            <Button
-              type="button"
-              variant="outline"
-              className="sm:ml-auto"
-              onClick={reset}
-            >
-              Cancel
-            </Button>
-            <Button type="submit">{saving ? "Saving…" : "Save changes"}</Button>
-          </div>
-        )}
       </fieldset>
     </form>
   );
