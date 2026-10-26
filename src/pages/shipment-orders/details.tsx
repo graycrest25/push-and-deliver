@@ -138,12 +138,14 @@ export default function ShipmentOrderDetailsPage() {
 
   const canEditPayment =
     order.paymentType === 1 && !order.ispaid && !isViewOnly;
+  const isLocal = order.quoteType === "local";
   const isCustomClearance =
-    order.shipmentType === IntlShipmentType.customclearance;
-  const isExpress = order.shipmentType === IntlShipmentType.express;
+    !isLocal && order.shipmentType === IntlShipmentType.customclearance;
+  const isExpress = !isLocal && order.shipmentType === IntlShipmentType.express;
   const hasRider = !!order.riderID;
 
   const getShipmentTypeLabel = () => {
+    if (isLocal) return "Local";
     if (isCustomClearance) {
       if (order.clearanceType === ShipmentCustomClearanceType.seaconsignment) {
         return "Sea Consignment";
@@ -188,6 +190,23 @@ export default function ShipmentOrderDetailsPage() {
           </Badge>
         </div>
       </div>
+
+      {(order.localtype || order.localzone) && (
+        <dl className="flex flex-wrap gap-x-8 gap-y-2 text-sm">
+          {order.localtype && (
+            <div className="flex gap-2">
+              <dt className="text-muted-foreground">Local type</dt>
+              <dd className="font-medium">{order.localtype}</dd>
+            </div>
+          )}
+          {order.localzone && (
+            <div className="flex gap-2">
+              <dt className="text-muted-foreground">Local zone</dt>
+              <dd className="font-medium">{order.localzone}</dd>
+            </div>
+          )}
+        </dl>
+      )}
 
       {/* Colored Status Cards */}
       <div className="grid gap-4 md:grid-cols-3">
@@ -576,63 +595,61 @@ export default function ShipmentOrderDetailsPage() {
 
       {/* Item Details (for Express) */}
       {isExpress && (
-        <Card>
+        <Card className="gap-4">
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
               <IconPackage className="h-5 w-5" />
               Item Details
             </CardTitle>
           </CardHeader>
-          <CardContent className="space-y-4">
-            <div className="grid gap-4 md:grid-cols-2">
-              <div className="space-y-2">
-                <div className="space-y-1">
-                  <span className="text-sm text-muted-foreground">Item Type</span>
-                  <div className="flex flex-wrap gap-1">
-                    {order.itemType ? (
-                      Array.isArray(order.itemType) ? (
-                        order.itemType.map((type, idx) => (
-                          <Badge key={idx} variant="secondary">
-                            {type}
-                          </Badge>
-                        ))
-                      ) : (
-                        <Badge variant="secondary">{order.itemType}</Badge>
-                      )
+          <CardContent className="space-y-5">
+            <dl className="grid grid-cols-1 gap-x-8 gap-y-5 sm:grid-cols-2 xl:grid-cols-4">
+              <div className="min-w-0 space-y-2">
+                <dt className="text-sm text-muted-foreground">Item Type</dt>
+                <dd className="flex flex-wrap gap-2">
+                  {order.itemType ? (
+                    Array.isArray(order.itemType) ? (
+                      order.itemType.map((type, idx) => (
+                        <Badge key={idx} variant="secondary" className="max-w-full whitespace-normal break-words text-left">
+                          {type}
+                        </Badge>
+                      ))
                     ) : (
-                      <span className="text-sm font-medium">Not specified</span>
-                    )}
-                  </div>
-                </div>
-                <div className="flex items-center justify-between">
-                  <span className="text-sm text-muted-foreground">
-                    Item Value
-                  </span>
-                  <span className="text-sm font-medium">
-                    ₦{(order.itemvalue || 0).toLocaleString()}
-                  </span>
-                </div>
+                      <Badge variant="secondary" className="max-w-full whitespace-normal break-words text-left">
+                        {order.itemType}
+                      </Badge>
+                    )
+                  ) : (
+                    <span className="text-sm font-medium">Not specified</span>
+                  )}
+                </dd>
               </div>
-              <div className="space-y-2">
-                <div className="flex items-center gap-2">
-                  <IconScale className="h-4 w-4 text-muted-foreground" />
-                  <span className="text-sm text-muted-foreground">Weight:</span>
-                  <span className="text-sm font-medium">
-                    {order.weightinKG || 0} KG
-                  </span>
-                </div>
-                <div className="flex items-center gap-2">
-                  <IconRuler className="h-4 w-4 text-muted-foreground" />
-                  <span className="text-sm text-muted-foreground">
-                    Dimensions:
-                  </span>
-                  <span className="text-sm font-medium">
-                    {order.widthinCM || 0}W × {order.heightinCM || 0}H ×{" "}
-                    {order.breadthinCM || 0}B cm
-                  </span>
-                </div>
+              <div className="min-w-0 space-y-2">
+                <dt className="text-sm text-muted-foreground">Item Value</dt>
+                <dd className="break-words text-sm font-medium tabular-nums">
+                  ₦{(order.itemvalue || 0).toLocaleString()}
+                </dd>
               </div>
-            </div>
+              <div className="min-w-0 space-y-2">
+                <dt className="flex items-center gap-2 text-sm text-muted-foreground">
+                  <IconScale aria-hidden="true" className="h-4 w-4 shrink-0" />
+                  Weight
+                </dt>
+                <dd className="break-words text-sm font-medium tabular-nums">
+                  {order.weightinKG || 0} KG
+                </dd>
+              </div>
+              <div className="min-w-0 space-y-2">
+                <dt className="flex items-center gap-2 text-sm text-muted-foreground">
+                  <IconRuler aria-hidden="true" className="h-4 w-4 shrink-0" />
+                  Dimensions
+                </dt>
+                <dd className="break-words text-sm font-medium tabular-nums">
+                  {order.widthinCM || 0}W × {order.heightinCM || 0}H ×{" "}
+                  {order.breadthinCM || 0}B cm
+                </dd>
+              </div>
+            </dl>
             {/* Item Image */}
             {order.itemImage && (
               <div className="pt-4 border-t">

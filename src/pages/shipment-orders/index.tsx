@@ -112,10 +112,13 @@ export default function ShipmentOrdersPage() {
   const filteredOrders = orders.filter((order) => {
     const matchesShipmentType =
       shipmentTypeFilter === "all" ||
-      order.shipmentType?.toString() === shipmentTypeFilter;
+      (order.quoteType === "local"
+        ? shipmentTypeFilter === "local"
+        : order.shipmentType?.toString() === shipmentTypeFilter);
     const matchesClearanceType =
       clearanceTypeFilter === "all" ||
-      (order.shipmentType === IntlShipmentType.customclearance &&
+      (order.quoteType !== "local" &&
+        order.shipmentType === IntlShipmentType.customclearance &&
         order.clearanceType?.toString() === clearanceTypeFilter);
 
     return matchesShipmentType && matchesClearanceType;
@@ -187,7 +190,7 @@ export default function ShipmentOrdersPage() {
             "Head office filters all shipments before pagination."}
         </p>
         <p className="text-muted-foreground mt-2">
-          Manage and track all international shipment orders
+          Manage and track all shipment orders
         </p>
       </div>
 
@@ -255,6 +258,7 @@ export default function ShipmentOrdersPage() {
                   <SelectItem value="all">All Types</SelectItem>
                   <SelectItem value="0">Custom Clearance</SelectItem>
                   <SelectItem value="1">Express</SelectItem>
+                  <SelectItem value="local">Local</SelectItem>
                 </SelectContent>
               </Select>
 
@@ -408,12 +412,24 @@ export default function ShipmentOrdersPage() {
                       <TableCell>
                         <div>
                           <p className="text-sm">
-                            {getShipmentTypeLabel(order.shipmentType)}
+                            {order.quoteType === "local"
+                              ? "Local"
+                              : getShipmentTypeLabel(order.shipmentType)}
                           </p>
-                          {order.shipmentType ===
+                          {order.quoteType !== "local" && order.shipmentType ===
                             IntlShipmentType.customclearance && (
                             <p className="text-xs text-muted-foreground">
                               {getClearanceTypeLabel(order.clearanceType)}
+                            </p>
+                          )}
+                          {order.localtype && (
+                            <p className="text-xs text-muted-foreground">
+                              Local type: {order.localtype}
+                            </p>
+                          )}
+                          {order.localzone && (
+                            <p className="text-xs text-muted-foreground">
+                              Local zone: {order.localzone}
                             </p>
                           )}
                         </div>

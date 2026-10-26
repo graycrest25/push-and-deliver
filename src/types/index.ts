@@ -432,6 +432,9 @@ export interface ShipmentOrder {
   senderemailaddress?: string;
   shipmentID?: string;
   shipmentType?: number; // 0 = custom clearance, 1 = express
+  quoteType?: string;
+  localtype?: string;
+  localzone?: string;
   startoffAddress?: string;
   startoffLocation?: ShipmentLocation;
   statusTimeline?: ShipmentStatusTimeline[];
