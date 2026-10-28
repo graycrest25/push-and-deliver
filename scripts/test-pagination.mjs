@@ -89,6 +89,8 @@ Object.assign(context, {
   },
   useCallback: (callback, deps) => context.useMemo(() => callback, deps),
 });
+context.useTableState = (_key, initial) => context.useState(initial);
+context.useEffect = (callback) => callback();
 loadSource("src/hooks/use-firestore-pagination.ts", context);
 function render(key = "users") {
   let result;

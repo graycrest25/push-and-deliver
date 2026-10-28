@@ -1,3 +1,4 @@
+import { useTableState } from "@/contexts/TableStateContext";
 import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 import { format } from "date-fns";
@@ -103,10 +104,10 @@ export default function SupportTicketsPage() {
   ]);
   const [loadingTickets, setLoadingTickets] = useState(true);
   const [ticketError, setTicketError] = useState("");
-  const [search, setSearch] = useState("");
+  const [search, setSearch] = useTableState("filter:search", "");
   const ticketPagination = useSearchPagination(search, ["id", "userId", "userName", "userEmail", "userPhone", "issue", "lastMessage", "tags"]);
-  const [status, setStatus] = useState("all");
-  const [platform, setPlatform] = useState("all");
+  const [status, setStatus] = useTableState("filter:status", "all");
+  const [platform, setPlatform] = useTableState("filter:platform", "all");
   const [conversationOpen, setConversationOpen] = useState(false);
   const [newMessage, setNewMessage] = useState("");
   const [sending, setSending] = useState(false);

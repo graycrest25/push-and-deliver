@@ -1,3 +1,4 @@
+import { useTableState } from "@/contexts/TableStateContext";
 import { useEffect, useState } from "react";
 import {
   adminReferralsService,
@@ -7,14 +8,14 @@ import {
 } from "@/services/admin-referrals.service";
 
 export function useReferralList(filters: ReferralFilters) {
-  const [limit, setLimit] = useState<ReferralLimit>(10);
+  const [limit, setLimit] = useTableState<ReferralLimit>("table:limit", 10);
   const scope = JSON.stringify([
     filters.referredUid?.trim(),
     filters.referreduserType?.trim(),
     filters.referralCodeUsed?.trim(),
     limit,
   ]);
-  const [navigation, setNavigation] = useState({
+  const [navigation, setNavigation] = useTableState("table:navigation", {
     scope,
     index: 0,
     cursors: [undefined] as Array<string | undefined>,

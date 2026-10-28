@@ -1,3 +1,4 @@
+import { useTableState } from "@/contexts/TableStateContext";
 import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 import { Loader2, RefreshCw } from "lucide-react";
@@ -43,17 +44,17 @@ export default function RiderWeeklyDeliveriesPage() {
   return <DeliveriesReport key={user?.id} />;
 }
 function DeliveriesReport() {
-  const [draft, setDraft] = useState({
+  const [draft, setDraft] = useTableState("table:draft", {
     weeks: "8",
     endDate: "",
     pageSize: "50",
   });
-  const [filters, setFilters] = useState({
+  const [filters, setFilters] = useTableState("table:filters", {
     weeks: 8,
     endDate: "",
     pageSize: 50,
   });
-  const [page, setPage] = useState(firstPage);
+  const [page, setPage] = useTableState("table:page", firstPage);
   const [revision, setRevision] = useState(0);
   const [formError, setFormError] = useState("");
   const [result, setResult] = useState<{

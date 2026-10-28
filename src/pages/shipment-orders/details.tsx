@@ -9,17 +9,11 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import { Label } from "@/components/ui/label";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Switch } from "@/components/ui/switch";
 import { useCurrentUser } from "@/contexts/UserContext";
 import { ShipmentFeeForm } from "@/components/shipment-orders/shipment-fee-form";
+import { ShipmentStatusControl } from "@/components/shipment-orders/shipment-status-control";
 import { shipmentOrdersService } from "@/services/shipment-orders.service";
 import {
   IntlShipmentType,
@@ -55,27 +49,24 @@ export default function ShipmentOrderDetailsPage() {
   const [order, setOrder] = useState<ShipmentOrder | null>(null);
   const [loading, setLoading] = useState(true);
   const [updatingPayment, setUpdatingPayment] = useState(false);
-  const [updatingStatus, setUpdatingStatus] = useState(false);
-  const isFinalStatus = order?.orderStatus === ShipmentOrderStatus.cancelled ||
-    order?.orderStatus === ShipmentOrderStatus.deliveredToDestination;
-
   useEffect(() => {
-    if (id) {
-      loadOrder();
-    }
+    if (!id) return;
+    setOrder(null);
+    setLoading(true);
+    return shipmentOrdersService.subscribeToOrder(id, (data) => {
+      setOrder(data);
+      setLoading(false);
+    }, (error) => {
+      console.error("Error observing shipment:", error);
+      setOrder(null);
+      setLoading(false);
+      toast.error("Failed to load shipment details");
+    });
   }, [id]);
 
   const loadOrder = async () => {
-    try {
-      setLoading(true);
-      const data = await shipmentOrdersService.getOrderById(id!);
-      setOrder(data);
-    } catch (error) {
-      console.error("Error loading order:", error);
-      toast.error("Failed to load shipment details");
-    } finally {
-      setLoading(false);
-    }
+    const data = await shipmentOrdersService.getOrderById(id!);
+    setOrder(data);
   };
 
   const handlePaymentStatusToggle = async (checked: boolean) => {
@@ -84,30 +75,12 @@ export default function ShipmentOrderDetailsPage() {
     try {
       setUpdatingPayment(true);
       await shipmentOrdersService.updatePaymentStatus(order.id, checked);
-      setOrder({ ...order, ispaid: checked });
+      setOrder((current) => current ? { ...current, ispaid: checked } : current);
       toast.success(`Payment status updated to ${checked ? "Paid" : "Unpaid"}`);
     } catch (error) {
       toast.error("Failed to update payment status");
     } finally {
       setUpdatingPayment(false);
-    }
-  };
-
-  const handleStatusChange = async (newStatus: string) => {
-    if (!order?.id || isFinalStatus || updatingStatus || isViewOnly) return;
-
-    try {
-      setUpdatingStatus(true);
-      await shipmentOrdersService.updateOrderStatus(
-        order.id,
-        parseInt(newStatus)
-      );
-      setOrder({ ...order, orderStatus: parseInt(newStatus) });
-      toast.success("Order status updated successfully");
-    } catch (error) {
-      toast.error("Failed to update order status");
-    } finally {
-      setUpdatingStatus(false);
     }
   };
 
@@ -217,54 +190,7 @@ export default function ShipmentOrderDetailsPage() {
             </CardTitle>
           </CardHeader>
           <CardContent>
-            <Select
-              value={order.orderStatus?.toString()}
-              onValueChange={handleStatusChange}
-              disabled={updatingStatus || isViewOnly || isFinalStatus}
-            >
-              <SelectTrigger className="bg-white dark:bg-gray-900">
-                <SelectValue />
-              </SelectTrigger>
-              {isCustomClearance ? (
-                <>
-                  <SelectContent>
-                    <SelectItem
-                      value={ShipmentOrderStatus.deliveredToDestination.toString()}
-                    >
-                      Delivered to Destination
-                    </SelectItem>
-                    <SelectItem
-                      value={ShipmentOrderStatus.cancelled.toString()}
-                    >
-                      Cancelled
-                    </SelectItem>
-                  </SelectContent>
-                </>
-              ) : (
-                <>
-                  <SelectContent>
-                    <SelectItem value={ShipmentOrderStatus.sentToHq.toString()}>
-                      Sent to HQ
-                    </SelectItem>
-                    <SelectItem
-                      value={ShipmentOrderStatus.onrouteToDestination.toString()}
-                    >
-                      On Route to Destination
-                    </SelectItem>
-                    <SelectItem
-                      value={ShipmentOrderStatus.deliveredToDestination.toString()}
-                    >
-                      Delivered to Destination
-                    </SelectItem>
-                    <SelectItem
-                      value={ShipmentOrderStatus.cancelled.toString()}
-                    >
-                      Cancelled
-                    </SelectItem>
-                  </SelectContent>
-                </>
-              )}
-            </Select>
+            <ShipmentStatusControl key={order.id} order={order} onRefresh={loadOrder} />
           </CardContent>
         </Card>
 
@@ -305,7 +231,7 @@ export default function ShipmentOrderDetailsPage() {
         </Card>
       </div>
 
-      {isExpress && user?.isAdmin === true && (user.adminType === "super" || user.adminType === "regular") && (
+      {isExpress && order.orderStatus !== ShipmentOrderStatus.cancelled && order.orderStatus !== ShipmentOrderStatus.deliveredToDestination && user?.isAdmin === true && (user.adminType === "super" || user.adminType === "regular") && (
         <ShipmentFeeForm key={order.id} order={order} />
       )}
 

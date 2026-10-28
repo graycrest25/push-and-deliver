@@ -1,3 +1,4 @@
+import { useTableState } from "@/contexts/TableStateContext";
 import { TablePagination } from "@/components/table-pagination";
 import { useSearchPagination } from "@/hooks/use-search-pagination";
 import { useState, useEffect } from "react";
@@ -20,7 +21,7 @@ import { IconMapPin, IconSearch } from "@tabler/icons-react";
 export default function DeliveryZonesPage() {
   const [states, setStates] = useState<State[]>([]);
   const [loading, setLoading] = useState(true);
-  const [searchQuery, setSearchQuery] = useState("");
+  const [searchQuery, setSearchQuery] = useTableState("filter:searchQuery", "");
   const pagination = useSearchPagination(searchQuery, ["id", "name"]);
 
   useEffect(() => {

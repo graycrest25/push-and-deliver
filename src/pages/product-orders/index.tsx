@@ -1,3 +1,4 @@
+import { useTableState } from "@/contexts/TableStateContext";
 import { OrderSummaryCards } from "@/components/order-summary-cards";
 import { useSearchPagination } from "@/hooks/use-search-pagination";
 import { TablePagination } from "@/components/table-pagination";
@@ -36,9 +37,9 @@ export default function ProductOrdersPage() {
   const [orders, setOrders] = useState<ProductOrder[]>([]);
   const [filteredOrders, setFilteredOrders] = useState<ProductOrder[]>([]);
   const [loading, setLoading] = useState(true);
-  const [searchQuery, setSearchQuery] = useState("");
+  const [searchQuery, setSearchQuery] = useTableState("filter:searchQuery", "");
   const pagination = useSearchPagination(searchQuery, ["id", "orderId", "customerName", "customerPhoneNumber"]);
-  const [currentTab, setCurrentTab] = useState("all");
+  const [currentTab, setCurrentTab] = useTableState("filter:currentTab", "all");
 
   useEffect(() => {
     loadOrders();

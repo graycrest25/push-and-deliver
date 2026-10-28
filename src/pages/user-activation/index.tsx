@@ -1,3 +1,4 @@
+import { useTableState } from "@/contexts/TableStateContext";
 import { useCurrentUser } from "@/contexts/UserContext";
 import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
@@ -68,8 +69,8 @@ export default function UserActivationPage() {
 }
 
 function UserActivationReport() {
-  const [lookup, setLookup] = useState("");
-  const [query, setQuery] = useState({
+  const [lookup, setLookup] = useTableState("table:lookup", "");
+  const [query, setQuery] = useTableState("table:query", {
     id: "",
     pageSize: 50,
     pageIndex: 0,

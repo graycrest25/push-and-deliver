@@ -1,3 +1,4 @@
+import { useTableState } from "@/contexts/TableStateContext";
 import { getUserTypeLabel, isUserTypeEqual, canEditWithdrawal } from "@/lib/withdrawal-utils";
 import { useSearchPagination } from "@/hooks/use-search-pagination";
 import { TablePagination } from "@/components/table-pagination";
@@ -117,9 +118,9 @@ const userTypeChartConfig = {
 export default function WithdrawalsPage() {
   const [withdrawals, setWithdrawals] = useState<Withdrawal[]>([]);
   const [loading, setLoading] = useState(true);
-  const [searchTerm, setSearchTerm] = useState("");
+  const [searchTerm, setSearchTerm] = useTableState("filter:searchTerm", "");
   const pagination = useSearchPagination(searchTerm, ["id", "accountname", "bankname", "userID"]);
-  const [statusFilter, setStatusFilter] = useState<string>("all");
+  const [statusFilter, setStatusFilter] = useTableState<string>("filter:statusFilter", "all");
   const [actionLoading, setActionLoading] = useState<string | null>(null);
   const [editingWithdrawal, setEditingWithdrawal] = useState<Withdrawal | null>(
     null,

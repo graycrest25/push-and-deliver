@@ -1,3 +1,4 @@
+import { useTableState } from "@/contexts/TableStateContext";
 import { AccountSummaryCards } from "@/components/account-summary-cards";
 import { useSearchPagination } from "@/hooks/use-search-pagination";
 import { TablePagination } from "@/components/table-pagination";
@@ -94,14 +95,14 @@ export default function RidersPage() {
   const [summaryRevision, setSummaryRevision] = useState(0);
   const [riders, setRiders] = useState<Rider[]>([]);
   const [loading, setLoading] = useState(true);
-  const [searchTerm, setSearchTerm] = useState("");
+  const [searchTerm, setSearchTerm] = useTableState("filter:searchTerm", "");
   const pagination = useSearchPagination(searchTerm, [
     "id",
     "fullname",
     "email",
     "phonenumber",
   ]);
-  const [statusFilter, setStatusFilter] = useState<string>("all");
+  const [statusFilter, setStatusFilter] = useTableState<string>("filter:statusFilter", "all");
   const [actionLoading, setActionLoading] = useState<string | null>(null);
   const [exporting, setExporting] = useState(false);
   const [dateRange, setDateRange] = useState<DateRange | undefined>();

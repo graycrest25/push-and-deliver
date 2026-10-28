@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from "react";
+import { useTableState } from "@/contexts/TableStateContext";
 import { IconUserCircle } from "@tabler/icons-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -48,17 +49,21 @@ export function AdminAccountsList({
   const [result, setResult] = useState<ListAdminUsersResponse | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [pageIndex, setPageIndex] = useState(0);
-  const [pageSize, setPageSize] = useState(10);
-  const [searchTerm, setSearchTerm] = useState("");
-  const tokens = useRef<Array<string | undefined>>([undefined]);
+  const [saved, save] = useTableState("admin-accounts:pagination", {
+    pageIndex: 0, pageSize: 10, tokens: [undefined] as Array<string | undefined>,
+  });
+  const [pageIndex, setPageIndex] = useState(saved.pageIndex);
+  const [pageSize, setPageSize] = useState(saved.pageSize);
+  const [searchTerm, setSearchTerm] = useTableState("admin-accounts:search", "");
+  const previousSearch = useRef(searchTerm);
+  const tokens = useRef<Array<string | undefined>>([...saved.tokens]);
   const request = useRef<AbortController | null>(null);
   const revision = useRef(0);
   const requestedPage = useRef<{
     index: number;
     size: number;
     pageToken?: string;
-  }>({ index: 0, size: 10 });
+  }>({ index: saved.pageIndex, size: saved.pageSize, pageToken: saved.tokens[saved.pageIndex] });
 
   const loadPage = useCallback(
     async (index: number, size: number, pageToken?: string) => {
@@ -83,6 +88,7 @@ export function AdminAccountsList({
         setResult(data);
         setPageIndex(index);
         setPageSize(size);
+        save({ pageIndex: index, pageSize: size, tokens: [...tokens.current] });
       } catch (cause) {
         if (controller.signal.aborted || version !== revision.current) return;
         setError(
@@ -95,11 +101,14 @@ export function AdminAccountsList({
           setLoading(false);
       }
     },
-    [searchTerm],
+    [searchTerm, save],
   );
 
   useEffect(() => {
-    const timer = setTimeout(() => void loadPage(0, pageSize), 300);
+    const sameSearch = previousSearch.current === searchTerm;
+    previousSearch.current = searchTerm;
+    const index = sameSearch ? requestedPage.current.index : 0;
+    const timer = setTimeout(() => void loadPage(index, pageSize, sameSearch ? tokens.current[index] : undefined), 300);
     return () => {
       clearTimeout(timer);
       revision.current++;

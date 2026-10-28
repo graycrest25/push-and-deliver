@@ -10,6 +10,9 @@ const firebaseEndpoint = (name: string): string => {
 };
 
 export const endpoints = {
+  get updateAdminShipmentOrderStatus() {
+    return firebaseEndpoint("updateAdminShipmentOrderStatus");
+  },
   get listAdminReferrals() {
     return firebaseEndpoint("listAdminReferrals");
   },

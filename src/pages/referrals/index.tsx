@@ -1,3 +1,4 @@
+import { useTableState } from "@/contexts/TableStateContext";
 import { useEffect, useRef, useState } from "react";
 import { Link } from "react-router-dom";
 import { Search } from "lucide-react";
@@ -48,10 +49,10 @@ const createdDate = (value: string | null) =>
     : "Not recorded";
 
 export default function ReferralsPage() {
-  const [referredUid, setReferredUid] = useState("");
-  const [referralCodeUsed, setReferralCodeUsed] = useState("");
-  const [referreduserType, setReferreduserType] = useState("all");
-  const [search, setSearch] = useState({
+  const [referredUid, setReferredUid] = useTableState("table:referredUid", "");
+  const [referralCodeUsed, setReferralCodeUsed] = useTableState("table:referralCodeUsed", "");
+  const [referreduserType, setReferreduserType] = useTableState("table:referreduserType", "all");
+  const [search, setSearch] = useTableState("table:search", {
     referredUid: "",
     referralCodeUsed: "",
   });

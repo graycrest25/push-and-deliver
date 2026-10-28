@@ -1,3 +1,4 @@
+import { useTableState } from "@/contexts/TableStateContext";
 import { useSearchPagination } from "@/hooks/use-search-pagination";
 import { TablePagination } from "@/components/table-pagination";
 import { useState, useEffect } from "react";
@@ -62,9 +63,9 @@ export default function EcommerceMerchantsPage() {
     EcommerceMerchant[]
   >([]);
   const [loading, setLoading] = useState(true);
-  const [searchQuery, setSearchQuery] = useState("");
+  const [searchQuery, setSearchQuery] = useTableState("filter:searchQuery", "");
   const pagination = useSearchPagination(searchQuery, ["id", "displayName", "email", "phonenumber"]);
-  const [activeTab, setActiveTab] = useState("all");
+  const [activeTab, setActiveTab] = useTableState("filter:activeTab", "all");
   const [merchantsWithTransactions, setMerchantsWithTransactions] = useState<
     Set<string>
   >(new Set());

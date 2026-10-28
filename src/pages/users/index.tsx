@@ -1,3 +1,4 @@
+import { useTableState } from "@/contexts/TableStateContext";
 import { AccountSummaryCards } from "@/components/account-summary-cards";
 import { useSearchPagination } from "@/hooks/use-search-pagination";
 import { TablePagination } from "@/components/table-pagination";
@@ -98,7 +99,7 @@ export default function UsersPage() {
     new Map(),
   );
   const [loading, setLoading] = useState(true);
-  const [searchTerm, setSearchTerm] = useState("");
+  const [searchTerm, setSearchTerm] = useTableState("filter:searchTerm", "");
   const pagination = useSearchPagination(searchTerm, [
     "id",
     "username",

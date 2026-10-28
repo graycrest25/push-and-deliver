@@ -1,3 +1,4 @@
+import { useTableState } from "@/contexts/TableStateContext";
 import { useSearchPagination } from "@/hooks/use-search-pagination";
 import { TablePagination } from "@/components/table-pagination";
 "use client";
@@ -53,9 +54,9 @@ export default function VendorsPage() {
   const navigate = useNavigate();
   const [restaurants, setRestaurants] = useState<Restaurant[]>([]);
   const [loading, setLoading] = useState(true);
-  const [searchTerm, setSearchTerm] = useState("");
+  const [searchTerm, setSearchTerm] = useTableState("filter:searchTerm", "");
   const pagination = useSearchPagination(searchTerm, ["id", "legalname", "email", "phonenumber"]);
-  const [statusFilter, setStatusFilter] = useState<string>("all");
+  const [statusFilter, setStatusFilter] = useTableState<string>("filter:statusFilter", "all");
   const [actionLoading, setActionLoading] = useState<string | null>(null);
 
   useEffect(() => {

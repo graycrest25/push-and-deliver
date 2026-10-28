@@ -195,6 +195,7 @@ const hookContext = vm.createContext({
     }
   },
 });
+hookContext.useTableState = (_key, initial) => hookContext.useState(initial);
 compile("src/hooks/use-referral-list.ts", hookContext);
 let filters = {};
 let hook;

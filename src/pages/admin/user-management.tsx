@@ -1,3 +1,4 @@
+import { useTableState } from "@/contexts/TableStateContext";
 import { SectionHelp } from "@/components/section-help";
 import { AdminAccountsList } from "./admin-accounts-list";
 import { useSearchPagination } from "@/hooks/use-search-pagination";
@@ -36,9 +37,9 @@ export default function UserManagementPage() {
   const { user: currentUser, loading: authLoading } = useCurrentUser();
   const [users, setUsers] = useState<User[]>([]);
   const [loading, setLoading] = useState(true);
-  const [searchTerm, setSearchTerm] = useState("");
+  const [searchTerm, setSearchTerm] = useTableState("filter:searchTerm", "");
   const pagination = useSearchPagination(searchTerm, ["id", "username", "email"]);
-  const [activeTab, setActiveTab] = useState("users");
+  const [activeTab, setActiveTab] = useTableState("filter:activeTab", "users");
   const [updatingUid, setUpdatingUid] = useState<string | null>(null);
 
   useEffect(() => {

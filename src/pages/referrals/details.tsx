@@ -1,3 +1,4 @@
+import { useTableState } from "@/contexts/TableStateContext";
 import { useSearchPagination } from "@/hooks/use-search-pagination";
 import { TablePagination } from "@/components/table-pagination";
 // app/referrals/[referrerId, pagination.options]/page.tsx
@@ -43,7 +44,7 @@ export default function ReferralDetailsPage() {
   const [referrals, setReferrals] = useState<Referral[]>([]);
   const [referrerInfo, setReferrerInfo] = useState<User | null>(null);
   const [loading, setLoading] = useState(true);
-  const [searchTerm, setSearchTerm] = useState("");
+  const [searchTerm, setSearchTerm] = useTableState("filter:searchTerm", "");
   const pagination = useSearchPagination(searchTerm, ["id", "normalizedEmail", "referredUid", "referrerUid"], referrerId);
   const [dateRange, setDateRange] = useState<DateRange | undefined>();
 

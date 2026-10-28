@@ -3,6 +3,8 @@
   "version": "0.1.0",
   "private": true,
   "scripts": {
+    "test:table-state": "node scripts/test-table-state.mjs",
+    "test:shipment-status": "node scripts/test-shipment-status.mjs",
     "test:dhl-local": "node scripts/test-dhl-local.mjs",
     "dev": "vite",
     "build": "vite build",

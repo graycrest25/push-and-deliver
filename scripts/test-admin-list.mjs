@@ -105,6 +105,10 @@ for (const name of [
   "IconUserCircle",
 ])
   context[name] = name;
+context.useTableState = (_key, initial) => {
+  const [value, setValue] = context.useState(initial);
+  return [value, context.useCallback(setValue, [])];
+};
 const source = fs
   .readFileSync("src/pages/admin/admin-accounts-list.tsx", "utf8")
   .replace(/^import[\s\S]*?from ["'][^"']+["'];\n/gm, "");

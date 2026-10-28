@@ -2,11 +2,14 @@ import { requireSuperAdmin } from "@/lib/require-super-admin";
 import { getPaginatedDocs, type PaginationOptions } from "@/lib/firestore-pagination";
 import { auth, db } from "@/lib/firebase";
 import { endpoints } from "@/lib/endpoint";
+import { isDevelopmentMode } from "@/lib/environment";
 import type { ShipmentOrder } from "@/types";
 import {
   collection,
   doc,
   getDoc,
+  getDocFromServer,
+  onSnapshot,
   orderBy,
   query,
   where,
@@ -15,7 +18,50 @@ import {
 
 const COLLECTION_NAME = "ShippmentOrders";
 
+export type AdminShipmentStatus =
+  | "AcceptedByRider"
+  | "SentToHq"
+  | "OnrouteToDestination"
+  | "DeliveredToDestination"
+  | "Cancelled";
+
+export interface ShipmentStatusResult {
+  success: true;
+  orderId: string;
+  orderStatus: number;
+  statusName: AdminShipmentStatus;
+  riderLocationUpdateDocID: string | null;
+}
+
+export class ShipmentStatusError extends Error {
+  readonly status: number;
+  readonly code: string;
+
+  constructor(status: number, code: string, message: string) {
+    super(message);
+    this.name = "ShipmentStatusError";
+    this.status = status;
+    this.code = code;
+  }
+}
+
 export const shipmentOrdersService = {
+  subscribeToOrder(
+    orderId: string,
+    onOrder: (order: ShipmentOrder | null) => void,
+    onError: (error: Error) => void,
+  ) {
+    return onSnapshot(doc(db, COLLECTION_NAME, orderId), (snapshot) => {
+      const data = snapshot.data();
+      onOrder(data ? {
+        ...data,
+        id: snapshot.id,
+        createdAt: data.createdAt?.toDate(),
+        cancelledAt: data.cancelledAt?.toDate(),
+        completedAt: data.completedAt?.toDate(),
+      } as ShipmentOrder : null);
+    }, onError);
+  },
   async resolveShipmentFee(input: {
     orderId: string;
     amount: number;
@@ -101,7 +147,7 @@ export const shipmentOrdersService = {
   async getOrderById(orderId: string): Promise<ShipmentOrder | null> {
     try {
       const docRef = doc(db, COLLECTION_NAME, orderId);
-      const docSnap = await getDoc(docRef);
+      const docSnap = await getDocFromServer(docRef);
 
       if (docSnap.exists()) {
         return {
@@ -133,15 +179,45 @@ export const shipmentOrdersService = {
   },
 
   // Update order status
-  async updateOrderStatus(orderId: string, status: number): Promise<void> {
-    try {
-      const docRef = doc(db, COLLECTION_NAME, orderId);
-      await updateDoc(docRef, {
-        orderStatus: status,
-      });
-    } catch (error) {
-      console.error("Error updating order status:", error);
-      throw error;
+  async updateOrderStatus(orderId: string, orderStatus: AdminShipmentStatus, riderID?: string): Promise<ShipmentStatusResult> {
+    if (!orderId.trim() || orderId.includes("/")) {
+      throw new ShipmentStatusError(400, "invalid-argument", "A shipment document ID is required");
     }
+    const acceptingRider = orderStatus === "AcceptedByRider";
+    if (acceptingRider ? !isDevelopmentMode : !["SentToHq", "OnrouteToDestination", "DeliveredToDestination", "Cancelled"].includes(orderStatus)) {
+      throw new ShipmentStatusError(400, "invalid-argument", "Unsupported admin shipment status");
+    }
+    if (acceptingRider && (!riderID?.trim() || riderID.includes("/"))) {
+      throw new ShipmentStatusError(400, "invalid-argument", "Enter the rider's Firebase user ID");
+    }
+    if (!acceptingRider && riderID !== undefined) {
+      throw new ShipmentStatusError(400, "invalid-argument", "Rider ID is only allowed when accepting a shipment");
+    }
+    const currentUser = auth.currentUser;
+    if (!currentUser) {
+      throw new ShipmentStatusError(401, "unauthenticated", "Sign in to update shipment status");
+    }
+    const send = async (forceRefresh: boolean) => {
+      const idToken = await currentUser.getIdToken(forceRefresh);
+      return fetch(endpoints.updateAdminShipmentOrderStatus, {
+        method: "POST",
+        headers: {
+          Authorization: `Bearer ${idToken}`,
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ orderId, orderStatus, ...(acceptingRider ? { riderID: riderID!.trim() } : {}) }),
+      });
+    };
+    let response = await send(false);
+    if (response.status === 401) response = await send(true);
+    const data = await response.json().catch(() => null);
+    if (!response.ok || data?.success !== true) {
+      throw new ShipmentStatusError(
+        response.status,
+        typeof data?.code === "string" ? data.code : "unknown",
+        typeof data?.error === "string" ? data.error : "Unable to update shipment status. Refresh the shipment before retrying.",
+      );
+    }
+    return data as ShipmentStatusResult;
   },
 };

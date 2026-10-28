@@ -38,6 +38,7 @@ import DHLLocalPage from "@/pages/dhl-local";
 import AppConfigPage from "@/pages/app-config";
 import { BrowserRouter, Navigate, Route, Routes } from "react-router-dom";
 import ProtectedRoutes from "./ProtectedRoutes";
+import { TableStateProvider } from "@/contexts/TableStateContext";
 
 import PublicRoute from "./PublicRoute";
 import SignInPage from "@/pages/Auth/sign-in";
@@ -71,99 +72,101 @@ function Router() {
           element={
             <ProtectedRoutes>
               <Layout>
-                <Routes>
-                  <Route path="/dashboard" element={<DashboardPage />} />
-                  <Route path="/head-offices" element={<HeadOfficesPage />} />
-                  <Route path="/admin/users" element={<UserManagementPage />} />
-                  <Route path="/users" element={<UsersPage />} />
-                  <Route path="/weekly-concentration" element={<WeeklyConcentrationPage />} />
-                  <Route path="/user-activation" element={<UserActivationPage />} />
-                  <Route path="/users/:id" element={<UserDetailsPage />} />
-                  <Route path="/riders" element={<RidersPage />} />
-                  <Route path="/rider-weekly-deliveries" element={<RiderWeeklyDeliveriesPage />} />
-                  <Route path="/riders/:id" element={<RiderDetailsPage />} />
-                  <Route path="/vendors" element={<VendorsPage />} />
-                  <Route path="/vendors/:id" element={<VendorDetailsPage />} />
-                  <Route
-                    path="/ecommerce-merchants"
-                    element={<EcommerceMerchantsPage />}
-                  />
-                  <Route
-                    path="/ecommerce-merchants/:id"
-                    element={<EcommerceMerchantDetailsPage />}
-                  />
-                  <Route
-                    path="/ecommerce-merchants/:id/products"
-                    element={<MerchantProductsPage />}
-                  />
-                  <Route
-                    path="/ecommerce-merchants/:id/products/:productId"
-                    element={<ProductDetailsPage />}
-                  />
-                  <Route
-                    path="/ecommerce-merchants/:id/transactions"
-                    element={<MerchantTransactionsPage />}
-                  />
-                  <Route path="/fees" element={<FeesPage />} />
-                  <Route path="/export-rates" element={<ExportRatesPage />} />
-                  <Route
-                    path="/delivery-zones"
-                    element={<DeliveryZonesPage />}
-                  />
-                  <Route path="/referrals" element={<ReferralsPage />} />
-                  <Route
-                    path="/referrals/:id"
-                    element={<ReferralDetailsPage />}
-                  />
-                  <Route path="/withdrawals" element={<WithdrawalsPage />} />
-                  <Route path="/coupons" element={<CouponsPage />} />
-                  <Route path="/coupon-redemption-metrics" element={<CouponRedemptionMetricsPage />} />
-                  <Route
-                    path="/general-notifications"
-                    element={<GeneralNotificationsPage />}
-                  />
-                  <Route path="/dhl-zones" element={<DHLZonesPage />} />
-                  <Route path="/dhl-local" element={<DHLLocalPage />} />
-                  <Route path="/app-config" element={<AppConfigPage />} />
-                  <Route
-                    path="/support-tickets"
-                    element={<SupportTicketsPage />}
-                  />
-                  <Route
-                    path="/restaurant-orders"
-                    element={<RestaurantOrdersPage />}
-                  />
-                  <Route
-                    path="/restaurant-orders/:id"
-                    element={<RestaurantOrderDetailsPage />}
-                  />
-                  <Route
-                    path="/shipment-orders"
-                    element={<ShipmentOrdersPage />}
-                  />
-                  <Route
-                    path="/shipment-orders/:id"
-                    element={<ShipmentOrderDetailsPage />}
-                  />
-                  <Route path="/ride-hailing" element={<RideHailingPage />} />
-                  <Route
-                    path="/ride-hailing/:id"
-                    element={<RideHailingDetailsPage />}
-                  />
-                  <Route
-                    path="/product-orders"
-                    element={<ProductOrdersPage />}
-                  />
-                  <Route
-                    path="/product-orders/:id"
-                    element={<ProductOrderDetailsPage />}
-                  />
-                  <Route
-                    path="*"
-                    element={<Navigate to="/dashboard" replace />}
-                  />
-                  <Route path="/generated" element={<GeneratedReferrals />} />
-                </Routes>
+                <TableStateProvider>
+                  <Routes>
+                    <Route path="/dashboard" element={<DashboardPage />} />
+                    <Route path="/head-offices" element={<HeadOfficesPage />} />
+                    <Route path="/admin/users" element={<UserManagementPage />} />
+                    <Route path="/users" element={<UsersPage />} />
+                    <Route path="/weekly-concentration" element={<WeeklyConcentrationPage />} />
+                    <Route path="/user-activation" element={<UserActivationPage />} />
+                    <Route path="/users/:id" element={<UserDetailsPage />} />
+                    <Route path="/riders" element={<RidersPage />} />
+                    <Route path="/rider-weekly-deliveries" element={<RiderWeeklyDeliveriesPage />} />
+                    <Route path="/riders/:id" element={<RiderDetailsPage />} />
+                    <Route path="/vendors" element={<VendorsPage />} />
+                    <Route path="/vendors/:id" element={<VendorDetailsPage />} />
+                    <Route
+                      path="/ecommerce-merchants"
+                      element={<EcommerceMerchantsPage />}
+                    />
+                    <Route
+                      path="/ecommerce-merchants/:id"
+                      element={<EcommerceMerchantDetailsPage />}
+                    />
+                    <Route
+                      path="/ecommerce-merchants/:id/products"
+                      element={<MerchantProductsPage />}
+                    />
+                    <Route
+                      path="/ecommerce-merchants/:id/products/:productId"
+                      element={<ProductDetailsPage />}
+                    />
+                    <Route
+                      path="/ecommerce-merchants/:id/transactions"
+                      element={<MerchantTransactionsPage />}
+                    />
+                    <Route path="/fees" element={<FeesPage />} />
+                    <Route path="/export-rates" element={<ExportRatesPage />} />
+                    <Route
+                      path="/delivery-zones"
+                      element={<DeliveryZonesPage />}
+                    />
+                    <Route path="/referrals" element={<ReferralsPage />} />
+                    <Route
+                      path="/referrals/:id"
+                      element={<ReferralDetailsPage />}
+                    />
+                    <Route path="/withdrawals" element={<WithdrawalsPage />} />
+                    <Route path="/coupons" element={<CouponsPage />} />
+                    <Route path="/coupon-redemption-metrics" element={<CouponRedemptionMetricsPage />} />
+                    <Route
+                      path="/general-notifications"
+                      element={<GeneralNotificationsPage />}
+                    />
+                    <Route path="/dhl-zones" element={<DHLZonesPage />} />
+                    <Route path="/dhl-local" element={<DHLLocalPage />} />
+                    <Route path="/app-config" element={<AppConfigPage />} />
+                    <Route
+                      path="/support-tickets"
+                      element={<SupportTicketsPage />}
+                    />
+                    <Route
+                      path="/restaurant-orders"
+                      element={<RestaurantOrdersPage />}
+                    />
+                    <Route
+                      path="/restaurant-orders/:id"
+                      element={<RestaurantOrderDetailsPage />}
+                    />
+                    <Route
+                      path="/shipment-orders"
+                      element={<ShipmentOrdersPage />}
+                    />
+                    <Route
+                      path="/shipment-orders/:id"
+                      element={<ShipmentOrderDetailsPage />}
+                    />
+                    <Route path="/ride-hailing" element={<RideHailingPage />} />
+                    <Route
+                      path="/ride-hailing/:id"
+                      element={<RideHailingDetailsPage />}
+                    />
+                    <Route
+                      path="/product-orders"
+                      element={<ProductOrdersPage />}
+                    />
+                    <Route
+                      path="/product-orders/:id"
+                      element={<ProductOrderDetailsPage />}
+                    />
+                    <Route
+                      path="*"
+                      element={<Navigate to="/dashboard" replace />}
+                    />
+                    <Route path="/generated" element={<GeneratedReferrals />} />
+                  </Routes>
+                </TableStateProvider>
               </Layout>
             </ProtectedRoutes>
           }

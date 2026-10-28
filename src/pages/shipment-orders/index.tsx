@@ -1,3 +1,4 @@
+import { useTableState } from "@/contexts/TableStateContext";
 import { OrderSummaryCards } from "@/components/order-summary-cards";
 import { useCurrentUser } from "@/contexts/UserContext";
 import { useHeadOffices } from "@/hooks/use-head-offices";
@@ -45,7 +46,7 @@ import { IconPackage, IconSearch, IconFilter } from "@tabler/icons-react";
 export default function ShipmentOrdersPage() {
   const { adminType } = useCurrentUser();
   const isSuperAdmin = adminType === "super";
-  const [headOfficeFilter, setHeadOfficeFilter] = useState("all");
+  const [headOfficeFilter, setHeadOfficeFilter] = useTableState("filter:headOfficeFilter", "all");
   const headOfficeId =
     isSuperAdmin && headOfficeFilter !== "all" ? headOfficeFilter : undefined;
   const {
@@ -60,10 +61,10 @@ export default function ShipmentOrdersPage() {
   const [loading, setLoading] = useState(true);
   const [orderError, setOrderError] = useState("");
   const [reloadOrders, setReloadOrders] = useState(0);
-  const [searchQuery, setSearchQuery] = useState("");
+  const [searchQuery, setSearchQuery] = useTableState("filter:searchQuery", "");
   const pagination = useSearchPagination(searchQuery, ["id", "shipmentID"], headOfficeId ?? "");
-  const [shipmentTypeFilter, setShipmentTypeFilter] = useState<string>("all");
-  const [clearanceTypeFilter, setClearanceTypeFilter] = useState<string>("all");
+  const [shipmentTypeFilter, setShipmentTypeFilter] = useTableState<string>("filter:shipmentTypeFilter", "all");
+  const [clearanceTypeFilter, setClearanceTypeFilter] = useTableState<string>("filter:clearanceTypeFilter", "all");
 
   useEffect(() => {
     let active = true;
