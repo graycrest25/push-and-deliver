@@ -10,6 +10,7 @@ import { db } from "@/lib/firebase";
 
 export type GeneratedReferral = {
   id: string;
+  code?: string;
   name?: string;
   shortUrl?: string;
   referralsCount?: number;

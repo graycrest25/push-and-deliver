@@ -225,7 +225,7 @@ export default function GeneratedReferralsPage() {
           <Table className="min-w-[1100px]">
             <TableHeader>
               <TableRow className="bg-muted/50">
-                <TableHead>Name</TableHead>
+                <TableHead>Referral code</TableHead>
                 <TableHead>URL</TableHead>
                 <TableHead>Referrals</TableHead>
                 <TableHead>Created</TableHead>
@@ -258,7 +258,7 @@ export default function GeneratedReferralsPage() {
                 referrals.map((ref) => (
                   <TableRow key={ref.id}>
                     <TableCell className="font-medium">
-                      {ref.name || "N/A"}
+                      {ref.code || "N/A"}
                     </TableCell>
 
                     <TableCell>
@@ -272,7 +272,7 @@ export default function GeneratedReferralsPage() {
                             variant="ghost"
                             size="icon"
                             className="shrink-0 text-muted-foreground hover:text-foreground"
-                            aria-label={`Copy referral link for ${ref.name || "unnamed referral"}`}
+                            aria-label={`Copy referral link for ${ref.code || "referral without code"}`}
                             onClick={() => handleCopy(ref.shortUrl)}
                           >
                             <Copy className="w-4 h-4" />
@@ -317,7 +317,7 @@ export default function GeneratedReferralsPage() {
                           variant="outline"
                           size="icon"
                           className="border-destructive/25 text-destructive hover:bg-destructive/10 hover:text-destructive"
-                          aria-label={`Delete referral ${ref.name || "unnamed referral"}`}
+                          aria-label={`Delete referral ${ref.code || "without code"}`}
                           onClick={() => handleDelete(ref.id)}
                           disabled={deletingId === ref.id}
                         >
@@ -332,7 +332,7 @@ export default function GeneratedReferralsPage() {
                         <Button
                           variant="outline"
                           size="icon"
-                          aria-label={`Regenerate referral ${ref.name || "unnamed referral"}`}
+                          aria-label={`Regenerate referral ${ref.code || "without code"}`}
                           onClick={() => handleRegenerate(ref)}
                           disabled={regeneratingId === ref.id}
                         >
