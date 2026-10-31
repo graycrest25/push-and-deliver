@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { useParams, useNavigate } from "react-router-dom";
+import { Link, useParams, useNavigate } from "react-router-dom";
 import {
   Card,
   CardContent,
@@ -132,6 +132,12 @@ export default function RideHailingDetailsPage() {
     order.paymentType === 1 && !order.ispaid && !isViewOnly;
   const isCourier = order.rideType === RideHaulingType.courier;
   const hasRider = !!order.riderID;
+  const declinedRiderIds = Array.isArray(order.declinelist)
+    ? order.declinelist.filter(
+        (riderId): riderId is string =>
+          typeof riderId === "string" && riderId.trim().length > 0,
+      )
+    : [];
 
   const getRideTypeLabel = () => {
     switch (order.rideType) {
@@ -407,6 +413,14 @@ export default function RideHailingDetailsPage() {
                 <span className="text-sm text-muted-foreground">OTP</span>
                 <Badge variant="outline">{order.otp || "N/A"}</Badge>
               </div>
+              {order.reciverOtp != null && (
+                <div className="flex items-center justify-between">
+                  <span className="text-sm text-muted-foreground">
+                    Receiver OTP
+                  </span>
+                  <Badge variant="outline">{order.reciverOtp}</Badge>
+                </div>
+              )}
             </div>
 
             {canEditPayment && (
@@ -596,6 +610,31 @@ export default function RideHailingDetailsPage() {
                 </div>
               </div>
             </div>
+          </CardContent>
+        </Card>
+      )}
+
+      {declinedRiderIds.length > 0 && (
+        <Card>
+          <CardHeader>
+            <CardTitle>Declined Riders</CardTitle>
+            <CardDescription>
+              Select a rider ID to view their profile.
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <ul className="space-y-2">
+              {declinedRiderIds.map((riderId, index) => (
+                <li key={`${riderId}-${index}`}>
+                  <Link
+                    to={`/riders/${encodeURIComponent(riderId)}`}
+                    className="inline-block max-w-full break-all rounded-sm font-mono text-sm text-primary underline underline-offset-4 hover:text-primary/80 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                  >
+                    {riderId}
+                  </Link>
+                </li>
+              ))}
+            </ul>
           </CardContent>
         </Card>
       )}

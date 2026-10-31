@@ -411,6 +411,7 @@ export interface ShipmentOrder {
   ispaid?: boolean;
   itemType?: string | string[]; // Can be a single string or array of strings
   itemImage?: string; // Item image URL if exists
+  itemImageURL?: string | null;
   itemvalue?: number;
   orderStatus?: number;
   packingListUrl?: string | null;
@@ -501,6 +502,7 @@ export interface RideHaulingOrder {
   paymentType?: number; // 0 = wallet, 1 = cash
   pndofficeaddress?: string;
   pndofficelocation?: RideHaulingLocation;
+  reciverOtp?: number | null;
   receivername?: string;
   receiverphonenumber?: string;
   rideType?: number;

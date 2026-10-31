@@ -115,6 +115,8 @@ export default function ShipmentOrderDetailsPage() {
   const isCustomClearance =
     !isLocal && order.shipmentType === IntlShipmentType.customclearance;
   const isExpress = !isLocal && order.shipmentType === IntlShipmentType.express;
+  const itemImageURL =
+    order.itemImageURL?.trim() || (isExpress ? order.itemImage?.trim() : undefined);
   const hasRider = !!order.riderID;
 
   const getShipmentTypeLabel = () => {
@@ -519,8 +521,8 @@ export default function ShipmentOrderDetailsPage() {
         </Card>
       </div>
 
-      {/* Item Details (for Express) */}
-      {isExpress && (
+      {/* Item Details */}
+      {(isExpress || itemImageURL) && (
         <Card className="gap-4">
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
@@ -529,62 +531,64 @@ export default function ShipmentOrderDetailsPage() {
             </CardTitle>
           </CardHeader>
           <CardContent className="space-y-5">
-            <dl className="grid grid-cols-1 gap-x-8 gap-y-5 sm:grid-cols-2 xl:grid-cols-4">
-              <div className="min-w-0 space-y-2">
-                <dt className="text-sm text-muted-foreground">Item Type</dt>
-                <dd className="flex flex-wrap gap-2">
-                  {order.itemType ? (
-                    Array.isArray(order.itemType) ? (
-                      order.itemType.map((type, idx) => (
-                        <Badge key={idx} variant="secondary" className="max-w-full whitespace-normal break-words text-left">
-                          {type}
+            {isExpress && (
+              <dl className="grid grid-cols-1 gap-x-8 gap-y-5 sm:grid-cols-2 xl:grid-cols-4">
+                <div className="min-w-0 space-y-2">
+                  <dt className="text-sm text-muted-foreground">Item Type</dt>
+                  <dd className="flex flex-wrap gap-2">
+                    {order.itemType ? (
+                      Array.isArray(order.itemType) ? (
+                        order.itemType.map((type, idx) => (
+                          <Badge key={idx} variant="secondary" className="max-w-full whitespace-normal break-words text-left">
+                            {type}
+                          </Badge>
+                        ))
+                      ) : (
+                        <Badge variant="secondary" className="max-w-full whitespace-normal break-words text-left">
+                          {order.itemType}
                         </Badge>
-                      ))
+                      )
                     ) : (
-                      <Badge variant="secondary" className="max-w-full whitespace-normal break-words text-left">
-                        {order.itemType}
-                      </Badge>
-                    )
-                  ) : (
-                    <span className="text-sm font-medium">Not specified</span>
-                  )}
-                </dd>
-              </div>
-              <div className="min-w-0 space-y-2">
-                <dt className="text-sm text-muted-foreground">Item Value</dt>
-                <dd className="break-words text-sm font-medium tabular-nums">
-                  ₦{(order.itemvalue || 0).toLocaleString()}
-                </dd>
-              </div>
-              <div className="min-w-0 space-y-2">
-                <dt className="flex items-center gap-2 text-sm text-muted-foreground">
-                  <IconScale aria-hidden="true" className="h-4 w-4 shrink-0" />
-                  Weight
-                </dt>
-                <dd className="break-words text-sm font-medium tabular-nums">
-                  {order.weightinKG || 0} KG
-                </dd>
-              </div>
-              <div className="min-w-0 space-y-2">
-                <dt className="flex items-center gap-2 text-sm text-muted-foreground">
-                  <IconRuler aria-hidden="true" className="h-4 w-4 shrink-0" />
-                  Dimensions
-                </dt>
-                <dd className="break-words text-sm font-medium tabular-nums">
-                  {order.widthinCM || 0}W × {order.heightinCM || 0}H ×{" "}
-                  {order.breadthinCM || 0}B cm
-                </dd>
-              </div>
-            </dl>
+                      <span className="text-sm font-medium">Not specified</span>
+                    )}
+                  </dd>
+                </div>
+                <div className="min-w-0 space-y-2">
+                  <dt className="text-sm text-muted-foreground">Item Value</dt>
+                  <dd className="break-words text-sm font-medium tabular-nums">
+                    ₦{(order.itemvalue || 0).toLocaleString()}
+                  </dd>
+                </div>
+                <div className="min-w-0 space-y-2">
+                  <dt className="flex items-center gap-2 text-sm text-muted-foreground">
+                    <IconScale aria-hidden="true" className="h-4 w-4 shrink-0" />
+                    Weight
+                  </dt>
+                  <dd className="break-words text-sm font-medium tabular-nums">
+                    {order.weightinKG || 0} KG
+                  </dd>
+                </div>
+                <div className="min-w-0 space-y-2">
+                  <dt className="flex items-center gap-2 text-sm text-muted-foreground">
+                    <IconRuler aria-hidden="true" className="h-4 w-4 shrink-0" />
+                    Dimensions
+                  </dt>
+                  <dd className="break-words text-sm font-medium tabular-nums">
+                    {order.widthinCM || 0}W × {order.heightinCM || 0}H ×{" "}
+                    {order.breadthinCM || 0}B cm
+                  </dd>
+                </div>
+              </dl>
+            )}
             {/* Item Image */}
-            {order.itemImage && (
-              <div className="pt-4 border-t">
+            {itemImageURL && (
+              <div className={isExpress ? "pt-4 border-t" : undefined}>
                 <span className="text-sm text-muted-foreground block mb-2">
                   Item Image
                 </span>
                 <img
-                  src={order.itemImage}
-                  alt="Item"
+                  src={itemImageURL}
+                  alt="Shipment item"
                   className="rounded-lg max-w-full max-h-[300px] w-auto object-contain border"
                 />
               </div>
