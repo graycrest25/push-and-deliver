@@ -119,7 +119,6 @@ for (const variant of [
   const html = renderData({ ...order, ...variant });
   for (const expected of [
     "Customer ID",
-    "Quote ID",
     "Delivery OTP",
     "Rider amount",
     "Coupon discount",
@@ -130,17 +129,14 @@ for (const variant of [
     "86,534.624",
     "1,290",
     "1860",
-    "s1e55b6gcy",
-    "8.9668961",
-    "4.3874051",
-    "Not set (null)",
+    ">---<",
     "None (empty list)",
     ">Empty<",
     ">No<",
     ">Yes<",
     "15:12:23",
-    "Placed (0)",
-    "Cancelled (5)",
+    "Placed",
+    "Cancelled",
   ]) {
     assert.ok(
       html.includes(expected),
@@ -149,7 +145,30 @@ for (const variant of [
   }
   assert.match(html, /datetime="2026-10-31T14:12:23.000Z"/i);
   assert.ok(html.includes(">0</dd>"), "Zero dimensions must remain visible");
+  assert.doesNotMatch(
+    html,
+    /Quote ID|coordinates|Geohash|Latitude|Longitude|s1e55b6gcy|8\.9668961|4\.3874051|q{64}|Not set \(null\)|(?:Placed|Cancelled) \(\d+\)/,
+  );
 }
+const nestedData = renderData({
+  ...order,
+  additionalRecord: {
+    note: "Visible note",
+    geohash: "hidden-hash",
+    latlng: [12.345, 67.89],
+    quoteID: "hidden-quote",
+    geopoint: location.geopoint,
+    latitude: 12.345,
+    longitude: 67.89,
+  },
+});
+assert.match(nestedData, /Visible note/);
+assert.doesNotMatch(
+  nestedData,
+  /hidden-hash|hidden-quote|12\.345|67\.89|8\.9668961|4\.3874051/,
+);
+assert.match(renderData({ ...order, orderStatus: 99 }), /Unknown/);
+assert.doesNotMatch(renderData({ ...order, orderStatus: 99 }), />99</);
 assert.match(
   renderData({
     ...order,
@@ -247,6 +266,7 @@ function renderPage(file, record, list = false, role = "regular") {
 for (const [folder, cancelledStatus] of [
   ["shipment-orders", 5],
   ["ride-hailing", 4],
+  ["ride-hailing", 5],
 ]) {
   for (const ispaid of [true, false]) {
     const record = {
@@ -340,5 +360,5 @@ if (process.env.SHIPMENT_REVIEW_HTML) {
   );
 }
 console.log(
-  "Shipment details passed: complete local/international/clearance data, nested Firestore values, empty/zero/false values, document links, cancelled payment UI in details/lists, and payment permissions.",
+  "Shipment details passed: readable local/international/clearance data, hidden coordinates/quote IDs, plain status labels, null placeholders, document links, cancelled/expired payment UI in details/lists, and payment permissions.",
 );

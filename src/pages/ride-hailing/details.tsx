@@ -77,7 +77,8 @@ export default function RideHailingDetailsPage() {
     if (
       !order?.id ||
       order.paymentType === 0 ||
-      order.orderStatus === RideHaulingStatus.cancelled
+      order.orderStatus === RideHaulingStatus.cancelled ||
+      order.orderStatus === RideHaulingStatus.expired
     )
       return;
 
@@ -133,9 +134,14 @@ export default function RideHailingDetailsPage() {
     );
   }
 
-  const isCancelled = order.orderStatus === RideHaulingStatus.cancelled;
+  const hidePaymentStatus =
+    order.orderStatus === RideHaulingStatus.cancelled ||
+    order.orderStatus === RideHaulingStatus.expired;
   const canEditPayment =
-    !isCancelled && order.paymentType === 1 && !order.ispaid && !isViewOnly;
+    !hidePaymentStatus &&
+    order.paymentType === 1 &&
+    !order.ispaid &&
+    !isViewOnly;
   const isCourier = order.rideType === RideHaulingType.courier;
   const hasRider = !!order.riderID;
   const declinedRiderIds = Array.isArray(order.declinelist)
@@ -195,7 +201,7 @@ export default function RideHailingDetailsPage() {
           </p>
         </div>
         <div className="flex items-center gap-2">
-          {!isCancelled && (
+          {!hidePaymentStatus && (
             <Badge
               variant={order.ispaid ? "default" : "destructive"}
               className="text-sm px-3 py-1"

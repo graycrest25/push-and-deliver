@@ -267,7 +267,8 @@ export default function RideHailingPage() {
                       </Badge>
                     </TableCell>
                     <TableCell>
-                      {order.orderStatus !== RideHaulingStatus.cancelled ? (
+                      {order.orderStatus !== RideHaulingStatus.cancelled &&
+                      order.orderStatus !== RideHaulingStatus.expired ? (
                         <Badge variant={order.ispaid ? "default" : "destructive"}>
                           {order.ispaid ? "Paid" : "Unpaid"}
                         </Badge>

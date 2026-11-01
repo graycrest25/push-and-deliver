@@ -11,7 +11,6 @@ const fieldGroups = [
       orderStatus: "Order status",
       shipmentType: "Shipment type",
       quoteType: "Quote type",
-      quoteID: "Quote ID",
       localtype: "Local service",
       localzone: "Local zone",
       clearanceType: "Clearance type",
@@ -34,12 +33,9 @@ const fieldGroups = [
     title: "Locations",
     fields: {
       startoffAddress: "Pickup address",
-      startoffLocation: "Pickup coordinates",
       dropoffAddress: "Drop-off address",
-      dropoffLocation: "Drop-off coordinates",
       pndofficeaddress: "PnD office address",
       pndofficelocationID: "PnD office ID",
-      pndofficelocation: "PnD office coordinates",
       country: "Country",
       state: "State",
       zipcode: "Postal code",
@@ -100,6 +96,27 @@ const fieldGroups = [
   },
 ] as const;
 
+const hiddenFields = new Set([
+  "quoteid",
+  "startofflocation",
+  "dropofflocation",
+  "pndofficelocation",
+  "geolocation",
+  "geopoint",
+  "geohash",
+  "latitude",
+  "longitude",
+  "latlng",
+  "lat",
+  "lng",
+  "_lat",
+  "_long",
+]);
+
+function isHiddenField(key: string) {
+  return hiddenFields.has(key.toLowerCase());
+}
+
 const moneyFields = new Set([
   "totalAmount",
   "riderAmount",
@@ -125,7 +142,7 @@ function EmptyValue({ children }: { children: string }) {
 }
 
 function OrderValue({ value, field }: { value: unknown; field: string }) {
-  if (value === null) return <EmptyValue>Not set (null)</EmptyValue>;
+  if (value === null) return <EmptyValue>---</EmptyValue>;
   if (value === undefined) return <EmptyValue>Not provided</EmptyValue>;
   if (value === "") return <EmptyValue>Empty</EmptyValue>;
   if (typeof value === "boolean") return <>{value ? "Yes" : "No"}</>;
@@ -160,22 +177,9 @@ function OrderValue({ value, field }: { value: unknown; field: string }) {
   }
 
   if (typeof value === "object") {
-    // GeoPoint coordinates are getters, so Object.entries alone loses their labels.
-    if ("latitude" in value && "longitude" in value) {
-      return (
-        <dl className="space-y-1">
-          <div>
-            <dt className="inline text-muted-foreground">Latitude: </dt>
-            <dd className="inline">{String(value.latitude)}</dd>
-          </div>
-          <div>
-            <dt className="inline text-muted-foreground">Longitude: </dt>
-            <dd className="inline">{String(value.longitude)}</dd>
-          </div>
-        </dl>
-      );
-    }
-    const entries = Object.entries(value);
+    const entries = Object.entries(value).filter(
+      ([key]) => !isHiddenField(key),
+    );
     if (!entries.length) return <EmptyValue>Empty map</EmptyValue>;
     return (
       <dl className="space-y-2">
@@ -199,13 +203,7 @@ function OrderValue({ value, field }: { value: unknown; field: string }) {
       clearanceType: { 0: "Sea consignment", 1: "Air consignment" },
       paymentType: { 0: "Wallet", 1: "Cash" },
     };
-    const label = labels[field]?.[value];
-    if (label)
-      return (
-        <>
-          {label} ({value})
-        </>
-      );
+    if (labels[field]) return <>{labels[field][value] ?? "Unknown"}</>;
     if (moneyFields.has(field))
       return (
         <>₦{value.toLocaleString("en-NG", { maximumFractionDigits: 20 })}</>
@@ -245,7 +243,7 @@ export function ShipmentOrderData({ order }: { order: ShipmentOrder }) {
     fieldGroups.flatMap((group) => Object.keys(group.fields)),
   );
   const additionalFields = Object.keys(data).filter(
-    (key) => !knownFields.has(key),
+    (key) => !knownFields.has(key) && !isHiddenField(key),
   );
   const groups = [
     ...fieldGroups,
@@ -263,6 +261,7 @@ export function ShipmentOrderData({ order }: { order: ShipmentOrder }) {
         const fields = Object.entries(group.fields).filter(
           ([key]) =>
             Object.hasOwn(data, key) &&
+            !isHiddenField(key) &&
             !(
               key === "ispaid" &&
               order.orderStatus === ShipmentOrderStatus.cancelled
