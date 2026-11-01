@@ -399,6 +399,7 @@ export interface ShipmentOrder {
   clearancedocument?: string;
   completedAt?: Timestamp | Date | null;
   country?: string;
+  couponDiscount?: number;
   createdAt?: Timestamp | Date;
   customerID?: string;
   customerName?: string;
@@ -419,9 +420,12 @@ export interface ShipmentOrder {
   paylater?: boolean;
   pndofficeaddress?: string;
   pndofficelocation?: ShipmentLocation;
+  otp?: number;
+  quoteID?: string;
   receiveremail?: string;
   receivername?: string;
   receiverphonenumber?: string;
+  riderAmount?: number;
   riderCarColor?: string;
   riderCarModel?: string;
   riderCarName?: string;
@@ -438,6 +442,7 @@ export interface ShipmentOrder {
   localzone?: string;
   startoffAddress?: string;
   startoffLocation?: ShipmentLocation;
+  state?: string;
   statusTimeline?: ShipmentStatusTimeline[];
   totalAmount?: number;
   transactionID?: string;

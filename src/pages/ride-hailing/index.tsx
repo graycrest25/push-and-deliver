@@ -267,9 +267,13 @@ export default function RideHailingPage() {
                       </Badge>
                     </TableCell>
                     <TableCell>
-                      <Badge variant={order.ispaid ? "default" : "destructive"}>
-                        {order.ispaid ? "Paid" : "Unpaid"}
-                      </Badge>
+                      {order.orderStatus !== RideHaulingStatus.cancelled ? (
+                        <Badge variant={order.ispaid ? "default" : "destructive"}>
+                          {order.ispaid ? "Paid" : "Unpaid"}
+                        </Badge>
+                      ) : (
+                        <span className="text-muted-foreground" aria-label="Payment status not applicable">—</span>
+                      )}
                     </TableCell>
                     <TableCell>
                       {order.createdAt

@@ -74,7 +74,12 @@ export default function RideHailingDetailsPage() {
   };
 
   const handlePaymentStatusToggle = async (checked: boolean) => {
-    if (!order?.id || order.paymentType === 0) return;
+    if (
+      !order?.id ||
+      order.paymentType === 0 ||
+      order.orderStatus === RideHaulingStatus.cancelled
+    )
+      return;
 
     try {
       setUpdatingPayment(true);
@@ -128,8 +133,9 @@ export default function RideHailingDetailsPage() {
     );
   }
 
+  const isCancelled = order.orderStatus === RideHaulingStatus.cancelled;
   const canEditPayment =
-    order.paymentType === 1 && !order.ispaid && !isViewOnly;
+    !isCancelled && order.paymentType === 1 && !order.ispaid && !isViewOnly;
   const isCourier = order.rideType === RideHaulingType.courier;
   const hasRider = !!order.riderID;
   const declinedRiderIds = Array.isArray(order.declinelist)
@@ -189,12 +195,14 @@ export default function RideHailingDetailsPage() {
           </p>
         </div>
         <div className="flex items-center gap-2">
-          <Badge
-            variant={order.ispaid ? "default" : "destructive"}
-            className="text-sm px-3 py-1"
-          >
-            {order.ispaid ? "Paid" : "Unpaid"}
-          </Badge>
+          {!isCancelled && (
+            <Badge
+              variant={order.ispaid ? "default" : "destructive"}
+              className="text-sm px-3 py-1"
+            >
+              {order.ispaid ? "Paid" : "Unpaid"}
+            </Badge>
+          )}
           <Badge variant="outline" className="text-sm px-3 py-1">
             {getRideTypeLabel()}
           </Badge>

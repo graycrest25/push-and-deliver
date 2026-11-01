@@ -244,6 +244,8 @@ Badges provide compact 12px labels with pill corners. Role labels instead use an
 ### Cards / Containers
 Default cards have a border, 16px corners, 24px vertical padding, and the faint card shadow. Metrics and status panels use 20px vertical padding with tighter internal gaps. Optional page insights are native details disclosures; charts remain below their summary and can be expanded with keyboard or pointer input.
 
+Shipment details use grouped definition lists for local, international, and customs clearance records. Every stored field appears, with additional fields collected automatically. Coordinates, geohashes, nested lists, and status history remain readable; timestamps use Africa/Lagos with a visible time zone. Zero, false, empty strings, empty lists, and null have distinct displays. Long identifiers and document URLs wrap, with one column on mobile, two from 768px, and three from 1280px. Cancelled shipments and rides hide paid/unpaid badges and payment status controls, and their list payment cells show a neutral dash.
+
 ### Navigation / Page Finder
 Destinations are grouped as Workspace, Operations, People & partners, Finance, Growth, and Administration, then filtered by the existing access rules. Selection includes nested detail routes and aria-current. Mobile selection closes the sheet. Breadcrumbs return to the parent list from details.
 

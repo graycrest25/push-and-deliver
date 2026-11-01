@@ -56,9 +56,9 @@ export const shipmentOrdersService = {
       onOrder(data ? {
         ...data,
         id: snapshot.id,
-        createdAt: data.createdAt?.toDate(),
-        cancelledAt: data.cancelledAt?.toDate(),
-        completedAt: data.completedAt?.toDate(),
+        createdAt: data.createdAt?.toDate?.() ?? data.createdAt,
+        cancelledAt: data.cancelledAt?.toDate?.() ?? data.cancelledAt,
+        completedAt: data.completedAt?.toDate?.() ?? data.completedAt,
       } as ShipmentOrder : null);
     }, onError);
   },
@@ -133,9 +133,9 @@ export const shipmentOrdersService = {
       return snapshot.docs.map((doc) => ({
         ...doc.data(),
         id: doc.id,
-        createdAt: doc.data().createdAt?.toDate(),
-        cancelledAt: doc.data().cancelledAt?.toDate(),
-        completedAt: doc.data().completedAt?.toDate(),
+        createdAt: doc.data().createdAt?.toDate?.() ?? doc.data().createdAt,
+        cancelledAt: doc.data().cancelledAt?.toDate?.() ?? doc.data().cancelledAt,
+        completedAt: doc.data().completedAt?.toDate?.() ?? doc.data().completedAt,
       })) as ShipmentOrder[];
     } catch (error) {
       console.error("Error fetching shipment orders:", error);
@@ -153,9 +153,9 @@ export const shipmentOrdersService = {
         return {
           ...docSnap.data(),
           id: docSnap.id,
-          createdAt: docSnap.data().createdAt?.toDate(),
-          cancelledAt: docSnap.data().cancelledAt?.toDate(),
-          completedAt: docSnap.data().completedAt?.toDate(),
+          createdAt: docSnap.data().createdAt?.toDate?.() ?? docSnap.data().createdAt,
+          cancelledAt: docSnap.data().cancelledAt?.toDate?.() ?? docSnap.data().cancelledAt,
+          completedAt: docSnap.data().completedAt?.toDate?.() ?? docSnap.data().completedAt,
         } as ShipmentOrder;
       }
       return null;
