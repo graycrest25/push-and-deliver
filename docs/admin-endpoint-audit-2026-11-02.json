@@ -1,0 +1,4053 @@
+{
+  "title": "Live admin webapp endpoint audit",
+  "date": "2026-11-02",
+  "completedAtWAT": "2026-11-02T23:18:51.658658+01:00",
+  "adminSubtype": "super",
+  "summary": {
+    "staticAdminDestinations": 35,
+    "sampledDetailPages": 9,
+    "coverageEntries": 58,
+    "failingEndpointFamilies": 25,
+    "distinctFailedRequestCases": 34,
+    "frontendDataDisplayFailures": 2,
+    "unhandledBrowserExceptions": 0
+  },
+  "limitations": [
+    "Current local Next.js webapp was checked against the live backend configured in BASE_URL. This is not a deployed-frontend audit.",
+    "All 35 static admin destinations, their tested report/configuration tabs, and 9 discovered detail URLs were visited. Not every database record or every filter/pagination combination was sampled.",
+    "Only read operations and authentication login/logout were exercised. Role changes, settings writes, coupon issuance, support replies/claims, wallet actions, notification sending, job replay, uploads and destructive commands were not executed.",
+    "General notifications, account security and Files were visited, but their mutation-only controls or file lifecycle were not tested. A page without a read failure is not proof that its write endpoints work.",
+    "Detail routes requiring records from failed/empty lists were not tested: user/rider/vendor/merchant profiles, ride/marketplace orders, office/tariff/catalogue details, withdrawal detail and payment receipt detail. No made-up identifiers were used to manufacture 404s.",
+    "Referral detail and merchant transaction/product placeholder routes have no established record-detail behavior; they were not exercised using fabricated IDs.",
+    "Password recovery, Google OAuth provider sign-in and revoked/other-subtype sessions were outside this supplied password-admin audit.",
+    "Expected unauthenticated startup 401s, React development-mode aborted duplicate requests, and corrected audit-script selector errors are excluded from failures.",
+    "Error bodies are the actual JSON returned through the proxy; BASE_URL, passwords, cookies and access/refresh credentials are omitted. Header descriptions reflect server proxy behavior, not browser-visible bearer headers.",
+    "No application implementation changes were made during this audit."
+  ],
+  "failures": [
+    {
+      "endpoint": "GET /v1/admin/analytics/account-summary",
+      "httpStatus": 503,
+      "affectedPages": [
+        "/dashboard",
+        "/reports",
+        "/reports [rider accounts]"
+      ],
+      "cases": [
+        {
+          "request": {
+            "method": "GET",
+            "endpoint": "/v1/admin/analytics/account-summary",
+            "query": {
+              "type": "users"
+            },
+            "url": "/v1/admin/analytics/account-summary?type=users",
+            "browserProxyPath": "/api/proxy/v1/admin/analytics/account-summary?type=users",
+            "upstreamHeaders": {
+              "Accept": "application/json",
+              "Authorization": "Bearer [REDACTED; server supplied]",
+              "X-Account-Type": "user"
+            },
+            "body": null
+          },
+          "response": {
+            "status": 503,
+            "requestId": "9550abad2fffe70bcd7783d166862f99",
+            "body": {
+              "error": {
+                "code": "temporarily_unavailable",
+                "details": {},
+                "message": "Analytics is temporarily unavailable."
+              },
+              "requestId": "9550abad2fffe70bcd7783d166862f99"
+            }
+          },
+          "source": "Browser page audit"
+        },
+        {
+          "request": {
+            "method": "GET",
+            "endpoint": "/v1/admin/analytics/account-summary",
+            "query": {
+              "type": "riders"
+            },
+            "url": "/v1/admin/analytics/account-summary?type=riders",
+            "browserProxyPath": "/api/proxy/v1/admin/analytics/account-summary?type=riders",
+            "upstreamHeaders": {
+              "Accept": "application/json",
+              "Authorization": "Bearer [REDACTED; server supplied]",
+              "X-Account-Type": "user"
+            },
+            "body": null
+          },
+          "response": {
+            "status": 503,
+            "requestId": "362d287f61253065d962430068a0fcbf",
+            "body": {
+              "error": {
+                "code": "temporarily_unavailable",
+                "details": {},
+                "message": "Analytics is temporarily unavailable."
+              },
+              "requestId": "362d287f61253065d962430068a0fcbf"
+            }
+          },
+          "source": "Browser follow-up"
+        }
+      ],
+      "occurrences": [
+        {
+          "page": "/dashboard",
+          "endpoint": "/v1/admin/analytics/account-summary",
+          "query": {
+            "type": "users"
+          },
+          "status": 503,
+          "requestId": "9550abad2fffe70bcd7783d166862f99",
+          "source": "Browser page audit",
+          "responseCaptured": true
+        },
+        {
+          "page": "/reports",
+          "endpoint": "/v1/admin/analytics/account-summary",
+          "query": {
+            "type": "users"
+          },
+          "status": 503,
+          "requestId": "1a6a00aced174672fd39020684627690",
+          "source": "Browser page audit",
+          "responseCaptured": true
+        },
+        {
+          "page": "/reports",
+          "endpoint": "/v1/admin/analytics/account-summary",
+          "query": {
+            "type": "users"
+          },
+          "status": 503,
+          "requestId": "6be8d4af8fee8f75540b4dada5f48e88",
+          "source": "Browser follow-up",
+          "responseCaptured": true
+        },
+        {
+          "page": "/reports [rider accounts]",
+          "endpoint": "/v1/admin/analytics/account-summary",
+          "query": {
+            "type": "riders"
+          },
+          "status": 503,
+          "requestId": "362d287f61253065d962430068a0fcbf",
+          "source": "Browser follow-up",
+          "responseCaptured": true
+        }
+      ],
+      "number": 1,
+      "errorCode": "temporarily_unavailable",
+      "errorMessage": "Analytics is temporarily unavailable."
+    },
+    {
+      "endpoint": "GET /v1/admin/analytics/order-summary",
+      "httpStatus": 503,
+      "affectedPages": [
+        "/dashboard",
+        "/reports",
+        "/reports [ride-courier]",
+        "/reports [food]",
+        "/reports [ecommerce]"
+      ],
+      "cases": [
+        {
+          "request": {
+            "method": "GET",
+            "endpoint": "/v1/admin/analytics/order-summary",
+            "query": {
+              "type": "shipment"
+            },
+            "url": "/v1/admin/analytics/order-summary?type=shipment",
+            "browserProxyPath": "/api/proxy/v1/admin/analytics/order-summary?type=shipment",
+            "upstreamHeaders": {
+              "Accept": "application/json",
+              "Authorization": "Bearer [REDACTED; server supplied]",
+              "X-Account-Type": "user"
+            },
+            "body": null
+          },
+          "response": {
+            "status": 503,
+            "requestId": "8163b4457a8c605373e5528aedd1d4c4",
+            "body": {
+              "error": {
+                "code": "temporarily_unavailable",
+                "details": {},
+                "message": "Analytics is temporarily unavailable."
+              },
+              "requestId": "8163b4457a8c605373e5528aedd1d4c4"
+            }
+          },
+          "source": "Browser page audit"
+        },
+        {
+          "request": {
+            "method": "GET",
+            "endpoint": "/v1/admin/analytics/order-summary",
+            "query": {
+              "type": "ride-courier"
+            },
+            "url": "/v1/admin/analytics/order-summary?type=ride-courier",
+            "browserProxyPath": "/api/proxy/v1/admin/analytics/order-summary?type=ride-courier",
+            "upstreamHeaders": {
+              "Accept": "application/json",
+              "Authorization": "Bearer [REDACTED; server supplied]",
+              "X-Account-Type": "user"
+            },
+            "body": null
+          },
+          "response": {
+            "status": 503,
+            "requestId": "a11fd663036d4706d45f0f05a8297ec1",
+            "body": {
+              "error": {
+                "code": "temporarily_unavailable",
+                "details": {},
+                "message": "Analytics is temporarily unavailable."
+              },
+              "requestId": "a11fd663036d4706d45f0f05a8297ec1"
+            }
+          },
+          "source": "Browser follow-up"
+        },
+        {
+          "request": {
+            "method": "GET",
+            "endpoint": "/v1/admin/analytics/order-summary",
+            "query": {
+              "type": "food"
+            },
+            "url": "/v1/admin/analytics/order-summary?type=food",
+            "browserProxyPath": "/api/proxy/v1/admin/analytics/order-summary?type=food",
+            "upstreamHeaders": {
+              "Accept": "application/json",
+              "Authorization": "Bearer [REDACTED; server supplied]",
+              "X-Account-Type": "user"
+            },
+            "body": null
+          },
+          "response": {
+            "status": 503,
+            "requestId": "3ae94ed38359128300accb3b709549a8",
+            "body": {
+              "error": {
+                "code": "temporarily_unavailable",
+                "details": {},
+                "message": "Analytics is temporarily unavailable."
+              },
+              "requestId": "3ae94ed38359128300accb3b709549a8"
+            }
+          },
+          "source": "Browser follow-up"
+        },
+        {
+          "request": {
+            "method": "GET",
+            "endpoint": "/v1/admin/analytics/order-summary",
+            "query": {
+              "type": "ecommerce"
+            },
+            "url": "/v1/admin/analytics/order-summary?type=ecommerce",
+            "browserProxyPath": "/api/proxy/v1/admin/analytics/order-summary?type=ecommerce",
+            "upstreamHeaders": {
+              "Accept": "application/json",
+              "Authorization": "Bearer [REDACTED; server supplied]",
+              "X-Account-Type": "user"
+            },
+            "body": null
+          },
+          "response": {
+            "status": 503,
+            "requestId": "71547a5c5806ae536753a0a944626d72",
+            "body": {
+              "error": {
+                "code": "temporarily_unavailable",
+                "details": {},
+                "message": "Analytics is temporarily unavailable."
+              },
+              "requestId": "71547a5c5806ae536753a0a944626d72"
+            }
+          },
+          "source": "Browser follow-up"
+        }
+      ],
+      "occurrences": [
+        {
+          "page": "/dashboard",
+          "endpoint": "/v1/admin/analytics/order-summary",
+          "query": {
+            "type": "shipment"
+          },
+          "status": 503,
+          "requestId": "8163b4457a8c605373e5528aedd1d4c4",
+          "source": "Browser page audit",
+          "responseCaptured": true
+        },
+        {
+          "page": "/reports",
+          "endpoint": "/v1/admin/analytics/order-summary",
+          "query": {
+            "type": "shipment"
+          },
+          "status": 503,
+          "requestId": "a75c4d8bfbb62be4911f4d151387cc90",
+          "source": "Browser page audit",
+          "responseCaptured": true
+        },
+        {
+          "page": "/reports",
+          "endpoint": "/v1/admin/analytics/order-summary",
+          "query": {
+            "type": "shipment"
+          },
+          "status": 503,
+          "requestId": "2cd5deac16149fb25cfda5d17be81e1b",
+          "source": "Browser follow-up",
+          "responseCaptured": true
+        },
+        {
+          "page": "/reports [ride-courier]",
+          "endpoint": "/v1/admin/analytics/order-summary",
+          "query": {
+            "type": "ride-courier"
+          },
+          "status": 503,
+          "requestId": "a11fd663036d4706d45f0f05a8297ec1",
+          "source": "Browser follow-up",
+          "responseCaptured": true
+        },
+        {
+          "page": "/reports [food]",
+          "endpoint": "/v1/admin/analytics/order-summary",
+          "query": {
+            "type": "food"
+          },
+          "status": 503,
+          "requestId": "3ae94ed38359128300accb3b709549a8",
+          "source": "Browser follow-up",
+          "responseCaptured": true
+        },
+        {
+          "page": "/reports [ecommerce]",
+          "endpoint": "/v1/admin/analytics/order-summary",
+          "query": {
+            "type": "ecommerce"
+          },
+          "status": 503,
+          "requestId": "71547a5c5806ae536753a0a944626d72",
+          "source": "Browser follow-up",
+          "responseCaptured": true
+        }
+      ],
+      "number": 2,
+      "errorCode": "temporarily_unavailable",
+      "errorMessage": "Analytics is temporarily unavailable."
+    },
+    {
+      "endpoint": "GET /v1/admin/users",
+      "httpStatus": 404,
+      "affectedPages": [
+        "/users",
+        "/riders",
+        "/vendors",
+        "/ecommerce-merchants"
+      ],
+      "cases": [
+        {
+          "request": {
+            "method": "GET",
+            "endpoint": "/v1/admin/users",
+            "query": {
+              "limit": "25"
+            },
+            "url": "/v1/admin/users?limit=25",
+            "browserProxyPath": "/api/proxy/v1/admin/users?limit=25",
+            "upstreamHeaders": {
+              "Accept": "application/json",
+              "Authorization": "Bearer [REDACTED; server supplied]",
+              "X-Account-Type": "user"
+            },
+            "body": null
+          },
+          "response": {
+            "status": 404,
+            "requestId": "5ae2ad49f16be2aa802fab2347bcb4e0",
+            "body": {
+              "error": {
+                "code": "not_found",
+                "details": {},
+                "message": "Route not found"
+              },
+              "requestId": "5ae2ad49f16be2aa802fab2347bcb4e0"
+            }
+          },
+          "source": "Browser page audit"
+        }
+      ],
+      "occurrences": [
+        {
+          "page": "/users",
+          "endpoint": "/v1/admin/users",
+          "query": {
+            "limit": "25"
+          },
+          "status": 404,
+          "requestId": "5ae2ad49f16be2aa802fab2347bcb4e0",
+          "source": "Browser page audit",
+          "responseCaptured": true
+        },
+        {
+          "page": "/riders",
+          "endpoint": "/v1/admin/users",
+          "query": {
+            "limit": "25"
+          },
+          "status": 404,
+          "requestId": "898a74a19ffc388c4c1f7696f3237aff",
+          "source": "Browser page audit",
+          "responseCaptured": true
+        },
+        {
+          "page": "/vendors",
+          "endpoint": "/v1/admin/users",
+          "query": {
+            "limit": "25"
+          },
+          "status": 404,
+          "requestId": "902577fcc4400f593ffba97aa8fc778b",
+          "source": "Browser page audit",
+          "responseCaptured": true
+        },
+        {
+          "page": "/ecommerce-merchants",
+          "endpoint": "/v1/admin/users",
+          "query": {
+            "limit": "25"
+          },
+          "status": 404,
+          "requestId": "3dd8c6d9eef51fd3315e309e6e15848a",
+          "source": "Browser page audit",
+          "responseCaptured": true
+        },
+        {
+          "page": "/users",
+          "endpoint": "/v1/admin/users",
+          "query": {
+            "limit": "25"
+          },
+          "status": 404,
+          "requestId": "6b696d5aad3afe6edeaeae06ffe1b691",
+          "source": "Browser follow-up",
+          "responseCaptured": true
+        },
+        {
+          "page": "/riders",
+          "endpoint": "/v1/admin/users",
+          "query": {
+            "limit": "25"
+          },
+          "status": 404,
+          "requestId": "c334c777621d698c5419fb977980498c",
+          "source": "Browser follow-up",
+          "responseCaptured": true
+        }
+      ],
+      "number": 3,
+      "errorCode": "not_found",
+      "errorMessage": "Route not found"
+    },
+    {
+      "endpoint": "GET /v1/rides/trips",
+      "httpStatus": 400,
+      "affectedPages": [
+        "/ride-hailing"
+      ],
+      "cases": [
+        {
+          "request": {
+            "method": "GET",
+            "endpoint": "/v1/rides/trips",
+            "query": {
+              "limit": "25"
+            },
+            "url": "/v1/rides/trips?limit=25",
+            "browserProxyPath": "/api/proxy/v1/rides/trips?limit=25",
+            "upstreamHeaders": {
+              "Accept": "application/json",
+              "Authorization": "Bearer [REDACTED; server supplied]",
+              "X-Account-Type": "user"
+            },
+            "body": null
+          },
+          "response": {
+            "status": 400,
+            "requestId": "e4486d890cf776868773f9e45dfc9211",
+            "body": {
+              "error": {
+                "code": "invalid_request",
+                "details": {},
+                "message": "The ride request is invalid."
+              },
+              "requestId": "e4486d890cf776868773f9e45dfc9211"
+            }
+          },
+          "source": "Browser page audit"
+        }
+      ],
+      "occurrences": [
+        {
+          "page": "/ride-hailing",
+          "endpoint": "/v1/rides/trips",
+          "query": {
+            "limit": "25"
+          },
+          "status": 400,
+          "requestId": "e4486d890cf776868773f9e45dfc9211",
+          "source": "Browser page audit",
+          "responseCaptured": true
+        }
+      ],
+      "number": 4,
+      "errorCode": "invalid_request",
+      "errorMessage": "The ride request is invalid."
+    },
+    {
+      "endpoint": "GET /v1/marketplace/orders",
+      "httpStatus": 404,
+      "affectedPages": [
+        "/restaurant-orders",
+        "/product-orders"
+      ],
+      "cases": [
+        {
+          "request": {
+            "method": "GET",
+            "endpoint": "/v1/marketplace/orders",
+            "query": {
+              "limit": "25"
+            },
+            "url": "/v1/marketplace/orders?limit=25",
+            "browserProxyPath": "/api/proxy/v1/marketplace/orders?limit=25",
+            "upstreamHeaders": {
+              "Accept": "application/json",
+              "Authorization": "Bearer [REDACTED; server supplied]",
+              "X-Account-Type": "user"
+            },
+            "body": null
+          },
+          "response": {
+            "status": 404,
+            "requestId": "9a48a158201d629e9841d49a21b90f15",
+            "body": {
+              "error": {
+                "code": "not_found",
+                "details": {},
+                "message": "Route not found"
+              },
+              "requestId": "9a48a158201d629e9841d49a21b90f15"
+            }
+          },
+          "source": "Browser page audit"
+        }
+      ],
+      "occurrences": [
+        {
+          "page": "/restaurant-orders",
+          "endpoint": "/v1/marketplace/orders",
+          "query": {
+            "limit": "25"
+          },
+          "status": 404,
+          "requestId": "9a48a158201d629e9841d49a21b90f15",
+          "source": "Browser page audit",
+          "responseCaptured": true
+        },
+        {
+          "page": "/product-orders",
+          "endpoint": "/v1/marketplace/orders",
+          "query": {
+            "limit": "25"
+          },
+          "status": 404,
+          "requestId": "25f8c7f8ae63410ccc494fb676981817",
+          "source": "Browser page audit",
+          "responseCaptured": true
+        }
+      ],
+      "number": 5,
+      "errorCode": "not_found",
+      "errorMessage": "Route not found"
+    },
+    {
+      "endpoint": "GET /v1/admin/referrals/summary",
+      "httpStatus": 503,
+      "affectedPages": [
+        "/referrals",
+        "/generated"
+      ],
+      "cases": [
+        {
+          "request": {
+            "method": "GET",
+            "endpoint": "/v1/admin/referrals/summary",
+            "query": {},
+            "url": "/v1/admin/referrals/summary",
+            "browserProxyPath": "/api/proxy/v1/admin/referrals/summary",
+            "upstreamHeaders": {
+              "Accept": "application/json",
+              "Authorization": "Bearer [REDACTED; server supplied]",
+              "X-Account-Type": "user"
+            },
+            "body": null
+          },
+          "response": {
+            "status": 503,
+            "requestId": "6bea7442798a821956f9d570145ad09f",
+            "body": {
+              "error": {
+                "code": "temporarily_unavailable",
+                "details": {},
+                "message": "Analytics is temporarily unavailable."
+              },
+              "requestId": "6bea7442798a821956f9d570145ad09f"
+            }
+          },
+          "source": "Browser page audit"
+        }
+      ],
+      "occurrences": [
+        {
+          "page": "/referrals",
+          "endpoint": "/v1/admin/referrals/summary",
+          "query": {},
+          "status": 503,
+          "requestId": "6bea7442798a821956f9d570145ad09f",
+          "source": "Browser page audit",
+          "responseCaptured": true
+        },
+        {
+          "page": "/generated",
+          "endpoint": "/v1/admin/referrals/summary",
+          "query": {},
+          "status": 503,
+          "requestId": "01e1a563289c64f758a2e5f8720cab64",
+          "source": "Browser page audit",
+          "responseCaptured": true
+        },
+        {
+          "page": "/referrals",
+          "endpoint": "/v1/admin/referrals/summary",
+          "query": {},
+          "status": 503,
+          "requestId": "78f985f85499924d7d74b9e01197dc41",
+          "source": "Browser follow-up",
+          "responseCaptured": true
+        }
+      ],
+      "number": 6,
+      "errorCode": "temporarily_unavailable",
+      "errorMessage": "Analytics is temporarily unavailable."
+    },
+    {
+      "endpoint": "GET /v1/admin/referrals",
+      "httpStatus": 503,
+      "affectedPages": [
+        "/referrals",
+        "/generated"
+      ],
+      "cases": [
+        {
+          "request": {
+            "method": "GET",
+            "endpoint": "/v1/admin/referrals",
+            "query": {
+              "limit": "10"
+            },
+            "url": "/v1/admin/referrals?limit=10",
+            "browserProxyPath": "/api/proxy/v1/admin/referrals?limit=10",
+            "upstreamHeaders": {
+              "Accept": "application/json",
+              "Authorization": "Bearer [REDACTED; server supplied]",
+              "X-Account-Type": "user"
+            },
+            "body": null
+          },
+          "response": {
+            "status": 503,
+            "requestId": "1fb452d503ae825712983c088ecf5d3f",
+            "body": {
+              "error": {
+                "code": "temporarily_unavailable",
+                "details": {},
+                "message": "Analytics is temporarily unavailable."
+              },
+              "requestId": "1fb452d503ae825712983c088ecf5d3f"
+            }
+          },
+          "source": "Browser page audit"
+        }
+      ],
+      "occurrences": [
+        {
+          "page": "/referrals",
+          "endpoint": "/v1/admin/referrals",
+          "query": {
+            "limit": "10"
+          },
+          "status": 503,
+          "requestId": "1fb452d503ae825712983c088ecf5d3f",
+          "source": "Browser page audit",
+          "responseCaptured": true
+        },
+        {
+          "page": "/generated",
+          "endpoint": "/v1/admin/referrals",
+          "query": {
+            "limit": "10"
+          },
+          "status": 503,
+          "requestId": "809bc7aab665625acc0195d400198aa2",
+          "source": "Browser page audit",
+          "responseCaptured": true
+        },
+        {
+          "page": "/referrals",
+          "endpoint": "/v1/admin/referrals",
+          "query": {
+            "limit": "10"
+          },
+          "status": 503,
+          "requestId": "a4ba4d96a4eb4e54bb01da84f4890e62",
+          "source": "Browser follow-up",
+          "responseCaptured": true
+        }
+      ],
+      "number": 7,
+      "errorCode": "temporarily_unavailable",
+      "errorMessage": "Analytics is temporarily unavailable."
+    },
+    {
+      "endpoint": "GET /v1/shipping/offices",
+      "httpStatus": 400,
+      "affectedPages": [
+        "/head-offices"
+      ],
+      "cases": [
+        {
+          "request": {
+            "method": "GET",
+            "endpoint": "/v1/shipping/offices",
+            "query": {
+              "include_inactive": "true"
+            },
+            "url": "/v1/shipping/offices?include_inactive=true",
+            "browserProxyPath": "/api/proxy/v1/shipping/offices?include_inactive=true",
+            "upstreamHeaders": {
+              "Accept": "application/json",
+              "Authorization": "Bearer [REDACTED; server supplied]",
+              "X-Account-Type": "user"
+            },
+            "body": null
+          },
+          "response": {
+            "status": 400,
+            "requestId": "58cc3cfcdebccf8dfbc5e89c5a4f5b05",
+            "body": {
+              "error": {
+                "code": "invalid_request",
+                "details": {},
+                "message": "The reference request is invalid."
+              },
+              "requestId": "58cc3cfcdebccf8dfbc5e89c5a4f5b05"
+            }
+          },
+          "source": "Browser page audit"
+        }
+      ],
+      "occurrences": [
+        {
+          "page": "/head-offices",
+          "endpoint": "/v1/shipping/offices",
+          "query": {
+            "include_inactive": "true"
+          },
+          "status": 400,
+          "requestId": "58cc3cfcdebccf8dfbc5e89c5a4f5b05",
+          "source": "Browser page audit",
+          "responseCaptured": true
+        }
+      ],
+      "number": 8,
+      "errorCode": "invalid_request",
+      "errorMessage": "The reference request is invalid."
+    },
+    {
+      "endpoint": "GET /v1/admin/shipping/settings",
+      "httpStatus": 404,
+      "affectedPages": [
+        "/fees"
+      ],
+      "cases": [
+        {
+          "request": {
+            "method": "GET",
+            "endpoint": "/v1/admin/shipping/settings",
+            "query": {},
+            "url": "/v1/admin/shipping/settings",
+            "browserProxyPath": "/api/proxy/v1/admin/shipping/settings",
+            "upstreamHeaders": {
+              "Accept": "application/json",
+              "Authorization": "Bearer [REDACTED; server supplied]",
+              "X-Account-Type": "user"
+            },
+            "body": null
+          },
+          "response": {
+            "status": 404,
+            "requestId": "89aa74834f2b66e207cca4c92681b1ef",
+            "body": {
+              "error": {
+                "code": "not_found",
+                "details": {},
+                "message": "Route not found"
+              },
+              "requestId": "89aa74834f2b66e207cca4c92681b1ef"
+            }
+          },
+          "source": "Browser page audit"
+        }
+      ],
+      "occurrences": [
+        {
+          "page": "/fees",
+          "endpoint": "/v1/admin/shipping/settings",
+          "query": {},
+          "status": 404,
+          "requestId": "89aa74834f2b66e207cca4c92681b1ef",
+          "source": "Browser page audit",
+          "responseCaptured": true
+        }
+      ],
+      "number": 9,
+      "errorCode": "not_found",
+      "errorMessage": "Route not found"
+    },
+    {
+      "endpoint": "GET /v1/rides/fares",
+      "httpStatus": 404,
+      "affectedPages": [
+        "/fees"
+      ],
+      "cases": [
+        {
+          "request": {
+            "method": "GET",
+            "endpoint": "/v1/rides/fares",
+            "query": {},
+            "url": "/v1/rides/fares",
+            "browserProxyPath": "/api/proxy/v1/rides/fares",
+            "upstreamHeaders": {
+              "Accept": "application/json",
+              "Authorization": "Bearer [REDACTED; server supplied]",
+              "X-Account-Type": "user"
+            },
+            "body": null
+          },
+          "response": {
+            "status": 404,
+            "requestId": "9df0344d65423c61ff369339c4976d61",
+            "body": {
+              "error": {
+                "code": "not_found",
+                "details": {},
+                "message": "Ride not found."
+              },
+              "requestId": "9df0344d65423c61ff369339c4976d61"
+            }
+          },
+          "source": "Browser page audit"
+        }
+      ],
+      "occurrences": [
+        {
+          "page": "/fees",
+          "endpoint": "/v1/rides/fares",
+          "query": {},
+          "status": 404,
+          "requestId": "9df0344d65423c61ff369339c4976d61",
+          "source": "Browser page audit",
+          "responseCaptured": true
+        }
+      ],
+      "number": 10,
+      "errorCode": "not_found",
+      "errorMessage": "Ride not found."
+    },
+    {
+      "endpoint": "GET /v1/shipping/tariffs",
+      "httpStatus": 404,
+      "affectedPages": [
+        "/export-rates",
+        "/dhl-zones"
+      ],
+      "cases": [
+        {
+          "request": {
+            "method": "GET",
+            "endpoint": "/v1/shipping/tariffs",
+            "query": {
+              "include_inactive": "true"
+            },
+            "url": "/v1/shipping/tariffs?include_inactive=true",
+            "browserProxyPath": "/api/proxy/v1/shipping/tariffs?include_inactive=true",
+            "upstreamHeaders": {
+              "Accept": "application/json",
+              "Authorization": "Bearer [REDACTED; server supplied]",
+              "X-Account-Type": "user"
+            },
+            "body": null
+          },
+          "response": {
+            "status": 404,
+            "requestId": "bca15e5ee149a198790cd44ddc0ea3a0",
+            "body": {
+              "error": {
+                "code": "not_found",
+                "details": {},
+                "message": "Route not found"
+              },
+              "requestId": "bca15e5ee149a198790cd44ddc0ea3a0"
+            }
+          },
+          "source": "Browser page audit"
+        }
+      ],
+      "occurrences": [
+        {
+          "page": "/export-rates",
+          "endpoint": "/v1/shipping/tariffs",
+          "query": {
+            "include_inactive": "true"
+          },
+          "status": 404,
+          "requestId": "bca15e5ee149a198790cd44ddc0ea3a0",
+          "source": "Browser page audit",
+          "responseCaptured": true
+        },
+        {
+          "page": "/dhl-zones",
+          "endpoint": "/v1/shipping/tariffs",
+          "query": {
+            "include_inactive": "true"
+          },
+          "status": 404,
+          "requestId": "6b53f418b49659a66818d4066acba1d4",
+          "source": "Browser page audit",
+          "responseCaptured": true
+        }
+      ],
+      "number": 11,
+      "errorCode": "not_found",
+      "errorMessage": "Route not found"
+    },
+    {
+      "endpoint": "GET /v1/shipping/countries",
+      "httpStatus": 400,
+      "affectedPages": [
+        "/export-rates",
+        "/dhl-zones"
+      ],
+      "cases": [
+        {
+          "request": {
+            "method": "GET",
+            "endpoint": "/v1/shipping/countries",
+            "query": {
+              "include_inactive": "true"
+            },
+            "url": "/v1/shipping/countries?include_inactive=true",
+            "browserProxyPath": "/api/proxy/v1/shipping/countries?include_inactive=true",
+            "upstreamHeaders": {
+              "Accept": "application/json",
+              "Authorization": "Bearer [REDACTED; server supplied]",
+              "X-Account-Type": "user"
+            },
+            "body": null
+          },
+          "response": {
+            "status": 400,
+            "requestId": "04338dd79b128c6ba9d447aec8ab19bd",
+            "body": {
+              "error": {
+                "code": "invalid_request",
+                "details": {},
+                "message": "The reference request is invalid."
+              },
+              "requestId": "04338dd79b128c6ba9d447aec8ab19bd"
+            }
+          },
+          "source": "Browser page audit"
+        }
+      ],
+      "occurrences": [
+        {
+          "page": "/export-rates",
+          "endpoint": "/v1/shipping/countries",
+          "query": {
+            "include_inactive": "true"
+          },
+          "status": 400,
+          "requestId": "04338dd79b128c6ba9d447aec8ab19bd",
+          "source": "Browser page audit",
+          "responseCaptured": true
+        },
+        {
+          "page": "/dhl-zones",
+          "endpoint": "/v1/shipping/countries",
+          "query": {
+            "include_inactive": "true"
+          },
+          "status": 400,
+          "requestId": "dc17701db93a406d20b69b34a0b96ddd",
+          "source": "Browser page audit",
+          "responseCaptured": true
+        }
+      ],
+      "number": 12,
+      "errorCode": "invalid_request",
+      "errorMessage": "The reference request is invalid."
+    },
+    {
+      "endpoint": "GET /v1/admin/geography/tariffs",
+      "httpStatus": 404,
+      "affectedPages": [
+        "/delivery-zones",
+        "/dhl-local"
+      ],
+      "cases": [
+        {
+          "request": {
+            "method": "GET",
+            "endpoint": "/v1/admin/geography/tariffs",
+            "query": {},
+            "url": "/v1/admin/geography/tariffs",
+            "browserProxyPath": "/api/proxy/v1/admin/geography/tariffs",
+            "upstreamHeaders": {
+              "Accept": "application/json",
+              "Authorization": "Bearer [REDACTED; server supplied]",
+              "X-Account-Type": "user"
+            },
+            "body": null
+          },
+          "response": {
+            "status": 404,
+            "requestId": "56677c7ebd3fe21be003e7e9e8853b69",
+            "body": {
+              "error": {
+                "code": "not_found",
+                "details": {},
+                "message": "Route not found"
+              },
+              "requestId": "56677c7ebd3fe21be003e7e9e8853b69"
+            }
+          },
+          "source": "Browser page audit"
+        }
+      ],
+      "occurrences": [
+        {
+          "page": "/delivery-zones",
+          "endpoint": "/v1/admin/geography/tariffs",
+          "query": {},
+          "status": 404,
+          "requestId": "56677c7ebd3fe21be003e7e9e8853b69",
+          "source": "Browser page audit",
+          "responseCaptured": true
+        },
+        {
+          "page": "/dhl-local",
+          "endpoint": "/v1/admin/geography/tariffs",
+          "query": {},
+          "status": 404,
+          "requestId": "b9571cb292f98ea5c436da8a78cf4a26",
+          "source": "Browser page audit",
+          "responseCaptured": true
+        }
+      ],
+      "number": 13,
+      "errorCode": "not_found",
+      "errorMessage": "Route not found"
+    },
+    {
+      "endpoint": "GET /v1/geography/states",
+      "httpStatus": 404,
+      "affectedPages": [
+        "/delivery-zones",
+        "/dhl-local"
+      ],
+      "cases": [
+        {
+          "request": {
+            "method": "GET",
+            "endpoint": "/v1/geography/states",
+            "query": {},
+            "url": "/v1/geography/states",
+            "browserProxyPath": "/api/proxy/v1/geography/states",
+            "upstreamHeaders": {
+              "Accept": "application/json",
+              "Authorization": "Bearer [REDACTED; server supplied]",
+              "X-Account-Type": "user"
+            },
+            "body": null
+          },
+          "response": {
+            "status": 404,
+            "requestId": "321064c5caef6356c92362b584ede533",
+            "body": {
+              "error": {
+                "code": "not_found",
+                "details": {},
+                "message": "Route not found"
+              },
+              "requestId": "321064c5caef6356c92362b584ede533"
+            }
+          },
+          "source": "Browser page audit"
+        }
+      ],
+      "occurrences": [
+        {
+          "page": "/delivery-zones",
+          "endpoint": "/v1/geography/states",
+          "query": {},
+          "status": 404,
+          "requestId": "321064c5caef6356c92362b584ede533",
+          "source": "Browser page audit",
+          "responseCaptured": true
+        },
+        {
+          "page": "/dhl-local",
+          "endpoint": "/v1/geography/states",
+          "query": {},
+          "status": 404,
+          "requestId": "db7cbc6e8dde06e50765baa218e0ecb8",
+          "source": "Browser page audit",
+          "responseCaptured": true
+        }
+      ],
+      "number": 14,
+      "errorCode": "not_found",
+      "errorMessage": "Route not found"
+    },
+    {
+      "endpoint": "GET /v1/config/mobile",
+      "httpStatus": 503,
+      "affectedPages": [
+        "/app-config",
+        "/app-config [user/ios]",
+        "/app-config [rider/android]",
+        "/app-config [rider/ios]"
+      ],
+      "cases": [
+        {
+          "request": {
+            "method": "GET",
+            "endpoint": "/v1/config/mobile",
+            "query": {
+              "app": "user",
+              "platform": "android"
+            },
+            "url": "/v1/config/mobile?app=user&platform=android",
+            "browserProxyPath": "/api/proxy/v1/config/mobile?app=user&platform=android",
+            "upstreamHeaders": {
+              "Accept": "application/json"
+            },
+            "body": null
+          },
+          "response": {
+            "status": 503,
+            "requestId": "7eee1eb37ce7e174bc43a6d7f8087591",
+            "body": {
+              "error": {
+                "code": "reference_unavailable",
+                "details": {},
+                "message": "Customer reference data is temporarily unavailable."
+              },
+              "requestId": "7eee1eb37ce7e174bc43a6d7f8087591"
+            }
+          },
+          "source": "Browser page audit"
+        },
+        {
+          "request": {
+            "method": "GET",
+            "endpoint": "/v1/config/mobile",
+            "query": {
+              "app": "user",
+              "platform": "ios"
+            },
+            "url": "/v1/config/mobile?app=user&platform=ios",
+            "browserProxyPath": "/api/proxy/v1/config/mobile?app=user&platform=ios",
+            "upstreamHeaders": {
+              "Accept": "application/json"
+            },
+            "body": null
+          },
+          "response": {
+            "status": 503,
+            "requestId": "ff512f3d67ec850c45163f751c363474",
+            "body": {
+              "error": {
+                "code": "reference_unavailable",
+                "details": {},
+                "message": "Customer reference data is temporarily unavailable."
+              },
+              "requestId": "ff512f3d67ec850c45163f751c363474"
+            }
+          },
+          "source": "Browser page audit"
+        },
+        {
+          "request": {
+            "method": "GET",
+            "endpoint": "/v1/config/mobile",
+            "query": {
+              "app": "rider",
+              "platform": "android"
+            },
+            "url": "/v1/config/mobile?app=rider&platform=android",
+            "browserProxyPath": "/api/proxy/v1/config/mobile?app=rider&platform=android",
+            "upstreamHeaders": {
+              "Accept": "application/json"
+            },
+            "body": null
+          },
+          "response": {
+            "status": 503,
+            "requestId": "c6f532abc2d0896e11dc49df74473376",
+            "body": {
+              "error": {
+                "code": "reference_unavailable",
+                "details": {},
+                "message": "Customer reference data is temporarily unavailable."
+              },
+              "requestId": "c6f532abc2d0896e11dc49df74473376"
+            }
+          },
+          "source": "Browser page audit"
+        },
+        {
+          "request": {
+            "method": "GET",
+            "endpoint": "/v1/config/mobile",
+            "query": {
+              "app": "rider",
+              "platform": "ios"
+            },
+            "url": "/v1/config/mobile?app=rider&platform=ios",
+            "browserProxyPath": "/api/proxy/v1/config/mobile?app=rider&platform=ios",
+            "upstreamHeaders": {
+              "Accept": "application/json"
+            },
+            "body": null
+          },
+          "response": {
+            "status": 503,
+            "requestId": "42bea1c66c48feba77c4366359101366",
+            "body": {
+              "error": {
+                "code": "reference_unavailable",
+                "details": {},
+                "message": "Customer reference data is temporarily unavailable."
+              },
+              "requestId": "42bea1c66c48feba77c4366359101366"
+            }
+          },
+          "source": "Browser page audit"
+        }
+      ],
+      "occurrences": [
+        {
+          "page": "/app-config",
+          "endpoint": "/v1/config/mobile",
+          "query": {
+            "app": "user",
+            "platform": "android"
+          },
+          "status": 503,
+          "requestId": "7eee1eb37ce7e174bc43a6d7f8087591",
+          "source": "Browser page audit",
+          "responseCaptured": true
+        },
+        {
+          "page": "/app-config [user/ios]",
+          "endpoint": "/v1/config/mobile",
+          "query": {
+            "app": "user",
+            "platform": "ios"
+          },
+          "status": 503,
+          "requestId": "ff512f3d67ec850c45163f751c363474",
+          "source": "Browser page audit",
+          "responseCaptured": true
+        },
+        {
+          "page": "/app-config [rider/android]",
+          "endpoint": "/v1/config/mobile",
+          "query": {
+            "app": "rider",
+            "platform": "android"
+          },
+          "status": 503,
+          "requestId": "c6f532abc2d0896e11dc49df74473376",
+          "source": "Browser page audit",
+          "responseCaptured": true
+        },
+        {
+          "page": "/app-config [rider/ios]",
+          "endpoint": "/v1/config/mobile",
+          "query": {
+            "app": "rider",
+            "platform": "ios"
+          },
+          "status": 503,
+          "requestId": "42bea1c66c48feba77c4366359101366",
+          "source": "Browser page audit",
+          "responseCaptured": true
+        }
+      ],
+      "number": 15,
+      "errorCode": "reference_unavailable",
+      "errorMessage": "Customer reference data is temporarily unavailable."
+    },
+    {
+      "endpoint": "GET /v1/marketplace/categories",
+      "httpStatus": 404,
+      "affectedPages": [
+        "/catalogue"
+      ],
+      "cases": [
+        {
+          "request": {
+            "method": "GET",
+            "endpoint": "/v1/marketplace/categories",
+            "query": {},
+            "url": "/v1/marketplace/categories",
+            "browserProxyPath": "/api/proxy/v1/marketplace/categories",
+            "upstreamHeaders": {
+              "Accept": "application/json",
+              "Authorization": "Bearer [REDACTED; server supplied]",
+              "X-Account-Type": "user"
+            },
+            "body": null
+          },
+          "response": {
+            "status": 404,
+            "requestId": "fe71e1422e8ecc8690dbfa4d679e5ad8",
+            "body": {
+              "error": {
+                "code": "not_found",
+                "details": {},
+                "message": "Route not found"
+              },
+              "requestId": "fe71e1422e8ecc8690dbfa4d679e5ad8"
+            }
+          },
+          "source": "Browser page audit"
+        }
+      ],
+      "occurrences": [
+        {
+          "page": "/catalogue",
+          "endpoint": "/v1/marketplace/categories",
+          "query": {},
+          "status": 404,
+          "requestId": "fe71e1422e8ecc8690dbfa4d679e5ad8",
+          "source": "Browser page audit",
+          "responseCaptured": true
+        }
+      ],
+      "number": 16,
+      "errorCode": "not_found",
+      "errorMessage": "Route not found"
+    },
+    {
+      "endpoint": "GET /v1/marketplace/items",
+      "httpStatus": 404,
+      "affectedPages": [
+        "/catalogue"
+      ],
+      "cases": [
+        {
+          "request": {
+            "method": "GET",
+            "endpoint": "/v1/marketplace/items",
+            "query": {
+              "limit": "25"
+            },
+            "url": "/v1/marketplace/items?limit=25",
+            "browserProxyPath": "/api/proxy/v1/marketplace/items?limit=25",
+            "upstreamHeaders": {
+              "Accept": "application/json",
+              "Authorization": "Bearer [REDACTED; server supplied]",
+              "X-Account-Type": "user"
+            },
+            "body": null
+          },
+          "response": {
+            "status": 404,
+            "requestId": "c16c832777634239ff954bc34b73610f",
+            "body": {
+              "error": {
+                "code": "not_found",
+                "details": {},
+                "message": "Route not found"
+              },
+              "requestId": "c16c832777634239ff954bc34b73610f"
+            }
+          },
+          "source": "Browser page audit"
+        }
+      ],
+      "occurrences": [
+        {
+          "page": "/catalogue",
+          "endpoint": "/v1/marketplace/items",
+          "query": {
+            "limit": "25"
+          },
+          "status": 404,
+          "requestId": "c16c832777634239ff954bc34b73610f",
+          "source": "Browser page audit",
+          "responseCaptured": true
+        }
+      ],
+      "number": 17,
+      "errorCode": "not_found",
+      "errorMessage": "Route not found"
+    },
+    {
+      "endpoint": "GET /v1/admin/audit",
+      "httpStatus": 404,
+      "affectedPages": [
+        "/audit"
+      ],
+      "cases": [
+        {
+          "request": {
+            "method": "GET",
+            "endpoint": "/v1/admin/audit",
+            "query": {
+              "limit": "25"
+            },
+            "url": "/v1/admin/audit?limit=25",
+            "browserProxyPath": "/api/proxy/v1/admin/audit?limit=25",
+            "upstreamHeaders": {
+              "Accept": "application/json",
+              "Authorization": "Bearer [REDACTED; server supplied]",
+              "X-Account-Type": "user"
+            },
+            "body": null
+          },
+          "response": {
+            "status": 404,
+            "requestId": "77946c4793d87cefa06a736d9d9b14a4",
+            "body": {
+              "error": {
+                "code": "not_found",
+                "details": {},
+                "message": "Route not found"
+              },
+              "requestId": "77946c4793d87cefa06a736d9d9b14a4"
+            }
+          },
+          "source": "Browser page audit"
+        }
+      ],
+      "occurrences": [
+        {
+          "page": "/audit",
+          "endpoint": "/v1/admin/audit",
+          "query": {
+            "limit": "25"
+          },
+          "status": 404,
+          "requestId": "77946c4793d87cefa06a736d9d9b14a4",
+          "source": "Browser page audit",
+          "responseCaptured": true
+        }
+      ],
+      "number": 18,
+      "errorCode": "not_found",
+      "errorMessage": "Route not found"
+    },
+    {
+      "endpoint": "GET /v1/admin/analytics/time-to-first-order",
+      "httpStatus": 400,
+      "affectedPages": [
+        "/user-activation"
+      ],
+      "cases": [
+        {
+          "request": {
+            "method": "GET",
+            "endpoint": "/v1/admin/analytics/time-to-first-order",
+            "query": {
+              "summary_only": "true"
+            },
+            "url": "/v1/admin/analytics/time-to-first-order?summary_only=true",
+            "browserProxyPath": "/api/proxy/v1/admin/analytics/time-to-first-order?summary_only=true",
+            "upstreamHeaders": {
+              "Accept": "application/json",
+              "Authorization": "Bearer [REDACTED; server supplied]",
+              "X-Account-Type": "user"
+            },
+            "body": null
+          },
+          "response": {
+            "status": 400,
+            "requestId": "5d6d2cf7f4c507f38c0e1f1454480deb",
+            "body": {
+              "error": {
+                "code": "invalid_request",
+                "details": {},
+                "message": "The analytics request is invalid."
+              },
+              "requestId": "5d6d2cf7f4c507f38c0e1f1454480deb"
+            }
+          },
+          "source": "Browser page audit"
+        }
+      ],
+      "occurrences": [
+        {
+          "page": "/user-activation",
+          "endpoint": "/v1/admin/analytics/time-to-first-order",
+          "query": {
+            "summary_only": "true"
+          },
+          "status": 400,
+          "requestId": "5d6d2cf7f4c507f38c0e1f1454480deb",
+          "source": "Browser page audit",
+          "responseCaptured": true
+        },
+        {
+          "page": "/user-activation",
+          "endpoint": "/v1/admin/analytics/time-to-first-order",
+          "query": {
+            "summary_only": "true"
+          },
+          "status": 400,
+          "requestId": "4de9d1820cd3ec6d2cf8bdee3cdb2413",
+          "source": "Browser follow-up",
+          "responseCaptured": true
+        }
+      ],
+      "number": 19,
+      "errorCode": "invalid_request",
+      "errorMessage": "The analytics request is invalid."
+    },
+    {
+      "endpoint": "GET /v1/admin/analytics/coupon-redemptions",
+      "httpStatus": 400,
+      "affectedPages": [
+        "/coupon-redemption-metrics [2026-10-26 to 2026-11-02]"
+      ],
+      "cases": [
+        {
+          "request": {
+            "method": "GET",
+            "endpoint": "/v1/admin/analytics/coupon-redemptions",
+            "query": {
+              "start_date": "2026-10-26",
+              "end_date": "2026-11-02"
+            },
+            "url": "/v1/admin/analytics/coupon-redemptions?start_date=2026-10-26&end_date=2026-11-02",
+            "browserProxyPath": "/api/proxy/v1/admin/analytics/coupon-redemptions?start_date=2026-10-26&end_date=2026-11-02",
+            "upstreamHeaders": {
+              "Accept": "application/json",
+              "Authorization": "Bearer [REDACTED; server supplied]",
+              "X-Account-Type": "user"
+            },
+            "body": null
+          },
+          "response": {
+            "status": 400,
+            "requestId": "150ee3a1bef1f6b3b72b75b6c281a818",
+            "body": {
+              "error": {
+                "code": "invalid_request",
+                "details": {},
+                "message": "The analytics request is invalid."
+              },
+              "requestId": "150ee3a1bef1f6b3b72b75b6c281a818"
+            }
+          },
+          "source": "Browser page audit"
+        }
+      ],
+      "occurrences": [
+        {
+          "page": "/coupon-redemption-metrics [2026-10-26 to 2026-11-02]",
+          "endpoint": "/v1/admin/analytics/coupon-redemptions",
+          "query": {
+            "start_date": "2026-10-26",
+            "end_date": "2026-11-02"
+          },
+          "status": 400,
+          "requestId": "150ee3a1bef1f6b3b72b75b6c281a818",
+          "source": "Browser page audit",
+          "responseCaptured": true
+        }
+      ],
+      "number": 20,
+      "errorCode": "invalid_request",
+      "errorMessage": "The analytics request is invalid."
+    },
+    {
+      "endpoint": "GET /v1/shipments/{id}/tracking",
+      "httpStatus": 404,
+      "affectedPages": [
+        "/shipment-orders/d276de00bab3da49023ff7925813421a09c142f2f47ab0cd8e3692930185ef9b",
+        "/shipment-orders/cb8aa7eace2556d74bde05f10fb6db91cf701ee804c88d7d8d30d44eb2ad73d5",
+        "/shipment-orders/192ae579d756147cab31462e32297a4eac5b1cd8783132b84ba8c940ce3df190"
+      ],
+      "cases": [
+        {
+          "request": {
+            "method": "GET",
+            "endpoint": "/v1/shipments/d276de00bab3da49023ff7925813421a09c142f2f47ab0cd8e3692930185ef9b/tracking",
+            "query": {},
+            "url": "/v1/shipments/d276de00bab3da49023ff7925813421a09c142f2f47ab0cd8e3692930185ef9b/tracking",
+            "browserProxyPath": "/api/proxy/v1/shipments/d276de00bab3da49023ff7925813421a09c142f2f47ab0cd8e3692930185ef9b/tracking",
+            "upstreamHeaders": {
+              "Accept": "application/json",
+              "Authorization": "Bearer [REDACTED; server supplied]",
+              "X-Account-Type": "user"
+            },
+            "body": null
+          },
+          "response": {
+            "status": 404,
+            "requestId": "848866e9a949b6f0d29fd7d33228761b",
+            "body": {
+              "error": {
+                "code": "not_found",
+                "details": {},
+                "message": "Tracking not found"
+              },
+              "requestId": "848866e9a949b6f0d29fd7d33228761b"
+            }
+          },
+          "source": "Browser page audit"
+        },
+        {
+          "request": {
+            "method": "GET",
+            "endpoint": "/v1/shipments/cb8aa7eace2556d74bde05f10fb6db91cf701ee804c88d7d8d30d44eb2ad73d5/tracking",
+            "query": {},
+            "url": "/v1/shipments/cb8aa7eace2556d74bde05f10fb6db91cf701ee804c88d7d8d30d44eb2ad73d5/tracking",
+            "browserProxyPath": "/api/proxy/v1/shipments/cb8aa7eace2556d74bde05f10fb6db91cf701ee804c88d7d8d30d44eb2ad73d5/tracking",
+            "upstreamHeaders": {
+              "Accept": "application/json",
+              "Authorization": "Bearer [REDACTED; server supplied]",
+              "X-Account-Type": "user"
+            },
+            "body": null
+          },
+          "response": {
+            "status": 404,
+            "requestId": "88ac07c2e2ad15f63fa0271979f6ead8",
+            "body": {
+              "error": {
+                "code": "not_found",
+                "details": {},
+                "message": "Tracking not found"
+              },
+              "requestId": "88ac07c2e2ad15f63fa0271979f6ead8"
+            }
+          },
+          "source": "Browser page audit"
+        },
+        {
+          "request": {
+            "method": "GET",
+            "endpoint": "/v1/shipments/192ae579d756147cab31462e32297a4eac5b1cd8783132b84ba8c940ce3df190/tracking",
+            "query": {},
+            "url": "/v1/shipments/192ae579d756147cab31462e32297a4eac5b1cd8783132b84ba8c940ce3df190/tracking",
+            "browserProxyPath": "/api/proxy/v1/shipments/192ae579d756147cab31462e32297a4eac5b1cd8783132b84ba8c940ce3df190/tracking",
+            "upstreamHeaders": {
+              "Accept": "application/json",
+              "Authorization": "Bearer [REDACTED; server supplied]",
+              "X-Account-Type": "user"
+            },
+            "body": null
+          },
+          "response": {
+            "status": 404,
+            "requestId": "48fb7dd5651cc0b6d6713abd05e116e7",
+            "body": {
+              "error": {
+                "code": "not_found",
+                "details": {},
+                "message": "Tracking not found"
+              },
+              "requestId": "48fb7dd5651cc0b6d6713abd05e116e7"
+            }
+          },
+          "source": "Browser page audit"
+        }
+      ],
+      "occurrences": [
+        {
+          "page": "/shipment-orders/d276de00bab3da49023ff7925813421a09c142f2f47ab0cd8e3692930185ef9b",
+          "endpoint": "/v1/shipments/d276de00bab3da49023ff7925813421a09c142f2f47ab0cd8e3692930185ef9b/tracking",
+          "query": {},
+          "status": 404,
+          "requestId": "848866e9a949b6f0d29fd7d33228761b",
+          "source": "Browser page audit",
+          "responseCaptured": true
+        },
+        {
+          "page": "/shipment-orders/cb8aa7eace2556d74bde05f10fb6db91cf701ee804c88d7d8d30d44eb2ad73d5",
+          "endpoint": "/v1/shipments/cb8aa7eace2556d74bde05f10fb6db91cf701ee804c88d7d8d30d44eb2ad73d5/tracking",
+          "query": {},
+          "status": 404,
+          "requestId": "88ac07c2e2ad15f63fa0271979f6ead8",
+          "source": "Browser page audit",
+          "responseCaptured": true
+        },
+        {
+          "page": "/shipment-orders/192ae579d756147cab31462e32297a4eac5b1cd8783132b84ba8c940ce3df190",
+          "endpoint": "/v1/shipments/192ae579d756147cab31462e32297a4eac5b1cd8783132b84ba8c940ce3df190/tracking",
+          "query": {},
+          "status": 404,
+          "requestId": "48fb7dd5651cc0b6d6713abd05e116e7",
+          "source": "Browser page audit",
+          "responseCaptured": true
+        }
+      ],
+      "number": 21,
+      "errorCode": "not_found",
+      "errorMessage": "Tracking not found",
+      "interpretation": "Tracking was missing for all three sampled, existing shipments. Shipment detail reads succeeded; this is not evidence that the tracking route is unmounted."
+    },
+    {
+      "endpoint": "GET /v1/admin/support/tickets/{id}/messages",
+      "httpStatus": 503,
+      "affectedPages": [
+        "/support-tickets/AQGwx67wSWJz40futLkw"
+      ],
+      "cases": [
+        {
+          "request": {
+            "method": "GET",
+            "endpoint": "/v1/admin/support/tickets/AQGwx67wSWJz40futLkw/messages",
+            "query": {
+              "limit": "25"
+            },
+            "url": "/v1/admin/support/tickets/AQGwx67wSWJz40futLkw/messages?limit=25",
+            "browserProxyPath": "/api/proxy/v1/admin/support/tickets/AQGwx67wSWJz40futLkw/messages?limit=25",
+            "upstreamHeaders": {
+              "Accept": "application/json",
+              "Authorization": "Bearer [REDACTED; server supplied]",
+              "X-Account-Type": "user"
+            },
+            "body": null
+          },
+          "response": {
+            "status": 503,
+            "requestId": "ce0e1ccbe9bd3946f4d429055037a2e7",
+            "body": {
+              "error": {
+                "code": "unavailable",
+                "details": {},
+                "message": "Administration is temporarily unavailable"
+              },
+              "requestId": "ce0e1ccbe9bd3946f4d429055037a2e7"
+            }
+          },
+          "source": "Browser page audit"
+        }
+      ],
+      "occurrences": [
+        {
+          "page": "/support-tickets/AQGwx67wSWJz40futLkw",
+          "endpoint": "/v1/admin/support/tickets/AQGwx67wSWJz40futLkw/messages",
+          "query": {
+            "limit": "25"
+          },
+          "status": 503,
+          "requestId": "ce0e1ccbe9bd3946f4d429055037a2e7",
+          "source": "Browser page audit",
+          "responseCaptured": true
+        },
+        {
+          "page": "/support-tickets/AQGwx67wSWJz40futLkw",
+          "endpoint": "/v1/admin/support/tickets/AQGwx67wSWJz40futLkw/messages",
+          "query": {
+            "limit": "25"
+          },
+          "status": 503,
+          "requestId": "231bcf16311c3473e80208edbffb1def",
+          "source": "Browser follow-up",
+          "responseCaptured": true
+        }
+      ],
+      "number": 22,
+      "errorCode": "unavailable",
+      "errorMessage": "Administration is temporarily unavailable",
+      "interpretation": "Repeated 503 for ticket AQGwx67wSWJz40futLkw. Two other sampled conversations loaded successfully; this is a ticket-specific observed failure."
+    },
+    {
+      "endpoint": "GET /v1/admin/referrals/export.csv",
+      "httpStatus": 503,
+      "affectedPages": [
+        "/referrals [export 2026-10-26 to 2026-11-02]"
+      ],
+      "cases": [
+        {
+          "request": {
+            "method": "GET",
+            "endpoint": "/v1/admin/referrals/export.csv",
+            "query": {
+              "startDate": "2026-10-26",
+              "endDate": "2026-11-02"
+            },
+            "url": "/v1/admin/referrals/export.csv?startDate=2026-10-26&endDate=2026-11-02",
+            "browserProxyPath": "/api/proxy/v1/admin/referrals/export.csv?startDate=2026-10-26&endDate=2026-11-02",
+            "upstreamHeaders": {
+              "Accept": "application/json",
+              "Authorization": "Bearer [REDACTED; server supplied]",
+              "X-Account-Type": "user"
+            },
+            "body": null
+          },
+          "response": {
+            "status": 503,
+            "requestId": "cba0aafc4cfc5f7effbfc373e5f42a74",
+            "body": {
+              "error": {
+                "code": "temporarily_unavailable",
+                "details": {},
+                "message": "Analytics is temporarily unavailable."
+              },
+              "requestId": "cba0aafc4cfc5f7effbfc373e5f42a74"
+            }
+          },
+          "source": "Browser follow-up"
+        }
+      ],
+      "occurrences": [
+        {
+          "page": "/referrals [export 2026-10-26 to 2026-11-02]",
+          "endpoint": "/v1/admin/referrals/export.csv",
+          "query": {
+            "startDate": "2026-10-26",
+            "endDate": "2026-11-02"
+          },
+          "status": 503,
+          "requestId": "cba0aafc4cfc5f7effbfc373e5f42a74",
+          "source": "Browser follow-up",
+          "responseCaptured": true
+        }
+      ],
+      "number": 23,
+      "errorCode": "temporarily_unavailable",
+      "errorMessage": "Analytics is temporarily unavailable."
+    },
+    {
+      "endpoint": "GET /v1/admin/reports/accounts",
+      "httpStatus": 404,
+      "affectedPages": [
+        "/users [export read]"
+      ],
+      "cases": [
+        {
+          "request": {
+            "method": "GET",
+            "endpoint": "/v1/admin/reports/accounts",
+            "query": {
+              "type": "users",
+              "limit": "2000"
+            },
+            "url": "/v1/admin/reports/accounts?type=users&limit=2000",
+            "browserProxyPath": "/api/proxy/v1/admin/reports/accounts?type=users&limit=2000",
+            "upstreamHeaders": {
+              "Accept": "application/json",
+              "Authorization": "Bearer [REDACTED; server supplied]",
+              "X-Account-Type": "user"
+            },
+            "body": null
+          },
+          "response": {
+            "status": 404,
+            "requestId": "8a45292bf8dc0a9c6db7467aad262e67",
+            "body": {
+              "error": {
+                "code": "not_found",
+                "details": {},
+                "message": "Route not found"
+              },
+              "requestId": "8a45292bf8dc0a9c6db7467aad262e67"
+            }
+          },
+          "source": "Authenticated proxy recheck with response body consumed"
+        }
+      ],
+      "occurrences": [
+        {
+          "page": "/users [export read]",
+          "endpoint": "/v1/admin/reports/accounts",
+          "query": {
+            "type": "users",
+            "limit": "2000"
+          },
+          "status": 404,
+          "requestId": "73cf5463971d376b783af6ae4ed1c089",
+          "source": "Browser follow-up",
+          "responseCaptured": false
+        },
+        {
+          "page": "/users [export read]",
+          "endpoint": "/v1/admin/reports/accounts",
+          "query": {
+            "type": "users",
+            "limit": "2000"
+          },
+          "status": 404,
+          "requestId": "8a45292bf8dc0a9c6db7467aad262e67",
+          "source": "Authenticated proxy recheck with response body consumed",
+          "responseCaptured": true
+        }
+      ],
+      "number": 24,
+      "errorCode": "not_found",
+      "errorMessage": "Route not found"
+    },
+    {
+      "endpoint": "GET /v1/admin/reports/riders",
+      "httpStatus": 404,
+      "affectedPages": [
+        "/riders [export read]"
+      ],
+      "cases": [
+        {
+          "request": {
+            "method": "GET",
+            "endpoint": "/v1/admin/reports/riders",
+            "query": {
+              "format": "csv",
+              "limit": "2000"
+            },
+            "url": "/v1/admin/reports/riders?format=csv&limit=2000",
+            "browserProxyPath": "/api/proxy/v1/admin/reports/riders?format=csv&limit=2000",
+            "upstreamHeaders": {
+              "Accept": "application/json",
+              "Authorization": "Bearer [REDACTED; server supplied]",
+              "X-Account-Type": "user"
+            },
+            "body": null
+          },
+          "response": {
+            "status": 404,
+            "requestId": "16ab173d1b6bd4fee71944ea2d6ac40c",
+            "body": {
+              "error": {
+                "code": "not_found",
+                "details": {},
+                "message": "Route not found"
+              },
+              "requestId": "16ab173d1b6bd4fee71944ea2d6ac40c"
+            }
+          },
+          "source": "Authenticated proxy recheck with response body consumed"
+        }
+      ],
+      "occurrences": [
+        {
+          "page": "/riders [export read]",
+          "endpoint": "/v1/admin/reports/riders",
+          "query": {
+            "format": "csv",
+            "limit": "2000"
+          },
+          "status": 404,
+          "requestId": "3ea6246bab13f8fe58c92b576ecc792f",
+          "source": "Browser follow-up",
+          "responseCaptured": false
+        },
+        {
+          "page": "/riders [export read]",
+          "endpoint": "/v1/admin/reports/riders",
+          "query": {
+            "format": "csv",
+            "limit": "2000"
+          },
+          "status": 404,
+          "requestId": "16ab173d1b6bd4fee71944ea2d6ac40c",
+          "source": "Authenticated proxy recheck with response body consumed",
+          "responseCaptured": true
+        }
+      ],
+      "number": 25,
+      "errorCode": "not_found",
+      "errorMessage": "Route not found"
+    }
+  ],
+  "frontendFailures": [
+    {
+      "page": "/rider-weekly-deliveries",
+      "request": {
+        "method": "GET",
+        "url": "/v1/admin/analytics/rider-weekly-deliveries?limit=25",
+        "body": null
+      },
+      "response": {
+        "status": 200,
+        "requestId": "11d7f56030bf490e4f0b316c920dce65",
+        "structureOnly": {
+          "topLevelKeys": [
+            "data",
+            "requestId"
+          ],
+          "dataKeys": [
+            "asOfDate",
+            "coverage",
+            "items",
+            "nextCursor"
+          ],
+          "itemCount": 16,
+          "firstItemKeys": [
+            "riderId",
+            "weeks"
+          ]
+        },
+        "note": "Structure/counts recorded instead of customer records; this is not an HTTP error body."
+      },
+      "visibleResult": [
+        "Page 1 · 0 records on this page"
+      ],
+      "errorMessage": "The API returned 16 records, but the table displayed 0 records.",
+      "cause": "Frontend integration mismatch: api.ts does not unwrap the data envelope for this analytics route; reports.tsx selects riders instead of data.items and uses legacy snake_case columns.",
+      "sourceFiles": [
+        "src/lib/api.ts",
+        "src/features/admin/reports.tsx"
+      ]
+    },
+    {
+      "page": "/user-activation",
+      "request": {
+        "method": "GET",
+        "url": "/v1/admin/analytics/time-to-first-order?limit=25",
+        "body": null
+      },
+      "response": {
+        "status": 200,
+        "requestId": "8b2bccf640e3e17df1c3f873a07d6cba",
+        "structureOnly": {
+          "topLevelKeys": [
+            "data",
+            "requestId"
+          ],
+          "dataKeys": [
+            "coverage",
+            "items",
+            "nextCursor",
+            "summary"
+          ],
+          "itemCount": 25,
+          "firstItemKeys": [
+            "userId",
+            "status",
+            "createdAt",
+            "firstOrderAt",
+            "timeToFirstOrderDays"
+          ]
+        },
+        "note": "Structure/counts recorded instead of customer records; this is not an HTTP error body."
+      },
+      "visibleResult": [
+        "Page 1 · 0 records on this page"
+      ],
+      "errorMessage": "The API returned 25 records, but the table displayed 0 records.",
+      "cause": "Frontend integration mismatch: api.ts does not unwrap the data envelope for this analytics route; reports.tsx selects users instead of data.items and uses legacy snake_case columns.",
+      "sourceFiles": [
+        "src/lib/api.ts",
+        "src/features/admin/reports.tsx"
+      ]
+    }
+  ],
+  "pageCoverage": [
+    {
+      "page": "/dashboard",
+      "finalPath": "/dashboard",
+      "errors": [
+        "Analytics is temporarily unavailable.Request reference: 9550abad2fffe70bcd7783d166862f99Try again",
+        "Analytics is temporarily unavailable.Request reference: 8163b4457a8c605373e5528aedd1d4c4Try again"
+      ],
+      "visibleTableStatuses": [],
+      "endpoints": [
+        {
+          "method": "GET",
+          "endpoint": "/v1/admin/analytics/account-summary",
+          "query": {
+            "type": "users"
+          },
+          "status": 503,
+          "responseStructure": {
+            "keys": [
+              "error",
+              "requestId"
+            ],
+            "dataKeys": [],
+            "arrayLengths": {}
+          }
+        },
+        {
+          "method": "GET",
+          "endpoint": "/v1/admin/analytics/order-summary",
+          "query": {
+            "type": "shipment"
+          },
+          "status": 503,
+          "responseStructure": {
+            "keys": [
+              "error",
+              "requestId"
+            ],
+            "dataKeys": [],
+            "arrayLengths": {}
+          }
+        }
+      ]
+    },
+    {
+      "page": "/reports",
+      "finalPath": "/reports",
+      "errors": [
+        "Analytics is temporarily unavailable.Request reference: 6be8d4af8fee8f75540b4dada5f48e88Try again",
+        "Analytics is temporarily unavailable.Request reference: 2cd5deac16149fb25cfda5d17be81e1bTry again"
+      ],
+      "visibleTableStatuses": [],
+      "endpoints": [
+        {
+          "method": "GET",
+          "endpoint": "/v1/admin/analytics/account-summary",
+          "query": {
+            "type": "users"
+          },
+          "status": 503,
+          "responseStructure": {
+            "keys": [
+              "error",
+              "requestId"
+            ],
+            "dataKeys": [],
+            "arrayLengths": {}
+          }
+        },
+        {
+          "method": "GET",
+          "endpoint": "/v1/admin/analytics/order-summary",
+          "query": {
+            "type": "shipment"
+          },
+          "status": 503,
+          "responseStructure": {
+            "keys": [
+              "error",
+              "requestId"
+            ],
+            "dataKeys": [],
+            "arrayLengths": {}
+          }
+        }
+      ]
+    },
+    {
+      "page": "/users",
+      "finalPath": "/users",
+      "errors": [
+        "Route not foundRequest reference: 6b696d5aad3afe6edeaeae06ffe1b691Try again"
+      ],
+      "visibleTableStatuses": [
+        "Page 1 · 0 records on this page",
+        ""
+      ],
+      "endpoints": [
+        {
+          "method": "GET",
+          "endpoint": "/v1/admin/users",
+          "query": {
+            "limit": "25"
+          },
+          "status": 404,
+          "responseStructure": {
+            "keys": [
+              "error",
+              "requestId"
+            ],
+            "dataKeys": [],
+            "arrayLengths": {}
+          }
+        }
+      ]
+    },
+    {
+      "page": "/riders",
+      "finalPath": "/riders",
+      "errors": [
+        "Route not foundRequest reference: c334c777621d698c5419fb977980498cTry again"
+      ],
+      "visibleTableStatuses": [
+        "Page 1 · 0 records on this page",
+        ""
+      ],
+      "endpoints": [
+        {
+          "method": "GET",
+          "endpoint": "/v1/admin/users",
+          "query": {
+            "limit": "25"
+          },
+          "status": 404,
+          "responseStructure": {
+            "keys": [
+              "error",
+              "requestId"
+            ],
+            "dataKeys": [],
+            "arrayLengths": {}
+          }
+        }
+      ]
+    },
+    {
+      "page": "/vendors",
+      "finalPath": "/vendors",
+      "errors": [
+        "Route not foundRequest reference: 902577fcc4400f593ffba97aa8fc778bTry again"
+      ],
+      "visibleTableStatuses": [],
+      "endpoints": [
+        {
+          "method": "GET",
+          "endpoint": "/v1/admin/users",
+          "query": {
+            "limit": "25"
+          },
+          "status": 404,
+          "responseStructure": {
+            "keys": [
+              "error",
+              "requestId"
+            ],
+            "dataKeys": [],
+            "arrayLengths": {}
+          }
+        }
+      ]
+    },
+    {
+      "page": "/ecommerce-merchants",
+      "finalPath": "/ecommerce-merchants",
+      "errors": [
+        "Route not foundRequest reference: 3dd8c6d9eef51fd3315e309e6e15848aTry again"
+      ],
+      "visibleTableStatuses": [],
+      "endpoints": [
+        {
+          "method": "GET",
+          "endpoint": "/v1/admin/users",
+          "query": {
+            "limit": "25"
+          },
+          "status": 404,
+          "responseStructure": {
+            "keys": [
+              "error",
+              "requestId"
+            ],
+            "dataKeys": [],
+            "arrayLengths": {}
+          }
+        }
+      ]
+    },
+    {
+      "page": "/admin/users",
+      "finalPath": "/admin/users",
+      "errors": [],
+      "visibleTableStatuses": [],
+      "endpoints": []
+    },
+    {
+      "page": "/admin/users [current administrator role lookup]",
+      "finalPath": "/admin/users",
+      "errors": [],
+      "visibleTableStatuses": [],
+      "endpoints": [
+        {
+          "method": "GET",
+          "endpoint": "/v1/admin/users/8hpZRBqYxb_8TCH3uogVk9GdpaSpPU67ebRBf8SUXAw/role",
+          "query": {},
+          "status": 200,
+          "responseStructure": {
+            "keys": [
+              "data",
+              "requestId"
+            ],
+            "dataKeys": [
+              "uid",
+              "email",
+              "isAdmin",
+              "adminType",
+              "version"
+            ],
+            "arrayLengths": {}
+          }
+        }
+      ]
+    },
+    {
+      "page": "/shipment-orders",
+      "finalPath": "/shipment-orders",
+      "errors": [],
+      "visibleTableStatuses": [],
+      "endpoints": [
+        {
+          "method": "GET",
+          "endpoint": "/v1/shipments",
+          "query": {
+            "limit": "25"
+          },
+          "status": 200,
+          "responseStructure": {
+            "keys": [
+              "data",
+              "requestId"
+            ],
+            "dataKeys": [
+              "items",
+              "nextCursor"
+            ],
+            "arrayLengths": {
+              "items": 25
+            }
+          }
+        }
+      ]
+    },
+    {
+      "page": "/ride-hailing",
+      "finalPath": "/ride-hailing",
+      "errors": [
+        "The ride request is invalid.Request reference: e4486d890cf776868773f9e45dfc9211Try again"
+      ],
+      "visibleTableStatuses": [],
+      "endpoints": [
+        {
+          "method": "GET",
+          "endpoint": "/v1/rides/trips",
+          "query": {
+            "limit": "25"
+          },
+          "status": 400,
+          "responseStructure": {
+            "keys": [
+              "error",
+              "requestId"
+            ],
+            "dataKeys": [],
+            "arrayLengths": {}
+          }
+        }
+      ]
+    },
+    {
+      "page": "/restaurant-orders",
+      "finalPath": "/restaurant-orders",
+      "errors": [
+        "Route not foundRequest reference: 9a48a158201d629e9841d49a21b90f15Try again"
+      ],
+      "visibleTableStatuses": [],
+      "endpoints": [
+        {
+          "method": "GET",
+          "endpoint": "/v1/marketplace/orders",
+          "query": {
+            "limit": "25"
+          },
+          "status": 404,
+          "responseStructure": {
+            "keys": [
+              "error",
+              "requestId"
+            ],
+            "dataKeys": [],
+            "arrayLengths": {}
+          }
+        }
+      ]
+    },
+    {
+      "page": "/product-orders",
+      "finalPath": "/product-orders",
+      "errors": [
+        "Route not foundRequest reference: 25f8c7f8ae63410ccc494fb676981817Try again"
+      ],
+      "visibleTableStatuses": [],
+      "endpoints": [
+        {
+          "method": "GET",
+          "endpoint": "/v1/marketplace/orders",
+          "query": {
+            "limit": "25"
+          },
+          "status": 404,
+          "responseStructure": {
+            "keys": [
+              "error",
+              "requestId"
+            ],
+            "dataKeys": [],
+            "arrayLengths": {}
+          }
+        }
+      ]
+    },
+    {
+      "page": "/withdrawals",
+      "finalPath": "/withdrawals",
+      "errors": [],
+      "visibleTableStatuses": [],
+      "endpoints": [
+        {
+          "method": "GET",
+          "endpoint": "/v1/admin/withdrawals",
+          "query": {
+            "limit": "25"
+          },
+          "status": 200,
+          "responseStructure": {
+            "keys": [
+              "data",
+              "requestId"
+            ],
+            "dataKeys": [
+              "items",
+              "nextCursor"
+            ],
+            "arrayLengths": {
+              "items": 0
+            }
+          }
+        }
+      ]
+    },
+    {
+      "page": "/support-tickets",
+      "finalPath": "/support-tickets",
+      "errors": [],
+      "visibleTableStatuses": [],
+      "endpoints": [
+        {
+          "method": "GET",
+          "endpoint": "/v1/admin/support/tickets",
+          "query": {
+            "limit": "25"
+          },
+          "status": 200,
+          "responseStructure": {
+            "keys": [
+              "data",
+              "requestId"
+            ],
+            "dataKeys": [
+              "items",
+              "nextCursor",
+              "hasMore"
+            ],
+            "arrayLengths": {
+              "items": 18
+            }
+          }
+        }
+      ]
+    },
+    {
+      "page": "/referrals",
+      "finalPath": "/referrals",
+      "errors": [
+        "Analytics is temporarily unavailable.Request reference: 78f985f85499924d7d74b9e01197dc41Try again",
+        "Analytics is temporarily unavailable.Request reference: a4ba4d96a4eb4e54bb01da84f4890e62Try again"
+      ],
+      "visibleTableStatuses": [
+        "Page 1 · 0 records on this page"
+      ],
+      "endpoints": [
+        {
+          "method": "GET",
+          "endpoint": "/v1/admin/referrals/summary",
+          "query": {},
+          "status": 503,
+          "responseStructure": {
+            "keys": [
+              "error",
+              "requestId"
+            ],
+            "dataKeys": [],
+            "arrayLengths": {}
+          }
+        },
+        {
+          "method": "GET",
+          "endpoint": "/v1/admin/referrals",
+          "query": {
+            "limit": "10"
+          },
+          "status": 503,
+          "responseStructure": {
+            "keys": [
+              "error",
+              "requestId"
+            ],
+            "dataKeys": [],
+            "arrayLengths": {}
+          }
+        }
+      ]
+    },
+    {
+      "page": "/generated",
+      "finalPath": "/generated",
+      "errors": [
+        "Analytics is temporarily unavailable.Request reference: 01e1a563289c64f758a2e5f8720cab64Try again",
+        "Analytics is temporarily unavailable.Request reference: 809bc7aab665625acc0195d400198aa2Try again"
+      ],
+      "visibleTableStatuses": [],
+      "endpoints": [
+        {
+          "method": "GET",
+          "endpoint": "/v1/admin/referrals",
+          "query": {
+            "limit": "10"
+          },
+          "status": 503,
+          "responseStructure": {
+            "keys": [
+              "error",
+              "requestId"
+            ],
+            "dataKeys": [],
+            "arrayLengths": {}
+          }
+        },
+        {
+          "method": "GET",
+          "endpoint": "/v1/admin/referrals/summary",
+          "query": {},
+          "status": 503,
+          "responseStructure": {
+            "keys": [
+              "error",
+              "requestId"
+            ],
+            "dataKeys": [],
+            "arrayLengths": {}
+          }
+        }
+      ]
+    },
+    {
+      "page": "/head-offices",
+      "finalPath": "/head-offices",
+      "errors": [
+        "The reference request is invalid.Request reference: 58cc3cfcdebccf8dfbc5e89c5a4f5b05Try again"
+      ],
+      "visibleTableStatuses": [],
+      "endpoints": [
+        {
+          "method": "GET",
+          "endpoint": "/v1/shipping/offices",
+          "query": {
+            "include_inactive": "true"
+          },
+          "status": 400,
+          "responseStructure": {
+            "keys": [
+              "error",
+              "requestId"
+            ],
+            "dataKeys": [],
+            "arrayLengths": {}
+          }
+        }
+      ]
+    },
+    {
+      "page": "/fees",
+      "finalPath": "/fees",
+      "errors": [
+        "Ride not found.Request reference: 9df0344d65423c61ff369339c4976d61Try again",
+        "Route not foundRequest reference: 89aa74834f2b66e207cca4c92681b1efTry again"
+      ],
+      "visibleTableStatuses": [],
+      "endpoints": [
+        {
+          "method": "GET",
+          "endpoint": "/v1/admin/shipping/settings",
+          "query": {},
+          "status": 404,
+          "responseStructure": {
+            "keys": [
+              "error",
+              "requestId"
+            ],
+            "dataKeys": [],
+            "arrayLengths": {}
+          }
+        },
+        {
+          "method": "GET",
+          "endpoint": "/v1/rides/fares",
+          "query": {},
+          "status": 404,
+          "responseStructure": {
+            "keys": [
+              "error",
+              "requestId"
+            ],
+            "dataKeys": [],
+            "arrayLengths": {}
+          }
+        }
+      ]
+    },
+    {
+      "page": "/export-rates",
+      "finalPath": "/export-rates",
+      "errors": [
+        "Route not foundRequest reference: bca15e5ee149a198790cd44ddc0ea3a0Try again",
+        "The reference request is invalid.Request reference: 04338dd79b128c6ba9d447aec8ab19bdTry again"
+      ],
+      "visibleTableStatuses": [],
+      "endpoints": [
+        {
+          "method": "GET",
+          "endpoint": "/v1/shipping/tariffs",
+          "query": {
+            "include_inactive": "true"
+          },
+          "status": 404,
+          "responseStructure": {
+            "keys": [
+              "error",
+              "requestId"
+            ],
+            "dataKeys": [],
+            "arrayLengths": {}
+          }
+        },
+        {
+          "method": "GET",
+          "endpoint": "/v1/shipping/countries",
+          "query": {
+            "include_inactive": "true"
+          },
+          "status": 400,
+          "responseStructure": {
+            "keys": [
+              "error",
+              "requestId"
+            ],
+            "dataKeys": [],
+            "arrayLengths": {}
+          }
+        }
+      ]
+    },
+    {
+      "page": "/delivery-zones",
+      "finalPath": "/delivery-zones",
+      "errors": [
+        "Route not foundRequest reference: 56677c7ebd3fe21be003e7e9e8853b69Try again",
+        "Route not foundRequest reference: 321064c5caef6356c92362b584ede533Try again"
+      ],
+      "visibleTableStatuses": [],
+      "endpoints": [
+        {
+          "method": "GET",
+          "endpoint": "/v1/admin/geography/tariffs",
+          "query": {},
+          "status": 404,
+          "responseStructure": {
+            "keys": [
+              "error",
+              "requestId"
+            ],
+            "dataKeys": [],
+            "arrayLengths": {}
+          }
+        },
+        {
+          "method": "GET",
+          "endpoint": "/v1/geography/states",
+          "query": {},
+          "status": 404,
+          "responseStructure": {
+            "keys": [
+              "error",
+              "requestId"
+            ],
+            "dataKeys": [],
+            "arrayLengths": {}
+          }
+        }
+      ]
+    },
+    {
+      "page": "/dhl-zones",
+      "finalPath": "/export-rates",
+      "errors": [
+        "Route not foundRequest reference: 6b53f418b49659a66818d4066acba1d4Try again",
+        "The reference request is invalid.Request reference: dc17701db93a406d20b69b34a0b96dddTry again"
+      ],
+      "visibleTableStatuses": [],
+      "endpoints": [
+        {
+          "method": "GET",
+          "endpoint": "/v1/shipping/tariffs",
+          "query": {
+            "include_inactive": "true"
+          },
+          "status": 404,
+          "responseStructure": {
+            "keys": [
+              "error",
+              "requestId"
+            ],
+            "dataKeys": [],
+            "arrayLengths": {}
+          }
+        },
+        {
+          "method": "GET",
+          "endpoint": "/v1/shipping/countries",
+          "query": {
+            "include_inactive": "true"
+          },
+          "status": 400,
+          "responseStructure": {
+            "keys": [
+              "error",
+              "requestId"
+            ],
+            "dataKeys": [],
+            "arrayLengths": {}
+          }
+        }
+      ]
+    },
+    {
+      "page": "/dhl-local",
+      "finalPath": "/delivery-zones",
+      "errors": [
+        "Route not foundRequest reference: b9571cb292f98ea5c436da8a78cf4a26Try again",
+        "Route not foundRequest reference: db7cbc6e8dde06e50765baa218e0ecb8Try again"
+      ],
+      "visibleTableStatuses": [],
+      "endpoints": [
+        {
+          "method": "GET",
+          "endpoint": "/v1/admin/geography/tariffs",
+          "query": {},
+          "status": 404,
+          "responseStructure": {
+            "keys": [
+              "error",
+              "requestId"
+            ],
+            "dataKeys": [],
+            "arrayLengths": {}
+          }
+        },
+        {
+          "method": "GET",
+          "endpoint": "/v1/geography/states",
+          "query": {},
+          "status": 404,
+          "responseStructure": {
+            "keys": [
+              "error",
+              "requestId"
+            ],
+            "dataKeys": [],
+            "arrayLengths": {}
+          }
+        }
+      ]
+    },
+    {
+      "page": "/coupons",
+      "finalPath": "/coupons",
+      "errors": [],
+      "visibleTableStatuses": [],
+      "endpoints": [
+        {
+          "method": "GET",
+          "endpoint": "/v1/admin/coupons/campaigns",
+          "query": {
+            "limit": "25"
+          },
+          "status": 200,
+          "responseStructure": {
+            "keys": [
+              "data",
+              "requestId"
+            ],
+            "dataKeys": [
+              "items",
+              "nextCursor",
+              "hasMore"
+            ],
+            "arrayLengths": {
+              "items": 0
+            }
+          }
+        }
+      ]
+    },
+    {
+      "page": "/coupons [Signup coupons]",
+      "finalPath": "/coupons",
+      "errors": [],
+      "visibleTableStatuses": [],
+      "endpoints": [
+        {
+          "method": "GET",
+          "endpoint": "/v1/admin/coupons/signup/settings",
+          "query": {},
+          "status": 200,
+          "responseStructure": {
+            "keys": [
+              "data",
+              "requestId"
+            ],
+            "dataKeys": [
+              "campaignIds",
+              "enabled",
+              "selection",
+              "version"
+            ],
+            "arrayLengths": {
+              "campaignIds": 0
+            }
+          }
+        }
+      ]
+    },
+    {
+      "page": "/coupons [Processing]",
+      "finalPath": "/coupons",
+      "errors": [],
+      "visibleTableStatuses": [],
+      "endpoints": [
+        {
+          "method": "GET",
+          "endpoint": "/v1/admin/coupons/signup/jobs",
+          "query": {
+            "limit": "25"
+          },
+          "status": 200,
+          "responseStructure": {
+            "keys": [
+              "data",
+              "requestId"
+            ],
+            "dataKeys": [
+              "items",
+              "nextCursor",
+              "hasMore"
+            ],
+            "arrayLengths": {
+              "items": 2
+            }
+          }
+        }
+      ]
+    },
+    {
+      "page": "/general-notifications",
+      "finalPath": "/general-notifications",
+      "errors": [],
+      "visibleTableStatuses": [],
+      "endpoints": []
+    },
+    {
+      "page": "/app-config",
+      "finalPath": "/app-config",
+      "errors": [
+        "Customer reference data is temporarily unavailable.Request reference: 7eee1eb37ce7e174bc43a6d7f8087591Try again"
+      ],
+      "visibleTableStatuses": [],
+      "endpoints": [
+        {
+          "method": "GET",
+          "endpoint": "/v1/config/mobile",
+          "query": {
+            "app": "user",
+            "platform": "android"
+          },
+          "status": 503,
+          "responseStructure": {
+            "keys": [
+              "error",
+              "requestId"
+            ],
+            "dataKeys": [],
+            "arrayLengths": {}
+          }
+        },
+        {
+          "method": "GET",
+          "endpoint": "/v1/admin/config/signup-bonus",
+          "query": {},
+          "status": 200,
+          "responseStructure": {
+            "keys": [
+              "data",
+              "requestId"
+            ],
+            "dataKeys": [
+              "enabled",
+              "amountMinor",
+              "budgetMinor",
+              "spentMinor",
+              "remainingMinor",
+              "currency",
+              "version"
+            ],
+            "arrayLengths": {}
+          }
+        }
+      ]
+    },
+    {
+      "page": "/app-config [user/ios]",
+      "finalPath": "/app-config",
+      "errors": [
+        "Customer reference data is temporarily unavailable.Request reference: ff512f3d67ec850c45163f751c363474Try again"
+      ],
+      "visibleTableStatuses": [],
+      "endpoints": [
+        {
+          "method": "GET",
+          "endpoint": "/v1/config/mobile",
+          "query": {
+            "app": "user",
+            "platform": "ios"
+          },
+          "status": 503,
+          "responseStructure": {
+            "keys": [
+              "error",
+              "requestId"
+            ],
+            "dataKeys": [],
+            "arrayLengths": {}
+          }
+        }
+      ]
+    },
+    {
+      "page": "/app-config [rider/android]",
+      "finalPath": "/app-config",
+      "errors": [
+        "Customer reference data is temporarily unavailable.Request reference: c6f532abc2d0896e11dc49df74473376Try again"
+      ],
+      "visibleTableStatuses": [],
+      "endpoints": [
+        {
+          "method": "GET",
+          "endpoint": "/v1/config/mobile",
+          "query": {
+            "app": "rider",
+            "platform": "android"
+          },
+          "status": 503,
+          "responseStructure": {
+            "keys": [
+              "error",
+              "requestId"
+            ],
+            "dataKeys": [],
+            "arrayLengths": {}
+          }
+        }
+      ]
+    },
+    {
+      "page": "/app-config [rider/ios]",
+      "finalPath": "/app-config",
+      "errors": [
+        "Customer reference data is temporarily unavailable.Request reference: 42bea1c66c48feba77c4366359101366Try again"
+      ],
+      "visibleTableStatuses": [],
+      "endpoints": [
+        {
+          "method": "GET",
+          "endpoint": "/v1/config/mobile",
+          "query": {
+            "app": "rider",
+            "platform": "ios"
+          },
+          "status": 503,
+          "responseStructure": {
+            "keys": [
+              "error",
+              "requestId"
+            ],
+            "dataKeys": [],
+            "arrayLengths": {}
+          }
+        }
+      ]
+    },
+    {
+      "page": "/settings",
+      "finalPath": "/settings",
+      "errors": [],
+      "visibleTableStatuses": [],
+      "endpoints": []
+    },
+    {
+      "page": "/catalogue",
+      "finalPath": "/catalogue",
+      "errors": [
+        "Route not foundRequest reference: c16c832777634239ff954bc34b73610fTry again",
+        "Route not foundRequest reference: fe71e1422e8ecc8690dbfa4d679e5ad8Try again"
+      ],
+      "visibleTableStatuses": [],
+      "endpoints": [
+        {
+          "method": "GET",
+          "endpoint": "/v1/marketplace/categories",
+          "query": {},
+          "status": 404,
+          "responseStructure": {
+            "keys": [
+              "error",
+              "requestId"
+            ],
+            "dataKeys": [],
+            "arrayLengths": {}
+          }
+        },
+        {
+          "method": "GET",
+          "endpoint": "/v1/marketplace/items",
+          "query": {
+            "limit": "25"
+          },
+          "status": 404,
+          "responseStructure": {
+            "keys": [
+              "error",
+              "requestId"
+            ],
+            "dataKeys": [],
+            "arrayLengths": {}
+          }
+        }
+      ]
+    },
+    {
+      "page": "/payments",
+      "finalPath": "/payments",
+      "errors": [],
+      "visibleTableStatuses": [],
+      "endpoints": [
+        {
+          "method": "GET",
+          "endpoint": "/v1/admin/payments/webhook-receipts",
+          "query": {
+            "status": "quarantined",
+            "limit": "25"
+          },
+          "status": 200,
+          "responseStructure": {
+            "keys": [
+              "data",
+              "requestId"
+            ],
+            "dataKeys": [
+              "items",
+              "nextCursor"
+            ],
+            "arrayLengths": {
+              "items": 0
+            }
+          }
+        }
+      ]
+    },
+    {
+      "page": "/audit",
+      "finalPath": "/audit",
+      "errors": [
+        "Route not foundRequest reference: 77946c4793d87cefa06a736d9d9b14a4Try again"
+      ],
+      "visibleTableStatuses": [],
+      "endpoints": [
+        {
+          "method": "GET",
+          "endpoint": "/v1/admin/audit",
+          "query": {
+            "limit": "25"
+          },
+          "status": 404,
+          "responseStructure": {
+            "keys": [
+              "error",
+              "requestId"
+            ],
+            "dataKeys": [],
+            "arrayLengths": {}
+          }
+        }
+      ]
+    },
+    {
+      "page": "/jobs",
+      "finalPath": "/jobs",
+      "errors": [],
+      "visibleTableStatuses": [],
+      "endpoints": [
+        {
+          "method": "GET",
+          "endpoint": "/v1/admin/jobs",
+          "query": {
+            "limit": "25"
+          },
+          "status": 200,
+          "responseStructure": {
+            "keys": [
+              "data",
+              "requestId"
+            ],
+            "dataKeys": [
+              "items",
+              "nextCursor"
+            ],
+            "arrayLengths": {
+              "items": 25
+            }
+          }
+        }
+      ]
+    },
+    {
+      "page": "/files",
+      "finalPath": "/files",
+      "errors": [],
+      "visibleTableStatuses": [],
+      "endpoints": []
+    },
+    {
+      "page": "/weekly-overview",
+      "finalPath": "/weekly-overview",
+      "errors": [],
+      "visibleTableStatuses": [],
+      "endpoints": [
+        {
+          "method": "GET",
+          "endpoint": "/v1/admin/analytics/weekly-overview",
+          "query": {},
+          "status": 200,
+          "responseStructure": {
+            "keys": [
+              "data",
+              "requestId"
+            ],
+            "dataKeys": [
+              "asOfDate",
+              "coverage",
+              "weeks"
+            ],
+            "arrayLengths": {
+              "weeks": 4
+            }
+          }
+        }
+      ]
+    },
+    {
+      "page": "/weekly-concentration",
+      "finalPath": "/weekly-concentration",
+      "errors": [],
+      "visibleTableStatuses": [],
+      "endpoints": [
+        {
+          "method": "GET",
+          "endpoint": "/v1/admin/analytics/weekly-concentration",
+          "query": {},
+          "status": 200,
+          "responseStructure": {
+            "keys": [
+              "data",
+              "requestId"
+            ],
+            "dataKeys": [
+              "coverage",
+              "items",
+              "top",
+              "topUsersOrders",
+              "topUsersShare",
+              "totalOrders",
+              "totalUsers",
+              "weekEnd",
+              "weekStart"
+            ],
+            "arrayLengths": {
+              "items": 1
+            }
+          }
+        }
+      ]
+    },
+    {
+      "page": "/rider-weekly-deliveries",
+      "finalPath": "/rider-weekly-deliveries",
+      "errors": [],
+      "visibleTableStatuses": [
+        "Page 1 · 0 records on this page"
+      ],
+      "endpoints": [
+        {
+          "method": "GET",
+          "endpoint": "/v1/admin/analytics/rider-weekly-deliveries",
+          "query": {
+            "limit": "25"
+          },
+          "status": 200,
+          "responseStructure": {
+            "keys": [
+              "data",
+              "requestId"
+            ],
+            "dataKeys": [
+              "asOfDate",
+              "coverage",
+              "items",
+              "nextCursor"
+            ],
+            "arrayLengths": {
+              "items": 16
+            }
+          }
+        }
+      ]
+    },
+    {
+      "page": "/user-activation",
+      "finalPath": "/user-activation",
+      "errors": [
+        "The analytics request is invalid.Request reference: 4de9d1820cd3ec6d2cf8bdee3cdb2413Try again"
+      ],
+      "visibleTableStatuses": [
+        "Page 1 · 0 records on this page"
+      ],
+      "endpoints": [
+        {
+          "method": "GET",
+          "endpoint": "/v1/admin/analytics/time-to-first-order",
+          "query": {
+            "summary_only": "true"
+          },
+          "status": 400,
+          "responseStructure": {
+            "keys": [
+              "error",
+              "requestId"
+            ],
+            "dataKeys": [],
+            "arrayLengths": {}
+          }
+        },
+        {
+          "method": "GET",
+          "endpoint": "/v1/admin/analytics/time-to-first-order",
+          "query": {
+            "limit": "25"
+          },
+          "status": 200,
+          "responseStructure": {
+            "keys": [
+              "data",
+              "requestId"
+            ],
+            "dataKeys": [
+              "coverage",
+              "items",
+              "nextCursor",
+              "summary"
+            ],
+            "arrayLengths": {
+              "items": 25
+            }
+          }
+        }
+      ]
+    },
+    {
+      "page": "/coupon-redemption-metrics",
+      "finalPath": "/coupon-redemption-metrics",
+      "errors": [],
+      "visibleTableStatuses": [],
+      "endpoints": []
+    },
+    {
+      "page": "/coupon-redemption-metrics [2026-10-26 to 2026-11-02]",
+      "finalPath": "/coupon-redemption-metrics",
+      "errors": [
+        "The analytics request is invalid.Request reference: 150ee3a1bef1f6b3b72b75b6c281a818Try again"
+      ],
+      "visibleTableStatuses": [],
+      "endpoints": [
+        {
+          "method": "GET",
+          "endpoint": "/v1/admin/analytics/coupon-redemptions",
+          "query": {
+            "start_date": "2026-10-26",
+            "end_date": "2026-11-02"
+          },
+          "status": 400,
+          "responseStructure": {
+            "keys": [
+              "error",
+              "requestId"
+            ],
+            "dataKeys": [],
+            "arrayLengths": {}
+          }
+        }
+      ]
+    },
+    {
+      "page": "/shipment-orders/d276de00bab3da49023ff7925813421a09c142f2f47ab0cd8e3692930185ef9b",
+      "finalPath": "/shipment-orders/d276de00bab3da49023ff7925813421a09c142f2f47ab0cd8e3692930185ef9b",
+      "errors": [
+        "Tracking not foundRequest reference: 848866e9a949b6f0d29fd7d33228761bTry again"
+      ],
+      "visibleTableStatuses": [],
+      "endpoints": [
+        {
+          "method": "GET",
+          "endpoint": "/v1/shipments/d276de00bab3da49023ff7925813421a09c142f2f47ab0cd8e3692930185ef9b",
+          "query": {},
+          "status": 200,
+          "responseStructure": {
+            "keys": [
+              "data",
+              "requestId"
+            ],
+            "dataKeys": [
+              "assessmentStatus",
+              "assessments",
+              "assets",
+              "assignedRider",
+              "canCancel",
+              "cancelledAt",
+              "clearanceType",
+              "completedAt",
+              "country",
+              "createdAt",
+              "customerId",
+              "dimensionsCm",
+              "dropoff",
+              "id",
+              "itemTypes",
+              "itemValueMinor",
+              "localTypeId",
+              "localZone",
+              "office",
+              "officeId",
+              "payment",
+              "pickup",
+              "pickupOtp",
+              "pricing",
+              "quoteId",
+              "receiver",
+              "refund",
+              "sender",
+              "shipmentNumber",
+              "shipmentType",
+              "stateId",
+              "status",
+              "updatedAt",
+              "version",
+              "weightKg",
+              "zipCode"
+            ],
+            "arrayLengths": {
+              "assessments": 0,
+              "itemTypes": 2
+            }
+          }
+        },
+        {
+          "method": "GET",
+          "endpoint": "/v1/shipments/d276de00bab3da49023ff7925813421a09c142f2f47ab0cd8e3692930185ef9b/tracking",
+          "query": {},
+          "status": 404,
+          "responseStructure": {
+            "keys": [
+              "error",
+              "requestId"
+            ],
+            "dataKeys": [],
+            "arrayLengths": {}
+          }
+        }
+      ]
+    },
+    {
+      "page": "/shipment-orders/cb8aa7eace2556d74bde05f10fb6db91cf701ee804c88d7d8d30d44eb2ad73d5",
+      "finalPath": "/shipment-orders/cb8aa7eace2556d74bde05f10fb6db91cf701ee804c88d7d8d30d44eb2ad73d5",
+      "errors": [
+        "Tracking not foundRequest reference: 88ac07c2e2ad15f63fa0271979f6ead8Try again"
+      ],
+      "visibleTableStatuses": [],
+      "endpoints": [
+        {
+          "method": "GET",
+          "endpoint": "/v1/shipments/cb8aa7eace2556d74bde05f10fb6db91cf701ee804c88d7d8d30d44eb2ad73d5",
+          "query": {},
+          "status": 200,
+          "responseStructure": {
+            "keys": [
+              "data",
+              "requestId"
+            ],
+            "dataKeys": [
+              "assessmentStatus",
+              "assessments",
+              "assets",
+              "assignedRider",
+              "canCancel",
+              "cancelledAt",
+              "clearanceType",
+              "completedAt",
+              "createdAt",
+              "customerId",
+              "id",
+              "localTypeId",
+              "localZone",
+              "office",
+              "officeId",
+              "payment",
+              "pricing",
+              "quoteId",
+              "refund",
+              "sender",
+              "shipmentNumber",
+              "shipmentType",
+              "stateId",
+              "status",
+              "updatedAt",
+              "version"
+            ],
+            "arrayLengths": {
+              "assessments": 0
+            }
+          }
+        },
+        {
+          "method": "GET",
+          "endpoint": "/v1/shipments/cb8aa7eace2556d74bde05f10fb6db91cf701ee804c88d7d8d30d44eb2ad73d5/tracking",
+          "query": {},
+          "status": 404,
+          "responseStructure": {
+            "keys": [
+              "error",
+              "requestId"
+            ],
+            "dataKeys": [],
+            "arrayLengths": {}
+          }
+        }
+      ]
+    },
+    {
+      "page": "/shipment-orders/192ae579d756147cab31462e32297a4eac5b1cd8783132b84ba8c940ce3df190",
+      "finalPath": "/shipment-orders/192ae579d756147cab31462e32297a4eac5b1cd8783132b84ba8c940ce3df190",
+      "errors": [
+        "Tracking not foundRequest reference: 48fb7dd5651cc0b6d6713abd05e116e7Try again"
+      ],
+      "visibleTableStatuses": [],
+      "endpoints": [
+        {
+          "method": "GET",
+          "endpoint": "/v1/shipments/192ae579d756147cab31462e32297a4eac5b1cd8783132b84ba8c940ce3df190",
+          "query": {},
+          "status": 200,
+          "responseStructure": {
+            "keys": [
+              "data",
+              "requestId"
+            ],
+            "dataKeys": [
+              "assessmentStatus",
+              "assessments",
+              "assets",
+              "assignedRider",
+              "canCancel",
+              "cancelledAt",
+              "clearanceType",
+              "completedAt",
+              "country",
+              "createdAt",
+              "customerId",
+              "dimensionsCm",
+              "dropoff",
+              "id",
+              "itemTypes",
+              "itemValueMinor",
+              "localTypeId",
+              "localZone",
+              "office",
+              "officeId",
+              "payment",
+              "pickup",
+              "pickupOtp",
+              "pricing",
+              "quoteId",
+              "receiver",
+              "refund",
+              "sender",
+              "shipmentNumber",
+              "shipmentType",
+              "stateId",
+              "status",
+              "updatedAt",
+              "version",
+              "weightKg",
+              "zipCode"
+            ],
+            "arrayLengths": {
+              "assessments": 0,
+              "itemTypes": 3
+            }
+          }
+        },
+        {
+          "method": "GET",
+          "endpoint": "/v1/shipments/192ae579d756147cab31462e32297a4eac5b1cd8783132b84ba8c940ce3df190/tracking",
+          "query": {},
+          "status": 404,
+          "responseStructure": {
+            "keys": [
+              "error",
+              "requestId"
+            ],
+            "dataKeys": [],
+            "arrayLengths": {}
+          }
+        }
+      ]
+    },
+    {
+      "page": "/support-tickets/xbV7uSmIGkXnJS2GsPtV",
+      "finalPath": "/support-tickets/xbV7uSmIGkXnJS2GsPtV",
+      "errors": [],
+      "visibleTableStatuses": [],
+      "endpoints": [
+        {
+          "method": "GET",
+          "endpoint": "/v1/admin/support/tickets/xbV7uSmIGkXnJS2GsPtV",
+          "query": {},
+          "status": 200,
+          "responseStructure": {
+            "keys": [
+              "data",
+              "requestId"
+            ],
+            "dataKeys": [
+              "id",
+              "status",
+              "createdAt",
+              "updatedAt",
+              "lastMessage",
+              "lastSender",
+              "unreadCount",
+              "customerUid",
+              "version",
+              "assignedSupportUid"
+            ],
+            "arrayLengths": {}
+          }
+        },
+        {
+          "method": "GET",
+          "endpoint": "/v1/admin/support/tickets/xbV7uSmIGkXnJS2GsPtV/messages",
+          "query": {
+            "limit": "25"
+          },
+          "status": 200,
+          "responseStructure": {
+            "keys": [
+              "data",
+              "requestId"
+            ],
+            "dataKeys": [
+              "items",
+              "nextCursor",
+              "hasMore"
+            ],
+            "arrayLengths": {
+              "items": 0
+            }
+          }
+        }
+      ]
+    },
+    {
+      "page": "/support-tickets/UGfsyJEc6ps7uAffzBvk",
+      "finalPath": "/support-tickets/UGfsyJEc6ps7uAffzBvk",
+      "errors": [],
+      "visibleTableStatuses": [],
+      "endpoints": [
+        {
+          "method": "GET",
+          "endpoint": "/v1/admin/support/tickets/UGfsyJEc6ps7uAffzBvk",
+          "query": {},
+          "status": 200,
+          "responseStructure": {
+            "keys": [
+              "data",
+              "requestId"
+            ],
+            "dataKeys": [
+              "id",
+              "status",
+              "createdAt",
+              "updatedAt",
+              "lastMessage",
+              "lastSender",
+              "unreadCount",
+              "customerUid",
+              "version",
+              "assignedSupportUid"
+            ],
+            "arrayLengths": {}
+          }
+        },
+        {
+          "method": "GET",
+          "endpoint": "/v1/admin/support/tickets/UGfsyJEc6ps7uAffzBvk/messages",
+          "query": {
+            "limit": "25"
+          },
+          "status": 200,
+          "responseStructure": {
+            "keys": [
+              "data",
+              "requestId"
+            ],
+            "dataKeys": [
+              "items",
+              "nextCursor",
+              "hasMore"
+            ],
+            "arrayLengths": {
+              "items": 0
+            }
+          }
+        }
+      ]
+    },
+    {
+      "page": "/support-tickets/AQGwx67wSWJz40futLkw",
+      "finalPath": "/support-tickets/AQGwx67wSWJz40futLkw",
+      "errors": [
+        "Administration is temporarily unavailableRequest reference: 231bcf16311c3473e80208edbffb1defTry again"
+      ],
+      "visibleTableStatuses": [
+        "Page 1 · 0 records on this page"
+      ],
+      "endpoints": [
+        {
+          "method": "GET",
+          "endpoint": "/v1/admin/support/tickets/AQGwx67wSWJz40futLkw",
+          "query": {},
+          "status": 200,
+          "responseStructure": {
+            "keys": [
+              "data",
+              "requestId"
+            ],
+            "dataKeys": [
+              "id",
+              "status",
+              "createdAt",
+              "updatedAt",
+              "lastMessage",
+              "lastSender",
+              "unreadCount",
+              "customerUid",
+              "version",
+              "assignedSupportUid"
+            ],
+            "arrayLengths": {}
+          }
+        },
+        {
+          "method": "GET",
+          "endpoint": "/v1/admin/support/tickets/AQGwx67wSWJz40futLkw/messages",
+          "query": {
+            "limit": "25"
+          },
+          "status": 503,
+          "responseStructure": {
+            "keys": [
+              "error",
+              "requestId"
+            ],
+            "dataKeys": [],
+            "arrayLengths": {}
+          }
+        }
+      ]
+    },
+    {
+      "page": "/jobs/cd6d8cdc039977153a600eb135d3deaac4db554ce439eac67b31701baa05e064",
+      "finalPath": "/jobs/cd6d8cdc039977153a600eb135d3deaac4db554ce439eac67b31701baa05e064",
+      "errors": [],
+      "visibleTableStatuses": [],
+      "endpoints": [
+        {
+          "method": "GET",
+          "endpoint": "/v1/admin/jobs/cd6d8cdc039977153a600eb135d3deaac4db554ce439eac67b31701baa05e064",
+          "query": {
+            "attemptsLimit": "25"
+          },
+          "status": 200,
+          "responseStructure": {
+            "keys": [
+              "data",
+              "requestId"
+            ],
+            "dataKeys": [
+              "attemptCount",
+              "attempts",
+              "attemptsNextCursor",
+              "availableAt",
+              "completedAt",
+              "createdAt",
+              "effects",
+              "effectsLimitedTo",
+              "effectsTruncated",
+              "entityPath",
+              "generation",
+              "jobId",
+              "jobType",
+              "lastError",
+              "maxAttempts",
+              "replayCount",
+              "sourceQueuePath",
+              "status",
+              "updatedAt"
+            ],
+            "arrayLengths": {
+              "attempts": 1
+            }
+          }
+        }
+      ]
+    },
+    {
+      "page": "/jobs/3f63a11515940c0b30f607aaa40321504a55b231f4be4d01332bc6ca6594552e",
+      "finalPath": "/jobs/3f63a11515940c0b30f607aaa40321504a55b231f4be4d01332bc6ca6594552e",
+      "errors": [],
+      "visibleTableStatuses": [],
+      "endpoints": [
+        {
+          "method": "GET",
+          "endpoint": "/v1/admin/jobs/3f63a11515940c0b30f607aaa40321504a55b231f4be4d01332bc6ca6594552e",
+          "query": {
+            "attemptsLimit": "25"
+          },
+          "status": 200,
+          "responseStructure": {
+            "keys": [
+              "data",
+              "requestId"
+            ],
+            "dataKeys": [
+              "attemptCount",
+              "attempts",
+              "attemptsNextCursor",
+              "availableAt",
+              "completedAt",
+              "createdAt",
+              "effects",
+              "effectsLimitedTo",
+              "effectsTruncated",
+              "entityPath",
+              "generation",
+              "jobId",
+              "jobType",
+              "lastError",
+              "maxAttempts",
+              "replayCount",
+              "sourceQueuePath",
+              "status",
+              "updatedAt"
+            ],
+            "arrayLengths": {
+              "attempts": 1
+            }
+          }
+        }
+      ]
+    },
+    {
+      "page": "/jobs/sql_ffb28ae3e3673ec553298308844d14571f62a9e164756361810340102703575c",
+      "finalPath": "/jobs/sql_ffb28ae3e3673ec553298308844d14571f62a9e164756361810340102703575c",
+      "errors": [],
+      "visibleTableStatuses": [],
+      "endpoints": [
+        {
+          "method": "GET",
+          "endpoint": "/v1/admin/jobs/sql_ffb28ae3e3673ec553298308844d14571f62a9e164756361810340102703575c",
+          "query": {
+            "attemptsLimit": "25"
+          },
+          "status": 200,
+          "responseStructure": {
+            "keys": [
+              "data",
+              "requestId"
+            ],
+            "dataKeys": [
+              "attemptCount",
+              "attempts",
+              "attemptsNextCursor",
+              "availableAt",
+              "completedAt",
+              "createdAt",
+              "effectStateAuthority",
+              "effects",
+              "entityPath",
+              "generation",
+              "jobId",
+              "jobType",
+              "lastError",
+              "maxAttempts",
+              "replayCount",
+              "sourceQueuePath",
+              "status",
+              "updatedAt"
+            ],
+            "arrayLengths": {
+              "attempts": 1
+            }
+          }
+        }
+      ]
+    },
+    {
+      "page": "/reports [rider accounts]",
+      "finalPath": "/reports",
+      "errors": [
+        "Analytics is temporarily unavailable.Request reference: 362d287f61253065d962430068a0fcbfTry again",
+        "Analytics is temporarily unavailable.Request reference: 2cd5deac16149fb25cfda5d17be81e1bTry again"
+      ],
+      "visibleTableStatuses": [],
+      "endpoints": [
+        {
+          "method": "GET",
+          "endpoint": "/v1/admin/analytics/account-summary",
+          "query": {
+            "type": "riders"
+          },
+          "status": 503,
+          "responseStructure": {
+            "keys": [
+              "error",
+              "requestId"
+            ],
+            "dataKeys": [],
+            "arrayLengths": {}
+          }
+        }
+      ]
+    },
+    {
+      "page": "/reports [ride-courier]",
+      "finalPath": "/reports",
+      "errors": [
+        "Analytics is temporarily unavailable.Request reference: 362d287f61253065d962430068a0fcbfTry again",
+        "Analytics is temporarily unavailable.Request reference: a11fd663036d4706d45f0f05a8297ec1Try again"
+      ],
+      "visibleTableStatuses": [],
+      "endpoints": [
+        {
+          "method": "GET",
+          "endpoint": "/v1/admin/analytics/order-summary",
+          "query": {
+            "type": "ride-courier"
+          },
+          "status": 503,
+          "responseStructure": {
+            "keys": [
+              "error",
+              "requestId"
+            ],
+            "dataKeys": [],
+            "arrayLengths": {}
+          }
+        }
+      ]
+    },
+    {
+      "page": "/reports [food]",
+      "finalPath": "/reports",
+      "errors": [
+        "Analytics is temporarily unavailable.Request reference: 362d287f61253065d962430068a0fcbfTry again",
+        "Analytics is temporarily unavailable.Request reference: 3ae94ed38359128300accb3b709549a8Try again"
+      ],
+      "visibleTableStatuses": [],
+      "endpoints": [
+        {
+          "method": "GET",
+          "endpoint": "/v1/admin/analytics/order-summary",
+          "query": {
+            "type": "food"
+          },
+          "status": 503,
+          "responseStructure": {
+            "keys": [
+              "error",
+              "requestId"
+            ],
+            "dataKeys": [],
+            "arrayLengths": {}
+          }
+        }
+      ]
+    },
+    {
+      "page": "/reports [ecommerce]",
+      "finalPath": "/reports",
+      "errors": [
+        "Analytics is temporarily unavailable.Request reference: 362d287f61253065d962430068a0fcbfTry again",
+        "Analytics is temporarily unavailable.Request reference: 71547a5c5806ae536753a0a944626d72Try again"
+      ],
+      "visibleTableStatuses": [],
+      "endpoints": [
+        {
+          "method": "GET",
+          "endpoint": "/v1/admin/analytics/order-summary",
+          "query": {
+            "type": "ecommerce"
+          },
+          "status": 503,
+          "responseStructure": {
+            "keys": [
+              "error",
+              "requestId"
+            ],
+            "dataKeys": [],
+            "arrayLengths": {}
+          }
+        }
+      ]
+    },
+    {
+      "page": "/referrals [export 2026-10-26 to 2026-11-02]",
+      "finalPath": "/referrals",
+      "errors": [
+        "Analytics is temporarily unavailable.Request reference: 78f985f85499924d7d74b9e01197dc41Try again",
+        "Analytics is temporarily unavailable.Request reference: a4ba4d96a4eb4e54bb01da84f4890e62Try again",
+        "Analytics is temporarily unavailable.Request reference: cba0aafc4cfc5f7effbfc373e5f42a74"
+      ],
+      "visibleTableStatuses": [
+        "Page 1 · 0 records on this page"
+      ],
+      "endpoints": [
+        {
+          "method": "GET",
+          "endpoint": "/v1/admin/referrals/export.csv",
+          "query": {
+            "startDate": "2026-10-26",
+            "endDate": "2026-11-02"
+          },
+          "status": 503,
+          "responseStructure": {
+            "keys": [
+              "error",
+              "requestId"
+            ],
+            "dataKeys": [],
+            "arrayLengths": {}
+          }
+        }
+      ]
+    },
+    {
+      "page": "/users [export read]",
+      "finalPath": "/users",
+      "errors": [
+        "Route not foundRequest reference: 6b696d5aad3afe6edeaeae06ffe1b691Try again"
+      ],
+      "visibleTableStatuses": [
+        "Page 1 · 0 records on this page",
+        ""
+      ],
+      "endpoints": [
+        {
+          "method": "GET",
+          "endpoint": "/v1/admin/reports/accounts",
+          "query": {
+            "type": "users",
+            "limit": "2000"
+          },
+          "status": 404,
+          "responseStructure": null
+        }
+      ]
+    },
+    {
+      "page": "/riders [export read]",
+      "finalPath": "/riders",
+      "errors": [
+        "Route not foundRequest reference: c334c777621d698c5419fb977980498cTry again"
+      ],
+      "visibleTableStatuses": [
+        "Page 1 · 0 records on this page",
+        ""
+      ],
+      "endpoints": [
+        {
+          "method": "GET",
+          "endpoint": "/v1/admin/reports/riders",
+          "query": {
+            "format": "csv",
+            "limit": "2000"
+          },
+          "status": 404,
+          "responseStructure": null
+        }
+      ]
+    }
+  ]
+}

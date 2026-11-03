@@ -1,6 +1,5 @@
 import { IconLogout } from "@tabler/icons-react";
-import { signOut } from "firebase/auth";
-import { auth } from "@/lib/firebase";
+import { signOut } from "@/lib/api";
 import { useNavigate } from "react-router-dom";
 import { toast } from "sonner";
 import { useState } from "react";
@@ -17,7 +16,7 @@ export function NavUser({
   async function handleLogout() {
     setSigningOut(true);
     try {
-      await signOut(auth);
+      await signOut();
       navigate("/sign-in");
     } catch {
       toast.error("Could not sign out. Please try again.");

@@ -1,179 +1,315 @@
-import CouponRedemptionMetricsPage from "@/pages/coupon-redemption-metrics";
-import WeeklyConcentrationPage from "@/pages/weekly-concentration";
-import RiderWeeklyDeliveriesPage from "@/pages/rider-weekly-deliveries";
-import UserActivationPage from "@/pages/user-activation";
-import HeadOfficesPage from "@/pages/head-offices";
-import UserManagementPage from "@/pages/admin/user-management";
-import { Layout } from "@/components/layout";
-import CouponsPage from "@/pages/coupons";
-import DashboardPage from "@/pages/dashboard";
-import FeesPage from "@/pages/fees";
-import ExportRatesPage from "@/pages/export-rates";
-import ReferralsPage from "@/pages/referrals";
-import DeliveryZonesPage from "@/pages/delivery-zones";
-import RestaurantOrdersPage from "@/pages/restaurant-orders";
-import RestaurantOrderDetailsPage from "@/pages/restaurant-orders/details";
-import RideHailingPage from "@/pages/ride-hailing";
-import RideHailingDetailsPage from "@/pages/ride-hailing/details";
-import RidersPage from "@/pages/riders";
-import RiderDetailsPage from "@/pages/riders/details";
-import ShipmentOrdersPage from "@/pages/shipment-orders";
-import ShipmentOrderDetailsPage from "@/pages/shipment-orders/details";
-import SupportTicketsPage from "@/pages/support-tickets";
-import UsersPage from "@/pages/users";
-import UserDetailsPage from "@/pages/users/details";
-import VendorsPage from "@/pages/vendors";
-import VendorDetailsPage from "@/pages/vendors/details";
-import EcommerceMerchantsPage from "@/pages/ecommerce-merchants";
-import EcommerceMerchantDetailsPage from "@/pages/ecommerce-merchants/details";
-import MerchantProductsPage from "@/pages/ecommerce-merchants/products";
-import ProductDetailsPage from "@/pages/ecommerce-merchants/product-details";
-import MerchantTransactionsPage from "@/pages/ecommerce-merchants/transactions";
-import ProductOrdersPage from "@/pages/product-orders";
-import ProductOrderDetailsPage from "@/pages/product-orders/details";
-import WithdrawalsPage from "@/pages/withdrawals";
-import GeneralNotificationsPage from "@/pages/general-notifications";
-import DHLZonesPage from "@/pages/dhl-zones";
-import DHLLocalPage from "@/pages/dhl-local";
-import AppConfigPage from "@/pages/app-config";
 import { BrowserRouter, Navigate, Route, Routes } from "react-router-dom";
+import { Layout } from "@/components/layout";
 import ProtectedRoutes from "./ProtectedRoutes";
-import { TableStateProvider } from "@/contexts/TableStateContext";
-
 import PublicRoute from "./PublicRoute";
-import SignInPage from "@/pages/Auth/sign-in";
-import SignUpPage from "@/pages/Auth/sign-up";
-import ReferralDetailsPage from "@/pages/referrals/details";
-import GeneratedReferrals from "@/pages/generated-referrals";
-
-function Router() {
+import SignInPage from "@/features/auth/sign-in";
+import {
+  OrdersPage,
+  OrderPage,
+  PaymentsPage,
+  ReceiptPage,
+} from "@/features/admin/operations";
+import {
+  NotificationsPage,
+  CataloguePage,
+  CatalogueItemPage,
+} from "@/features/admin/configuration";
+import { AnalyticsPage } from "@/features/admin/reports";
+import { PasswordRecovery, SecurityPage } from "@/features/admin/security";
+import { Heading, Notice } from "@/features/admin/shared";
+import {
+  NativeDashboard,
+  NativeSummaryPage,
+  NativeShipments,
+  NativeShipment,
+  NativeWithdrawals,
+  NativeWithdrawal,
+  NativeJobs,
+  NativeJob,
+  NativeReferrals,
+} from "@/features/admin/native-operations";
+import { NativeFiles } from "@/features/uploads/native-files";
+import { MobileReleaseSettings } from "@/features/admin/release-settings";
+import {
+  AdminRoles,
+  NativeCoupons,
+  NativeSupport,
+  NativeConversation,
+  SignupFunding,
+} from "@/features/admin/native-dashboard";
+import {
+  NativeAccounts,
+  NativeAccount,
+  NativeRides,
+  NativeRide,
+  NativeFees,
+  NativeOffices,
+  NativeOffice,
+  NativeTariffs,
+  NativeTariff,
+  NativeCountry,
+  NativeAudit,
+  AnalyticsCoverage,
+} from "@/features/admin/native-read-models";
+import { UnavailableAdminFeature } from "@/features/admin/native-operations";
+import { TableStateProvider } from "@/features/admin/table-state";
+export default function Router() {
   return (
     <BrowserRouter>
-      <Routes>
-        <Route
-          path="/sign-in"
-          element={
-            <PublicRoute>
-              <SignInPage />
-            </PublicRoute>
-          }
-        />
-        <Route
-          path="/sign-up"
-          element={
-            <PublicRoute>
-              <SignUpPage />
-            </PublicRoute>
-          }
-        />
-
-        <Route
-          path="/*"
-          element={
-            <ProtectedRoutes>
-              <Layout>
-                <TableStateProvider>
+      <TableStateProvider>
+        <Routes>
+          <Route
+            path="/sign-in"
+            element={
+              <PublicRoute>
+                <SignInPage />
+              </PublicRoute>
+            }
+          />
+          <Route
+            path="/forgot-password"
+            element={
+              <PublicRoute>
+                <PasswordRecovery />
+              </PublicRoute>
+            }
+          />
+          <Route path="/sign-up" element={<Navigate to="/sign-in" replace />} />
+          <Route
+            path="/*"
+            element={
+              <ProtectedRoutes>
+                <Layout>
                   <Routes>
-                    <Route path="/dashboard" element={<DashboardPage />} />
-                    <Route path="/head-offices" element={<HeadOfficesPage />} />
-                    <Route path="/admin/users" element={<UserManagementPage />} />
-                    <Route path="/users" element={<UsersPage />} />
-                    <Route path="/weekly-concentration" element={<WeeklyConcentrationPage />} />
-                    <Route path="/user-activation" element={<UserActivationPage />} />
-                    <Route path="/users/:id" element={<UserDetailsPage />} />
-                    <Route path="/riders" element={<RidersPage />} />
-                    <Route path="/rider-weekly-deliveries" element={<RiderWeeklyDeliveriesPage />} />
-                    <Route path="/riders/:id" element={<RiderDetailsPage />} />
-                    <Route path="/vendors" element={<VendorsPage />} />
-                    <Route path="/vendors/:id" element={<VendorDetailsPage />} />
+                    <Route path="/dashboard" element={<NativeDashboard />} />
+                    <Route path="/users" element={<NativeAccounts />} />
+                    <Route path="/users/:id" element={<NativeAccount />} />
+                    <Route path="/riders" element={<NativeAccounts riders />} />
+                    <Route
+                      path="/riders/:id"
+                      element={<NativeAccount riders />}
+                    />
+                    <Route
+                      path="/vendors"
+                      element={
+                        <UnavailableAdminFeature title="Partner applications">
+                          Vendor and merchant directories are not available in
+                          this service yet.
+                        </UnavailableAdminFeature>
+                      }
+                    />
+                    <Route
+                      path="/vendors/:id"
+                      element={
+                        <UnavailableAdminFeature title="Partner profile">
+                          Partner profile inspection is not available in this
+                          service yet.
+                        </UnavailableAdminFeature>
+                      }
+                    />
                     <Route
                       path="/ecommerce-merchants"
-                      element={<EcommerceMerchantsPage />}
+                      element={
+                        <UnavailableAdminFeature title="Partner applications">
+                          Vendor and merchant directories are not available in
+                          this service yet.
+                        </UnavailableAdminFeature>
+                      }
                     />
                     <Route
                       path="/ecommerce-merchants/:id"
-                      element={<EcommerceMerchantDetailsPage />}
+                      element={
+                        <UnavailableAdminFeature title="Partner profile">
+                          Partner profile inspection is not available in this
+                          service yet.
+                        </UnavailableAdminFeature>
+                      }
                     />
                     <Route
                       path="/ecommerce-merchants/:id/products"
-                      element={<MerchantProductsPage />}
+                      element={<CataloguePage />}
                     />
                     <Route
                       path="/ecommerce-merchants/:id/products/:productId"
-                      element={<ProductDetailsPage />}
+                      element={
+                        <Notice>
+                          Open this item from the marketplace catalogue to
+                          inspect its current record.
+                        </Notice>
+                      }
                     />
                     <Route
                       path="/ecommerce-merchants/:id/transactions"
-                      element={<MerchantTransactionsPage />}
+                      element={
+                        <Notice>
+                          Merchant transaction history is not available in the
+                          current service.
+                        </Notice>
+                      }
                     />
-                    <Route path="/fees" element={<FeesPage />} />
-                    <Route path="/export-rates" element={<ExportRatesPage />} />
-                    <Route
-                      path="/delivery-zones"
-                      element={<DeliveryZonesPage />}
-                    />
-                    <Route path="/referrals" element={<ReferralsPage />} />
-                    <Route
-                      path="/referrals/:id"
-                      element={<ReferralDetailsPage />}
-                    />
-                    <Route path="/withdrawals" element={<WithdrawalsPage />} />
-                    <Route path="/coupons" element={<CouponsPage />} />
-                    <Route path="/coupon-redemption-metrics" element={<CouponRedemptionMetricsPage />} />
-                    <Route
-                      path="/general-notifications"
-                      element={<GeneralNotificationsPage />}
-                    />
-                    <Route path="/dhl-zones" element={<DHLZonesPage />} />
-                    <Route path="/dhl-local" element={<DHLLocalPage />} />
-                    <Route path="/app-config" element={<AppConfigPage />} />
-                    <Route
-                      path="/support-tickets"
-                      element={<SupportTicketsPage />}
-                    />
-                    <Route
-                      path="/restaurant-orders"
-                      element={<RestaurantOrdersPage />}
-                    />
-                    <Route
-                      path="/restaurant-orders/:id"
-                      element={<RestaurantOrderDetailsPage />}
-                    />
+                    <Route path="/admin/users" element={<AdminRoles />} />
                     <Route
                       path="/shipment-orders"
-                      element={<ShipmentOrdersPage />}
+                      element={<NativeShipments />}
                     />
                     <Route
                       path="/shipment-orders/:id"
-                      element={<ShipmentOrderDetailsPage />}
+                      element={<NativeShipment />}
                     />
-                    <Route path="/ride-hailing" element={<RideHailingPage />} />
+                    <Route path="/ride-hailing" element={<NativeRides />} />
+                    <Route path="/ride-hailing/:id" element={<NativeRide />} />
                     <Route
-                      path="/ride-hailing/:id"
-                      element={<RideHailingDetailsPage />}
+                      path="/restaurant-orders"
+                      element={<OrdersPage kind="marketplace" />}
+                    />
+                    <Route
+                      path="/restaurant-orders/:id"
+                      element={<OrderPage kind="marketplace" />}
                     />
                     <Route
                       path="/product-orders"
-                      element={<ProductOrdersPage />}
+                      element={<OrdersPage kind="marketplace" />}
                     />
                     <Route
                       path="/product-orders/:id"
-                      element={<ProductOrderDetailsPage />}
+                      element={<OrderPage kind="marketplace" />}
+                    />
+                    <Route
+                      path="/withdrawals"
+                      element={<NativeWithdrawals />}
+                    />
+                    <Route
+                      path="/withdrawals/:id"
+                      element={<NativeWithdrawal />}
+                    />
+                    <Route
+                      path="/support-tickets"
+                      element={<NativeSupport />}
+                    />
+                    <Route
+                      path="/support-tickets/:id"
+                      element={<NativeConversation />}
+                    />
+                    <Route path="/referrals" element={<NativeReferrals />} />
+                    <Route path="/generated" element={<NativeReferrals />} />
+                    <Route
+                      path="/referrals/:id"
+                      element={
+                        <Notice>
+                          Referral attribution details are not available. Use
+                          the referral list and export to inspect attribution
+                          records.
+                        </Notice>
+                      }
+                    />
+                    <Route path="/head-offices" element={<NativeOffices />} />
+                    <Route
+                      path="/head-offices/:id"
+                      element={<NativeOffice />}
+                    />
+                    <Route path="/fees" element={<NativeFees />} />
+                    <Route path="/export-rates" element={<NativeTariffs />} />
+                    <Route
+                      path="/export-rates/tariffs/:id"
+                      element={<NativeTariff />}
+                    />
+                    <Route
+                      path="/delivery-zones"
+                      element={<NativeTariffs domestic />}
+                    />
+                    <Route
+                      path="/delivery-zones/tariffs/:id"
+                      element={<NativeTariff domestic />}
+                    />
+                    <Route
+                      path="/dhl-zones"
+                      element={<Navigate to="/export-rates" replace />}
+                    />
+                    <Route
+                      path="/dhl-local"
+                      element={<Navigate to="/delivery-zones" replace />}
+                    />
+                    <Route path="/coupons" element={<NativeCoupons />} />
+                    <Route
+                      path="/general-notifications"
+                      element={<NotificationsPage />}
+                    />
+                    <Route
+                      path="/app-config"
+                      element={
+                        <div className="space-y-6">
+                          <Heading title="App configuration" />
+                          <MobileReleaseSettings />
+                          <SignupFunding />
+                        </div>
+                      }
+                    />
+                    <Route path="/settings" element={<SecurityPage />} />
+                    <Route path="/catalogue" element={<CataloguePage />} />
+                    <Route
+                      path="/catalogue/:id"
+                      element={<CatalogueItemPage />}
+                    />
+                    <Route path="/payments" element={<PaymentsPage />} />
+                    <Route
+                      path="/payments/receipts/:id"
+                      element={<ReceiptPage />}
+                    />
+                    <Route path="/audit" element={<NativeAudit />} />
+                    <Route path="/reports" element={<NativeSummaryPage />} />
+                    <Route
+                      path="/analytics-coverage"
+                      element={<AnalyticsCoverage />}
+                    />
+                    <Route
+                      path="/export-rates/countries/:id"
+                      element={<NativeCountry />}
+                    />
+                    <Route path="/jobs" element={<NativeJobs />} />
+                    <Route path="/jobs/:id" element={<NativeJob />} />
+                    <Route path="/files" element={<NativeFiles />} />
+                    <Route
+                      path="/weekly-overview"
+                      element={<AnalyticsPage kind="weekly-overview" />}
+                    />
+                    <Route
+                      path="/weekly-concentration"
+                      element={<AnalyticsPage kind="weekly-concentration" />}
+                    />
+                    <Route
+                      path="/rider-weekly-deliveries"
+                      element={<AnalyticsPage kind="rider-weekly-deliveries" />}
+                    />
+                    <Route
+                      path="/user-activation"
+                      element={<AnalyticsPage kind="time-to-first-order" />}
+                    />
+                    <Route
+                      path="/coupon-redemption-metrics"
+                      element={<AnalyticsPage kind="coupon-redemptions" />}
+                    />
+                    <Route
+                      path="/"
+                      element={<Navigate to="/dashboard" replace />}
                     />
                     <Route
                       path="*"
-                      element={<Navigate to="/dashboard" replace />}
+                      element={
+                        <div className="space-y-4">
+                          <Heading title="Page not found" />
+                          <Notice>
+                            Choose a destination from the sidebar.
+                          </Notice>
+                        </div>
+                      }
                     />
-                    <Route path="/generated" element={<GeneratedReferrals />} />
                   </Routes>
-                </TableStateProvider>
-              </Layout>
-            </ProtectedRoutes>
-          }
-        />
-      </Routes>
+                </Layout>
+              </ProtectedRoutes>
+            }
+          />
+        </Routes>
+      </TableStateProvider>
     </BrowserRouter>
   );
 }
-
-export default Router;

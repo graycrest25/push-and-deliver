@@ -253,13 +253,15 @@ The page finder searches only allowed destinations. Cmd/Ctrl K toggles its dialo
 
 ### Tables / Pagination
 
-The Referrals screen shows one referral per row in a fixed 32rem scroll region, with sticky headers and pagination below it. Exact referred-user-ID search and type/code filters run on the API before cursor pagination. Its page-size choices are 10, 20, 30, and 50; filters and size changes return to page one. Global referral summary cards load independently. CSV exports cover the selected Lagos date range and user type across all pages.
+API lists retain the existing table, toolbar, and semantic status treatments. Pagination shows the current page and returned row count; endpoint cursors and offsets replace database snapshots. Search appears only where the service supports it. Bounded catalogues disclose their limit. Exports follow all returned continuation headers and download a separate file per page.
 
-Support tickets and ticket details share a viewport-based fixed height. Each panel scrolls independently; table column headers stay pinned and pagination remains below the scroll area. Conversations open in a right-side drawer with a blurred backdrop, filling the width on mobile. The newest messages appear first on opening; scrolling upward expands the live history in batches of 25 while preserving the reading position. The header and reply controls remain visible.
+Support ticket View links open a compact details panel beside the queue at desktop widths and below it on smaller screens. Close details preserves the queue filters, page size and cursor and returns focus to the opening link. Open conversation uses the existing dialog treatment with newest messages first and cursor navigation for older messages. Direct conversation routes remain supported. Refresh checks for new activity. Replies and close/reopen actions use the same labelled, responsive form controls as the rest of the workspace; closed tickets are visible and reopenable only by super administrators.
+
+API actions use expandable forms with visible field labels, inline errors, busy controls, and explicit success receipts. Shipping commands follow the current lifecycle; pricing uses draft review and publication. Unsupported legacy features have explanatory empty states rather than controls that cannot save. All existing brand, typography, theme, focus, sidebar and mobile-sheet tokens remain authoritative.
 
 Headers are 46px high with 16px horizontal padding and 12px semibold muted text. Cells use 14px records, approximately 14.4px 16px padding, and tabular numerals. Clickable rows are keyboard reachable and activate with Enter or Space when focus is on the row itself; child controls keep their own interactions. Focus supplies an inset outline and accent background.
 
-Pagination wraps responsively, exposes its status through role=status, and disables unavailable or busy actions. Zero totals display “Loading records…” while busy and “No records” when settled, rather than an empty page fraction. Search, filters, summaries, and exports keep their current-page disclosure.
+Pagination wraps responsively, exposes its status through role=status, and disables unavailable or busy actions. Loading and empty states are explicit. Lists show the returned row count without inventing a total. Reports and exports identify their full period or bounded catalogue scope.
 
 ### Motion / Keyboard
 Shared button and navigation state transitions take 160ms. Sidebar width and sheet behavior use the existing 200ms transitions. The shipped system has no entrance choreography. Reduced-motion mode reduces transitions and animations to 0.01ms, limits animation iterations to one, and restores automatic scroll behavior. Global focus uses a 2px ring outline with 3px offset; controls add their own focus treatment and clickable table rows use a negative offset.
@@ -268,7 +270,7 @@ Shared button and navigation state transitions take 160ms. Sidebar width and she
 
 ### Do:
 - **Do** use semantic colors and both theme mappings from src/index.css.
-- **Do** keep current-page filtering, summaries, and exports visibly scoped.
+- **Do** keep server filters, page counts, summaries, and exports visibly scoped.
 - **Do** preserve route access and action permissions.
 - **Do** retain keyboard focus, mobile toolbar wrapping, and reduced-motion behavior.
 
@@ -276,3 +278,9 @@ Shared button and navigation state transitions take 160ms. Sidebar width and she
 - **Don't** replace semantic status roles with arbitrary brand-blue states.
 - **Don't** present fixture counts or invented claims as production data.
 - **Don't** hide records behind optional charts or create inaccessible click-only rows.
+
+Account details preserve the earlier personal information, verification, vehicle/documents, wallet and transaction sections. Unknown data is explicit; unavailable financial data never becomes a zero balance. Profile edits are preview-only until the backend publishes the target-account write contract. Section navigation retains table state while viewing details and resets it on leaving the section.
+
+Refresh and retry actions share the outlined secondary control with a Tabler refresh icon, compact sizing and busy/disabled states. Detail-card headers explicitly use a wrapping horizontal layout. Loading reads use semantic-colour shimmer placeholders matching definition lists, table columns/rows, profile sections, shipment groups and the authentication/workspace shell. Existing headings and filters stay visible; loading is announced once, decorative blocks are hidden from assistive technology, and reduced motion disables shimmer. Shipment filters display native status names through readable labels; the primary table reference is the clickable native shipment ID.
+
+Report details reuse the shipment information-card pattern: descriptive section headings, compact label/value grids, related records and coverage in sibling cards. Report filters have their own titled card. Activation and rider summaries sit above the paginated table, and their skeletons preserve that arrangement. User activation/concentration and user profiles share the Users navigation state; rider delivery reports and rider profiles share Riders state. Leaving those sections clears pagination.

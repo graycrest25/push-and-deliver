@@ -909,3 +909,24 @@
   padding-bottom: 1rem;
   border-bottom: 1px solid var(--border);
 }
+
+/* Loading placeholders use the same surfaces as the content they replace. */
+.skeleton-shimmer {
+  position: relative;
+  overflow: hidden;
+}
+.skeleton-shimmer::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  transform: translateX(-100%);
+  background: linear-gradient(90deg, transparent, var(--card), transparent);
+  opacity: 0.65;
+  animation: skeleton-shimmer 1.6s ease-in-out infinite;
+}
+@keyframes skeleton-shimmer {
+  to { transform: translateX(100%); }
+}
+@media (prefers-reduced-motion: reduce) {
+  .skeleton-shimmer::after { animation: none; display: none; }
+}

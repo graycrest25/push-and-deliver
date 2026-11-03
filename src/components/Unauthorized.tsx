@@ -1,28 +1,78 @@
-import { signOut } from "firebase/auth";
-import { auth } from "@/lib/firebase";
+import { useState } from "react";
+import { signOut } from "@/lib/api";
 import { Button } from "@/components/ui/button";
-import { useNavigate } from "react-router-dom";
-
+import { AuthFrame } from "@/components/auth-frame";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { useCurrentUser } from "@/contexts/UserContext";
+import { SecurityPage } from "@/features/admin/security";
 export default function Unauthorized() {
-  const navigate = useNavigate();
-
-  const handleLogout = async () => {
-    await signOut(auth);
-    navigate("/sign-in");
-  };
-
+  const { refetchUser, user } = useCurrentUser();
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState("");
+  async function logout() {
+    setBusy(true);
+    setError("");
+    try {
+      await signOut();
+    } catch (e) {
+      setError(
+        e instanceof Error ? e.message : "Sign out failed. Please retry.",
+      );
+    } finally {
+      setBusy(false);
+    }
+  }
   return (
-    <div className="flex flex-col items-center justify-center min-h-screen bg-background p-4 text-center">
-      <h1 className="text-4xl font-bold tracking-tight text-foreground mb-4">
-        Access Denied
-      </h1>
-      <p className="text-muted-foreground mb-8 max-w-md">
-        You are not authorized to use this application. Please get permission
-        from a super admin to be granted access.
-      </p>
-      <Button variant="destructive" onClick={handleLogout}>
-        Log out
-      </Button>
-    </div>
+    <AuthFrame>
+      <Card className="auth-form-card">
+        <CardHeader>
+          <CardTitle>
+            <h1>
+              {user?.membershipKnown
+                ? "Administrator access required"
+                : "Admin access cannot be verified yet"}
+            </h1>
+          </CardTitle>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          <p className="text-sm text-muted-foreground">
+            {user?.membershipKnown
+              ? "Your account does not have administrator access. Contact an administrator to request access."
+              : "You are signed in, but this deployment did not return valid administrator membership. Contact your backend administrator to enable the updated session contract."}
+          </p>
+          {error && (
+            <p role="alert" className="text-sm text-destructive">
+              {error}
+            </p>
+          )}
+          <div className="flex flex-wrap gap-2">
+            <Button
+              disabled={busy}
+              onClick={async () => {
+                setBusy(true);
+                try {
+                  await refetchUser();
+                } finally {
+                  setBusy(false);
+                }
+              }}
+            >
+              Retry access check
+            </Button>
+            <Button variant="outline" disabled={busy} onClick={logout}>
+              Sign out
+            </Button>
+          </div>
+          <details>
+            <summary className="cursor-pointer text-sm font-medium">
+              Manage your own session
+            </summary>
+            <div className="mt-4">
+              <SecurityPage />
+            </div>
+          </details>
+        </CardContent>
+      </Card>
+    </AuthFrame>
   );
 }

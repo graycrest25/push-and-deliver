@@ -1,0 +1,291 @@
+{
+  "auditDate": "2026-11-03",
+  "timezone": "Africa/Lagos",
+  "authentication": "Existing supplied administrator login; verified super subtype. Credentials omitted.",
+  "scope": "Read-only browser check of the current local webapp against the live BASE_URL backend. No application changes or business mutations were made.",
+  "summary": {
+    "affectedPages": 6,
+    "distinctEndpoints": 3
+  },
+  "silentDataDisplayFailures": [
+    {
+      "page": "/users",
+      "request": {
+        "method": "GET",
+        "endpoint": "/v1/admin/users",
+        "query": {
+          "limit": "25"
+        },
+        "body": null
+      },
+      "httpStatus": 200,
+      "returnedArray": {
+        "path": "data.items",
+        "count": 25,
+        "firstItemFields": [
+          "id",
+          "uid",
+          "email",
+          "deleted",
+          "disabled",
+          "username",
+          "createdAt",
+          "accountType",
+          "phoneNumber",
+          "emailVerified",
+          "identityExists",
+          "verificationStatus"
+        ]
+      },
+      "displayedRows": 0,
+      "visibleStatus": [
+        "Page 1 \u00b7 0 records on this page",
+        ""
+      ],
+      "responseRequestId": "a43e169de50537abc0d1641c751f7393",
+      "causes": [
+        "The API returns data.items, but the table looks for users.",
+        "api.ts does not unwrap the data envelope for this endpoint.",
+        "The visible columns use legacy fields that differ from the live response fields."
+      ]
+    },
+    {
+      "page": "/riders",
+      "request": {
+        "method": "GET",
+        "endpoint": "/v1/admin/users",
+        "query": {
+          "limit": "25"
+        },
+        "body": null
+      },
+      "httpStatus": 200,
+      "returnedArray": {
+        "path": "data.items",
+        "count": 25,
+        "firstItemFields": [
+          "id",
+          "uid",
+          "email",
+          "deleted",
+          "disabled",
+          "username",
+          "createdAt",
+          "accountType",
+          "phoneNumber",
+          "emailVerified",
+          "identityExists",
+          "verificationStatus"
+        ]
+      },
+      "displayedRows": 0,
+      "visibleStatus": [
+        "Page 1 \u00b7 0 records on this page",
+        ""
+      ],
+      "responseRequestId": "a02a5263b50bfa8a620aa91016bf34d1",
+      "causes": [
+        "The API returns data.items, but the table looks for users.",
+        "api.ts does not unwrap the data envelope for this endpoint.",
+        "The visible columns use legacy fields that differ from the live response fields."
+      ]
+    },
+    {
+      "page": "/vendors",
+      "request": {
+        "method": "GET",
+        "endpoint": "/v1/admin/users",
+        "query": {
+          "limit": "25"
+        },
+        "body": null
+      },
+      "httpStatus": 200,
+      "returnedArray": {
+        "path": "data.items",
+        "count": 25,
+        "firstItemFields": [
+          "id",
+          "uid",
+          "email",
+          "deleted",
+          "disabled",
+          "username",
+          "createdAt",
+          "accountType",
+          "phoneNumber",
+          "emailVerified",
+          "identityExists",
+          "verificationStatus"
+        ]
+      },
+      "displayedRows": 0,
+      "visibleStatus": [
+        "Page 1 \u00b7 0 records on this page",
+        ""
+      ],
+      "responseRequestId": "c086c45c66299ae66f210dcd249a356f",
+      "causes": [
+        "The API returns data.items, but the table looks for users.",
+        "api.ts does not unwrap the data envelope for this endpoint.",
+        "The visible columns use legacy fields that differ from the live response fields."
+      ]
+    },
+    {
+      "page": "/ecommerce-merchants",
+      "request": {
+        "method": "GET",
+        "endpoint": "/v1/admin/users",
+        "query": {
+          "limit": "25"
+        },
+        "body": null
+      },
+      "httpStatus": 200,
+      "returnedArray": {
+        "path": "data.items",
+        "count": 25,
+        "firstItemFields": [
+          "id",
+          "uid",
+          "email",
+          "deleted",
+          "disabled",
+          "username",
+          "createdAt",
+          "accountType",
+          "phoneNumber",
+          "emailVerified",
+          "identityExists",
+          "verificationStatus"
+        ]
+      },
+      "displayedRows": 0,
+      "visibleStatus": [
+        "Page 1 \u00b7 0 records on this page",
+        ""
+      ],
+      "responseRequestId": "8ce7fc82b9a3fdfd0442a42859b55ec3",
+      "causes": [
+        "The API returns data.items, but the table looks for users.",
+        "api.ts does not unwrap the data envelope for this endpoint.",
+        "The visible columns use legacy fields that differ from the live response fields."
+      ]
+    },
+    {
+      "page": "/delivery-zones",
+      "request": {
+        "method": "GET",
+        "endpoint": "/v1/admin/geography/tariffs",
+        "query": {},
+        "body": null
+      },
+      "httpStatus": 200,
+      "returnedArray": {
+        "path": "data.items",
+        "count": 6,
+        "firstItemFields": [
+          "id",
+          "zone",
+          "status",
+          "createdAt",
+          "localType",
+          "volumetricDivisor"
+        ]
+      },
+      "displayedRows": 0,
+      "visibleStatus": [],
+      "responseRequestId": "ab4415027fb6c4a45a3b19fd80134532",
+      "causes": [
+        "The API returns data.items, but the table looks for tariffs.",
+        "api.ts does not unwrap the data envelope for this endpoint.",
+        "The visible columns use legacy fields that differ from the live response fields."
+      ]
+    },
+    {
+      "page": "/audit",
+      "request": {
+        "method": "GET",
+        "endpoint": "/v1/admin/audit",
+        "query": {
+          "limit": "25"
+        },
+        "body": null
+      },
+      "httpStatus": 200,
+      "returnedArray": {
+        "path": "data.items",
+        "count": 1,
+        "firstItemFields": [
+          "id",
+          "actor",
+          "source",
+          "adminType",
+          "createdAt",
+          "targetUid"
+        ]
+      },
+      "displayedRows": 0,
+      "visibleStatus": [
+        "Page 1 \u00b7 0 records on this page"
+      ],
+      "responseRequestId": "6648d89faed491b7bb2679c57df92361",
+      "causes": [
+        "The API returns data.items, but the table looks for events.",
+        "api.ts does not unwrap the data envelope for this endpoint.",
+        "The visible columns use legacy fields that differ from the live response fields."
+      ]
+    }
+  ],
+  "additionalFindings": [
+    {
+      "pages": [
+        "/riders",
+        "/vendors",
+        "/ecommerce-merchants"
+      ],
+      "finding": "These pages send the same unfiltered /v1/admin/users?limit=25 request as Users. They do not currently send an account-type/application-specific filter. Correct row rendering alone does not establish that the intended account/application population is selected."
+    },
+    {
+      "page": "/shipment-orders",
+      "displayedRows": 25,
+      "finding": "Rows render, but shipmentNumber and customerId are absent from the sampled list response; the corresponding columns display blanks. This is a response/UI field mismatch, rather than a hidden list.",
+      "returnedFirstItemFields": [
+        "createdAt",
+        "currency",
+        "id",
+        "shipmentType",
+        "status",
+        "totalAmountMinor"
+      ]
+    }
+  ],
+  "verifiedVisibleLists": [
+    {
+      "page": "/shipment-orders",
+      "displayedRows": 25
+    },
+    {
+      "page": "/support-tickets",
+      "displayedRows": 18
+    },
+    {
+      "page": "/jobs",
+      "displayedRows": 25
+    },
+    {
+      "page": "/rider-weekly-deliveries",
+      "displayedRows": 16
+    },
+    {
+      "page": "/user-activation",
+      "displayedRows": 25
+    }
+  ],
+  "limitations": [
+    "Counts are the observed first page, not database totals.",
+    "Other pages returning HTTP 4xx/5xx are outside these silent HTTP 200 findings.",
+    "Null dates or null job errors were not treated as mapping defects.",
+    "Only response structure and counts are stored; customer records, credentials and BASE_URL are excluded."
+  ]
+}

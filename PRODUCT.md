@@ -12,11 +12,11 @@ Administrators working across orders, shipments, customers, riders, merchants, p
 
 ## Product Purpose
 
-Manage the existing PushNDeliver platform through its Firebase-backed administration app. Improve clarity, usability, and liveliness across the entire web app.
+Manage the existing PushNDeliver platform through its API-backed administration app. Improve clarity, usability, and liveliness across the entire web app.
 
 ## Capabilities and Constraints
 
-Preserve existing workflows, data, routes, authentication, and role permissions. Super, regular, customer care, and verifier roles have different access. The additional shipment fee action appears for super and regular admins on express shipments. Search, filtering, summaries, and exports on paginated lists operate on the current page; preserve that disclosure.
+Preserve the existing brand and workspace UI while adapting workflows to the registered API contracts. Super, regular, customer care, and verifier memberships have different access. The backend authorizes every action. Reads use endpoint-specific cursors or offsets; counts describe their stated scope. Configuration and shipment changes use supported commands and stable operation keys. Features without a documented contract show an explicit unavailable state. BASE_URL and session credentials remain server-side.
 
 ## Brand Commitments
 
@@ -24,7 +24,7 @@ Use #445CAA and #B4DAFD in the redesigned palette (user confirmed). Preserve the
 
 ## Evidence on Hand
 
-Existing React, TypeScript, Tailwind, Radix, Firebase, and Recharts code. Real analytics counts and existing order records provide content. No additional commercial claims or fabricated production data are authorized.
+Existing Next.js, React, TypeScript, Tailwind, and Radix code. Real analytics counts and existing order records provide content. No additional commercial claims or fabricated production data are authorized.
 
 ## Product Principles
 

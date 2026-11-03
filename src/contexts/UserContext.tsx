@@ -6,122 +6,114 @@ import {
   useCallback,
   useRef,
 } from "react";
-import { onIdTokenChanged } from "firebase/auth";
-import { doc, getDoc } from "firebase/firestore";
-import { auth, db } from "@/lib/firebase";
-import { isAdminType } from "@/lib/admin-access";
-import { startAdminClaimsRefresh } from "@/lib/admin-claims-refresh";
-import type { User } from "@/types";
-
-interface UserContextType {
-  user: User | null;
-  loading: boolean;
+import { api, ApiError } from "@/lib/api";
+import { isAdminType, type AdminType } from "@/lib/admin-access";
+export interface SessionUser {
+  id: string;
+  email: string;
+  username: string;
+  imageURL?: string;
   isAdmin: boolean;
-  adminType?: "super" | "regular" | "customercare" | "verifier" | "";
-  refetchUser: () => Promise<void>;
+  membershipKnown?: boolean;
+  adminType?: AdminType;
 }
-
-const UserContext = createContext<UserContextType>({
+const UserContext = createContext<{
+  user: SessionUser | null;
+  loading: boolean;
+  error: string;
+  isAdmin: boolean;
+  adminType?: AdminType;
+  refetchUser: () => Promise<boolean>;
+}>({
   user: null,
   loading: true,
+  error: "",
   isAdmin: false,
-  refetchUser: async () => {},
+  refetchUser: async () => false,
 });
-
 export function UserProvider({ children }: { children: React.ReactNode }) {
-  const [user, setUser] = useState<User | null>(null);
+  const [user, setUser] = useState<SessionUser | null>(null);
   const [loading, setLoading] = useState(true);
-  const [currentUid, setCurrentUid] = useState<string | null>(null);
-  const sessionUid = useRef<string | null>(null);
-  const profileRequest = useRef(0);
-
-  const fetchUserData = useCallback(async (uid: string) => {
-    const request = ++profileRequest.current;
+  const [error, setError] = useState("");
+  const generation = useRef(0);
+  const refetchUser = useCallback(async () => {
+    const request = ++generation.current;
+    setLoading(true);
+    setError("");
     try {
-      const firebaseUser = auth.currentUser;
-      if (!firebaseUser || firebaseUser.uid !== uid) return;
-      const { claims } = await firebaseUser.getIdTokenResult();
-      if (request !== profileRequest.current || auth.currentUser?.uid !== uid)
-        return;
-      if (claims.isAdmin !== true || !isAdminType(claims.adminType)) {
-        setUser(null);
-        return;
-      }
-      const adminType = claims.adminType;
-      // Apply permissions immediately; profile reads must not delay a role change.
-      setUser((previous) => ({
-        ...(previous?.id === uid ? previous : {}),
-        id: uid,
-        email: firebaseUser.email || undefined,
-        username: firebaseUser.displayName || undefined,
-        imageURL: firebaseUser.photoURL || undefined,
-        isAdmin: true,
-        adminType,
-      }));
-      // Profile data enriches the session; token claims determine access.
-      const userSnap = await getDoc(doc(db, "Users", uid)).catch(() => null);
-      if (request !== profileRequest.current || auth.currentUser?.uid !== uid)
-        return;
-      const userData = userSnap?.exists() ? userSnap.data() : {};
+      const session = await api("/v2/auth/session");
+      if (
+        session.accountType !== "user" ||
+        !session.uid ||
+        session.accountStatus !== "active"
+      )
+        throw new Error(
+          "An active user-context session is required for the admin workspace.",
+        );
+      const profile = await api("/v1/users/me");
+      if (profile.uid !== session.uid || profile.accountType !== "user")
+        throw new Error("The profile does not match your session.");
+      if (request !== generation.current) return false;
+      // Membership comes only from the authoritative session contract.
+      const membershipKnown =
+        (session.isAdmin === true && isAdminType(session.adminType)) ||
+        (session.isAdmin === false && session.adminType === null);
       setUser({
-        ...userData,
-        id: uid,
-        email: userData.email || firebaseUser.email,
-        username: userData.username || firebaseUser.displayName,
-        imageURL: userData.imageURL || firebaseUser.photoURL,
-        isAdmin: true,
-        adminType,
-      } as User);
-    } catch (error) {
-      if (request !== profileRequest.current || auth.currentUser?.uid !== uid)
-        return;
-      console.error("Failed to load user profile:", error);
-      setUser(null);
+        id: session.uid,
+        email: profile.email || "",
+        username: profile.username || profile.email || session.uid,
+        isAdmin: membershipKnown && session.isAdmin === true,
+        membershipKnown,
+        adminType:
+          membershipKnown && session.isAdmin ? session.adminType : undefined,
+      });
+      return true;
+    } catch (failure) {
+      if (request !== generation.current) return false;
+      if (failure instanceof ApiError && failure.status === 401) setUser(null);
+      else
+        setError(
+          failure instanceof Error
+            ? failure.message
+            : "Unable to load your session. Please retry.",
+        );
+      return false;
+    } finally {
+      if (request === generation.current) setLoading(false);
     }
   }, []);
-
-  const refetchUser = useCallback(async () => {
-    if (currentUid) {
-      await auth.currentUser?.getIdToken(true);
-      await fetchUserData(currentUid);
-    }
-  }, [currentUid, fetchUserData]);
-
   useEffect(() => {
-    const unsubscribe = onIdTokenChanged(auth, async (firebaseUser) => {
-      if (sessionUid.current !== (firebaseUser?.uid ?? null)) setLoading(true);
-      sessionUid.current = firebaseUser?.uid ?? null;
-      if (firebaseUser) {
-        setCurrentUid(firebaseUser.uid);
-        await fetchUserData(firebaseUser.uid);
-      } else {
-        setCurrentUid(null);
-        setUser(null);
-      }
+    void refetchUser();
+    const expired = () => {
+      generation.current++;
+      setError("");
+      setUser(null);
       setLoading(false);
-    });
-
-    return () => unsubscribe();
-  }, [fetchUserData]);
-
-  useEffect(
-    () =>
-      startAdminClaimsRefresh(async () => {
-        await auth.currentUser?.getIdToken(true);
-      }),
-    [],
-  );
-
-  const isAdmin = user?.isAdmin === true;
-  const adminType = user?.adminType;
-
+    };
+    const changed = () => {
+      void refetchUser();
+    };
+    window.addEventListener("session-expired", expired);
+    window.addEventListener("session-changed", changed);
+    return () => {
+      generation.current++;
+      window.removeEventListener("session-expired", expired);
+      window.removeEventListener("session-changed", changed);
+    };
+  }, [refetchUser]);
   return (
     <UserContext.Provider
-      value={{ user, loading, isAdmin, adminType, refetchUser }}
+      value={{
+        user,
+        loading,
+        error,
+        isAdmin: user?.isAdmin === true,
+        adminType: user?.adminType,
+        refetchUser,
+      }}
     >
       {children}
     </UserContext.Provider>
   );
 }
-
 export const useCurrentUser = () => useContext(UserContext);

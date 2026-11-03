@@ -1,3 +1,4 @@
+import { RefreshButton } from "@/components/ui/refresh-button";
 import { LoadingModal } from "@/components/shared/Loader";
 import Unauthorized from "@/components/Unauthorized";
 import { useCurrentUser } from "@/contexts/UserContext";
@@ -6,12 +7,22 @@ import { Navigate, useLocation } from "react-router-dom";
 import { adminHome, canAccessAdminScreen } from "@/lib/admin-access";
 
 const ProtectedRoutes = ({ children }: { children: React.ReactNode }) => {
-  const { user, loading, isAdmin } = useCurrentUser();
+  const { user, loading, error, refetchUser, isAdmin } = useCurrentUser();
   const location = useLocation();
 
   if (loading) {
     return <LoadingModal />;
   }
+
+  if (error)
+    return (
+      <div className="p-8 space-y-4" role="alert">
+        <p>{error}</p>
+        <RefreshButton onClick={() => void refetchUser()}>
+          Retry session
+        </RefreshButton>
+      </div>
+    );
 
   if (!user) {
     return <Navigate to="/sign-in" replace />;
