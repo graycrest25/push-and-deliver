@@ -1,5 +1,8 @@
 # Native admin integration status
 
+Current follow-up: see [Latest native admin integration](latest-api-integration-2026-11-03.md) for the resolved account, pricing and shipment gaps, new UI and remaining acceptance work. Earlier entries below describe the previous integration.
+
+
 Updated 2026-11-03 against the supplied [native admin API update reference](../../pnd-backend/docs/admin-api-update-reference.md). This document supersedes the earlier eight-item source audit. The reference supplies native contracts for the earlier membership, releases, roles, coupons, bonus funding and support gaps. Source availability and local fixture tests are not deployed-backend verification.
 
 ## Implemented dashboard update

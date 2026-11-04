@@ -1,3 +1,6 @@
+import { AccountSummary } from "./account-summary";
+import { ShipmentTimeline } from "./shipment-commands";
+import { WithdrawalExport } from "./withdrawal-export";
 import { ShipmentDetails } from "./shipment-details";
 import { shipmentStatuses, shipmentStatusLabel } from "@/lib/shipment-status";
 import { Badge } from "@/components/ui/badge";
@@ -60,11 +63,9 @@ export function NativeSummaries({
               <option value="riders">Riders</option>
             </select>
           </label>
-          <ResourcePanel
-            title="Account totals"
-            path={queryPath("/v1/admin/analytics/account-summary", {
-              type: verifier ? "riders" : account,
-            })}
+          <AccountSummary
+            key={verifier ? "riders" : account}
+            type={verifier || account === "riders" ? "riders" : "users"}
           />
         </section>
       )}
@@ -87,12 +88,22 @@ export function NativeSummaries({
               ))}
             </select>
           </label>
-          <ResourcePanel
-            title="Order totals"
-            path={queryPath("/v1/admin/analytics/order-summary", {
-              type: order,
-            })}
-          />
+          <div role="region" aria-label="Order totals">
+            <ResourcePanel
+              title="Order totals"
+              path={queryPath("/v1/admin/analytics/order-summary", {
+                type: order,
+              })}
+            />
+          </div>
+          {adminType === "super" && (
+            <Link
+              className="inline-flex text-sm text-primary underline"
+              to="/analytics-coverage?report=order_summary"
+            >
+              Check order report readiness
+            </Link>
+          )}
         </section>
       )}
     </div>
@@ -216,6 +227,7 @@ export function NativeShipment() {
         record.data && (
           <>
             <ShipmentDetails data={record.data} reload={record.reload} />
+            <ShipmentTimeline id={id} />
             <ShipmentTracking id={id} status={record.data.status} />
           </>
         )
@@ -288,6 +300,7 @@ export function NativeWithdrawals() {
           link: (r) => `/withdrawals/${segment(r.id)}`,
         }}
       />
+      <WithdrawalExport />
     </div>
   );
 }

@@ -190,6 +190,14 @@ export function features(path, req, res, body, success, error) {
     });
     return true;
   }
+  if (path === "/v1/shipping/local-types") {
+    success(res, {
+      items: [{ id: "premium", name: "Premium" }],
+      nextCursor: null,
+      hasMore: false,
+    });
+    return true;
+  }
   if (path === "/v1/shipments") {
     success(res, {
       items: [
@@ -207,7 +215,30 @@ export function features(path, req, res, body, success, error) {
     return true;
   }
   if (path === "/v1/shipments/shipment-1") {
-    success(res, shipment);
+    const allowedAdminActions = [];
+    if (shipment.status === "placed" && shipment.assignedRider === null)
+      allowedAdminActions.push("accept_at_office");
+    if (["placed", "acceptedByRider"].includes(shipment.status))
+      allowedAdminActions.push("cancel");
+    if (shipment.status === "onRouteToPndHQ")
+      allowedAdminActions.push("confirm_arrival");
+    const paid =
+      shipment.payment?.status === "paid" &&
+      ["paid", "not_required"].includes(shipment.assessmentStatus);
+    if (shipment.status === "sentToHq" && paid)
+      allowedAdminActions.push("dispatch");
+    if (shipment.status === "onrouteToDestination" && paid)
+      allowedAdminActions.push("complete_delivery");
+    success(res, {
+      ...shipment,
+      nativeWriteEligible: true,
+      pendingCommands: { assignment: false, assessment: false },
+      allowedAdminActions,
+    });
+    return true;
+  }
+  if (path === "/v1/admin/shipments/shipment-1/timeline") {
+    success(res, { items: [], nextCursor: null, hasMore: false });
     return true;
   }
   if (/^\/v1\/shipments\/shipment-1\/(accept|transitions|cancel)$/.test(path)) {

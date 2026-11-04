@@ -115,7 +115,8 @@ export async function proxy(request: NextRequest, segments: string[]) {
         "Reload this page before trying again.",
       );
   }
-  const publicReleaseRead = method === "GET" && path === "/v1/config/mobile";
+  const publicConfigurationRead =
+    method === "GET" && path === "/v1/config/mobile";
   const action = path.startsWith("/v2/auth/")
     ? path.slice("/v2/auth/".length)
     : undefined;
@@ -135,7 +136,7 @@ export async function proxy(request: NextRequest, segments: string[]) {
       ? request.cookies.get(DEVICE)?.value || randomUUID()
       : session?.deviceId;
   if (
-    !publicReleaseRead &&
+    !publicConfigurationRead &&
     !(action && publicAuth.has(action)) &&
     !(action === "refresh" ? refresh : access)
   )
@@ -163,12 +164,26 @@ export async function proxy(request: NextRequest, segments: string[]) {
       "The service is not configured. Contact your administrator.",
     );
   }
+  const configEnvironment = createHash("sha256")
+    .update(base.href)
+    .digest("hex")
+    .slice(0, 24);
+  if (
+    path === "/v1/admin/game/rules" &&
+    request.headers.has("x-config-environment") &&
+    request.headers.get("x-config-environment") !== configEnvironment
+  )
+    return fail(
+      409,
+      "environment_changed",
+      "The API environment changed. Reload settings before preparing another save.",
+    );
   const url = new URL(base.href.replace(/\/$/, "") + path);
   url.search = request.nextUrl.search;
   const headers = new Headers({ Accept: "application/json" });
   if (
     access &&
-    !publicReleaseRead &&
+    !publicConfigurationRead &&
     !(action && (publicAuth.has(action) || action === "refresh"))
   ) {
     headers.set("Authorization", `Bearer ${access}`);
@@ -187,6 +202,7 @@ export async function proxy(request: NextRequest, segments: string[]) {
     const reader = request.body?.getReader();
     const decoder = new TextDecoder();
     const dashboardWrite =
+      path.startsWith("/v1/admin/") ||
       /^\/v1\/shipments\/[^/]+\/(accept|transitions|cancel)$/.test(path) ||
       /^\/v1\/admin\/(coupons|support|config|analytics\/backfills|users\/[^/]+\/role)(\/|$)/.test(
         path,
@@ -297,10 +313,60 @@ export async function proxy(request: NextRequest, segments: string[]) {
     headers.set("Content-Type", "application/json");
   }
   try {
+    const gameRequest = path === "/v1/admin/game/rules";
+    const reportReadinessRequest =
+      path === "/v1/admin/analytics/coverage" ||
+      path === "/v1/admin/analytics/backfills";
+    const campaignMutation =
+      method !== "GET" &&
+      (path === "/v1/admin/coupons/campaigns" ||
+        /^\/v1\/admin\/coupons\/campaigns\/[^/]+\/status$/.test(path));
+    if (gameRequest || reportReadinessRequest || campaignMutation) {
+      const authorityResponse = await fetch(
+        new URL(base.href.replace(/\/$/, "") + "/v2/auth/session"),
+        {
+          headers: {
+            Accept: "application/json",
+            Authorization: `Bearer ${access}`,
+            "X-Account-Type": "user",
+          },
+          cache: "no-store",
+          redirect: "manual",
+          signal: AbortSignal.timeout(25_000),
+        },
+      );
+      if (!authorityResponse.ok)
+        return fail(
+          authorityResponse.status === 401 ? 401 : 403,
+          "game_access_denied",
+          "Unable to verify configuration access. Sign in again.",
+        );
+      const authority = (await authorityResponse.json()).data;
+      if (
+        authority?.isAdmin !== true ||
+        authority.accountType !== "user" ||
+        authority.accountStatus !== "active" ||
+        !(
+          gameRequest || reportReadinessRequest
+            ? ["super"]
+            : ["super", "regular"]
+        ).includes(authority.adminType)
+      )
+        return fail(
+          403,
+          "game_access_denied",
+          gameRequest
+            ? "Only super administrators can manage game rules."
+            : reportReadinessRequest
+              ? "Only super administrators can inspect report coverage or request rebuilds."
+              : "Only super and regular administrators can manage reward campaigns.",
+        );
+    }
     // Shipment status commands in this dashboard are restricted to super admins.
     if (
-      method === "POST" &&
-      /^\/v1\/shipments\/[^/]+\/(accept|transitions|cancel)$/.test(path)
+      (method === "POST" &&
+        /^\/v1\/shipments\/[^/]+\/(accept|transitions|cancel)$/.test(path)) ||
+      (method !== "GET" && /^\/v1\/admin\/shipments\//.test(path))
     ) {
       const authorityResponse = await fetch(
         new URL(base.href.replace(/\/$/, "") + "/v2/auth/session"),
@@ -412,6 +478,8 @@ export async function proxy(request: NextRequest, segments: string[]) {
       "Cache-Control": "no-store",
       "X-Content-Type-Options": "nosniff",
     });
+    if (path === "/v1/admin/game/rules")
+      responseHeaders.set("X-Config-Environment", configEnvironment);
     for (const name of safeHeaders) {
       const value = upstream.headers.get(name);
       if (value) responseHeaders.set(name, String(redact(value, base)));

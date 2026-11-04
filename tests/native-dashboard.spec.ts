@@ -276,12 +276,10 @@ test("support claims scope attachments; replies retry unchanged and status uses 
   await page.goto("/support-tickets/ticket-1");
   await expect(page.getByText("Claim ticket to download")).toBeVisible();
   expect(await page.content()).not.toContain("private.example.test");
-  await openForm(page, "Claim ticket");
   await page.getByRole("button", { name: "Claim ticket", exact: true }).click();
   await expect(
     page.getByRole("link", { name: "Download attachment" }),
   ).toHaveAttribute("href", "/api/proxy/v1/media/asset-private/content");
-  await openForm(page, "Send reply");
   await page
     .getByLabel("Message to customer")
     .fill("We are checking your delivery.");
@@ -290,7 +288,7 @@ test("support claims scope attachments; replies retry unchanged and status uses 
   await expect(
     page.locator("#workspace-content").getByRole("alert"),
   ).toContainText("Response lost");
-  await page.getByRole("button", { name: "Send reply", exact: true }).click();
+  await page.getByRole("button", { name: "Retry reply", exact: true }).click();
   await expect(
     page.getByText("We are checking your delivery.", { exact: true }),
   ).toBeVisible();
@@ -307,14 +305,129 @@ test("support claims scope attachments; replies retry unchanged and status uses 
     "clientMessageId",
     "message",
   ]);
-  await openForm(page, "Close ticket");
+  await expect(page.getByRole("dialog")).toHaveCount(0);
+  await expect(page.getByRole("table")).toHaveCount(0);
+  await expect(
+    page.getByRole("log", { name: "Conversation messages" }),
+  ).toContainText("Help with delivery");
+  await page
+    .getByLabel("Message to customer")
+    .fill("Your courier will contact you shortly.");
+  await page.getByRole("button", { name: "Send reply", exact: true }).click();
+  await expect(
+    page.getByText("Your courier will contact you shortly.", { exact: true }),
+  ).toBeVisible();
+  const fresh = await writes("/v1/admin/support/tickets/ticket-1/messages");
+  expect(fresh[2].body.clientMessageId).not.toBe(fresh[0].body.clientMessageId);
+  expect(fresh[2].key).not.toBe(fresh[0].key);
+  await page.screenshot({
+    path: "test-results/support-chat-desktop.png",
+    fullPage: true,
+    animations: "disabled",
+  });
+  await page.getByRole("button", { name: "Switch to dark theme" }).click();
+  await page.screenshot({
+    path: "test-results/support-chat-desktop-dark.png",
+    fullPage: true,
+    animations: "disabled",
+  });
+  await page.setViewportSize({ width: 390, height: 844 });
+  await page.screenshot({
+    path: "test-results/support-chat-mobile.png",
+    fullPage: true,
+    animations: "disabled",
+  });
+  expect(
+    await page.evaluate(
+      () => document.documentElement.scrollWidth <= innerWidth,
+    ),
+  ).toBeTruthy();
   await page.getByRole("button", { name: "Close ticket", exact: true }).click();
   await expect(
     page.locator("#workspace-content").getByRole("alert"),
   ).toContainText("Only a super administrator");
   const call = (await writes("/v1/admin/support/tickets/ticket-1/status"))[0];
   expect(call.method).toBe("PUT");
-  expect(call.body).toEqual({ status: "closed", expectedVersion: 4 });
+  expect(call.body).toEqual({ status: "closed", expectedVersion: 6 });
+  const records = (await control()).records;
+  const notice = records.find(
+    (row: any) =>
+      row.path === "/v1/admin/support/tickets/ticket-1/messages" &&
+      row.body.message ===
+        "This ticket is now closed, I hope all your issues have been resolved. If you have any other issues, please open a new ticket.",
+  );
+  expect(notice).toBeTruthy();
+  const closing = records.findIndex(
+    (row: any) =>
+      row.path === "/v1/admin/support/tickets/ticket-1/status" &&
+      row.method === "PUT",
+  );
+  expect(records.indexOf(notice)).toBeLessThan(closing);
+  expect(
+    records
+      .slice(records.indexOf(notice) + 1, closing)
+      .some(
+        (row: any) =>
+          row.method === "GET" &&
+          row.path === "/v1/admin/support/tickets/ticket-1",
+      ),
+  ).toBeTruthy();
+});
+test("closing waits for its message and retries both steps without duplicate notices", async ({
+  page,
+}) => {
+  await login(page);
+  await page.goto("/support-tickets/ticket-1");
+  await page.getByRole("button", { name: "Claim ticket", exact: true }).click();
+  await expect(page.getByLabel("Message to customer")).toBeVisible();
+  const statusRequests: { key: string | undefined; body: any }[] = [];
+  await page.route(
+    "**/api/proxy/v1/admin/support/tickets/ticket-1/status",
+    (route) => {
+      statusRequests.push({
+        key: route.request().headers()["idempotency-key"],
+        body: route.request().postDataJSON(),
+      });
+      return statusRequests.length === 1
+        ? route.fulfill({
+            status: 503,
+            json: { error: { message: "Closing response unavailable" } },
+          })
+        : route.continue();
+    },
+  );
+  await control({ failWrite: true });
+  const close = page.getByRole("button", { name: "Close ticket", exact: true });
+  await close.click();
+  await expect(
+    page.getByRole("alert").filter({ hasText: "Response lost" }),
+  ).toBeVisible();
+  expect(statusRequests).toHaveLength(0);
+  await close.click();
+  await expect(
+    page.getByRole("alert").filter({ hasText: "Closing response unavailable" }),
+  ).toBeVisible();
+  const notices = await writes("/v1/admin/support/tickets/ticket-1/messages");
+  expect(notices).toHaveLength(2);
+  expect(notices[0].body.message).toBe(
+    "This ticket is now closed, I hope all your issues have been resolved. If you have any other issues, please open a new ticket.",
+  );
+  expect(notices[1].body).toEqual(notices[0].body);
+  expect(notices[1].key).toBe(notices[0].key);
+  await close.click();
+  await expect(page.getByText("Closed", { exact: true })).toBeVisible();
+  expect(statusRequests).toHaveLength(2);
+  expect(statusRequests[1]).toEqual(statusRequests[0]);
+  expect(statusRequests[0].body).toEqual({
+    status: "closed",
+    expectedVersion: 4,
+  });
+  expect(
+    await writes("/v1/admin/support/tickets/ticket-1/messages"),
+  ).toHaveLength(2);
+  await expect(
+    page.getByRole("log").getByText(notices[0].body.message, { exact: true }),
+  ).toHaveCount(1);
 });
 test("Google challenge login keeps nonce/device binding and opaque credentials behind the proxy", async ({
   page,
@@ -646,14 +759,16 @@ test("native rides, fares and catalogues use admin reads and preserve monetary u
     page.getByRole("cell", { name: "ride-1", exact: true }),
   ).toBeVisible();
   await page.getByRole("link", { name: /Open ride-1/ }).click();
-  await expect(page.getByText(/2,500\.00/)).toBeVisible();
+  await expect(page.getByText(/2,500\.00/).first()).toBeVisible();
   await expect(page.getByRole("button", { name: /Cancel ride/ })).toHaveCount(
     0,
   );
   await page.goto("/fees");
   await expect(page.getByRole("cell", { name: /25\.50/ })).toBeVisible();
   await page.getByLabel("Fee catalogue").selectOption("shipping");
-  await expect(page.getByRole("cell", { name: "Distance fee" })).toBeVisible();
+  await expect(
+    page.getByRole("cell", { name: "Distance fee", exact: true }),
+  ).toBeVisible();
   await page.goto("/head-offices");
   await expect(
     page.getByRole("cell", { name: "Lagos office", exact: true }),
@@ -667,21 +782,23 @@ test("native rides, fares and catalogues use admin reads and preserve monetary u
     page.getByRole("cell", { name: "International tariff", exact: true }),
   ).toBeVisible();
   await page.getByRole("link", { name: /Open International tariff/ }).click();
-  await expect(page.getByRole("cell", { name: /1,500\.00/ })).toBeVisible();
   await expect(
-    page.getByRole("cell", { name: "Nigeria", exact: true }),
+    page.getByRole("cell", { name: "150,000", exact: true }),
   ).toBeVisible();
+  await expect(page.getByText("NG", { exact: true })).toBeVisible();
   await page.goto("/export-rates/countries/NG");
   await expect(page.getByText("Nigeria", { exact: true })).toBeVisible();
   await page.goto("/delivery-zones");
   await expect(
-    page.getByRole("cell", { name: "within_state", exact: true }),
+    page.getByRole("cell", { name: "Within state", exact: true }),
   ).toBeVisible();
   await expect(
     page.getByRole("cell", { name: "Lagos", exact: true }),
   ).toBeVisible();
   await page.getByRole("link", { name: /Open local-1/ }).click();
-  await expect(page.getByRole("cell", { name: /1,500\.00/ })).toBeVisible();
+  await expect(
+    page.getByRole("cell", { name: "150,000", exact: true }),
+  ).toBeVisible();
   const calls = (await control()).records;
   expect(
     calls.some(
@@ -692,7 +809,7 @@ test("native rides, fares and catalogues use admin reads and preserve monetary u
   ).toBe(true);
   expect(
     calls.some(
-      (r: any) => r.path === "/v1/admin/geography/tariffs/local-1/rates",
+      (r: any) => r.path === "/v1/admin/geography/tariffs/local-1/snapshot",
     ),
   ).toBe(true);
   expect(
@@ -726,7 +843,7 @@ test("audit handles role events and coverage rebuild acceptance stays separate f
     .click();
   await expect(page.getByText("rebuild-1", { exact: true })).toBeVisible();
   const call = (await writes("/v1/admin/analytics/backfills"))[0];
-  expect(call.body).toEqual({ report: "account_summary" });
+  expect(call.body).toEqual({ report: "account_summary", resume: true });
   expect(call.key).toBeTruthy();
   await expect(
     page.getByText(/not ready for complete business totals/),
@@ -783,11 +900,40 @@ test("historical support attachments show an unavailable placeholder without bre
   page,
 }) => {
   await login(page, "customercare");
+  await page.route(
+    "**/api/proxy/v1/admin/support/tickets/ticket-1/messages?*",
+    (route) =>
+      route.fulfill({
+        json: {
+          data: {
+            items: [
+              {
+                id: "late-legacy",
+                senderRole: "user",
+                message: "Old attachment",
+                createdAt: "2026-11-03T23:30:00Z",
+                attachmentUnavailable: true,
+              },
+              {
+                id: "early-message",
+                senderRole: "user",
+                message: "An early update",
+                createdAt: "2026-11-04T00:05:00Z",
+              },
+            ],
+            hasMore: false,
+            nextCursor: null,
+          },
+        },
+      }),
+  );
   await page.goto("/support-tickets/ticket-1");
   await expect(
     page.getByText("Attachment unavailable", { exact: true }),
   ).toBeVisible();
   await expect(page.getByText("Old attachment", { exact: true })).toBeVisible();
+  await expect(page.getByText("4 Nov 2026", { exact: true })).toHaveCount(1);
+  await expect(page.getByText("3 Nov 2026", { exact: true })).toHaveCount(0);
 });
 
 test("native directory, audit and coverage screens follow the updated subtype restrictions", async ({
@@ -815,63 +961,20 @@ test("native directory, audit and coverage screens follow the updated subtype re
   ).toBe(false);
 });
 
-test("profile sections keep unknown finances honest and provide a safe edit preview", async ({
+test("profile sections display full native details and target finances", async ({
   page,
 }) => {
   await login(page);
-  await control({ verificationStatus: "1" });
+  await control({ latest: true });
   await page.goto("/riders/rider-1");
-  await expect(
-    page.getByRole("heading", { name: "Native Rider", exact: true }),
-  ).toBeVisible();
-  await expect(page.locator("#verification")).toContainText("Verified");
-  await expect(page.locator("#wallet")).toContainText("Unavailable");
-  await expect(page.locator("#transactions")).toContainText(
-    "not available yet",
-  );
-  await expect(
-    page.getByRole("button", { name: "Approve rider", exact: true }),
-  ).toBeDisabled();
-  await page.getByRole("button", { name: "Edit rider information" }).click();
-  await expect(page.getByLabel("Full name", { exact: true })).toHaveValue(
+  await expect(page.locator("#personal-information")).toContainText(
     "Native Rider",
   );
-  await page.getByLabel("Phone number", { exact: true }).fill("+2348000000000");
+  await expect(page.locator("#wallet")).toContainText("₦1,250.00");
+  await expect(page.locator("#transactions")).toContainText("Delivery");
   await expect(
-    page.getByRole("button", { name: "Save unavailable" }),
-  ).toBeDisabled();
-  await page.keyboard.press("Escape");
-  await page.getByRole("button", { name: "Edit rider information" }).click();
-  await expect(page.getByLabel("Phone number", { exact: true })).toHaveValue(
-    "",
-  );
-  await page.keyboard.press("Escape");
-  await expect(page.getByRole("dialog")).toHaveCount(0);
-  await page.screenshot({
-    animations: "disabled",
-    path: "test-results/profile-desktop.png",
-    fullPage: true,
-  });
-  await page.setViewportSize({ width: 390, height: 844 });
-  await page.screenshot({
-    path: "test-results/profile-mobile.png",
-    fullPage: true,
-  });
-  expect(
-    await page.evaluate(
-      () => document.documentElement.scrollWidth <= window.innerWidth,
-    ),
-  ).toBeTruthy();
-  const calls = (await control()).records;
-  expect(
-    calls.some(
-      (r: any) =>
-        r.method !== "GET" && /\/admin\/(users|riders)\//.test(r.path),
-    ),
-  ).toBe(false);
-  expect(calls.some((r: any) => /\/(wallet|transactions)$/.test(r.path))).toBe(
-    false,
-  );
+    page.getByRole("link", { name: "Inspect application and review history" }),
+  ).toHaveAttribute("href", "/rider-applications/rider-1");
 });
 
 test("directory pagination survives details and back but resets after leaving the section", async ({
@@ -920,10 +1023,16 @@ test("account selection opens authoritative roles and administrators remain dist
     .getByRole("button", { name: "Administrators", exact: true })
     .click();
   await expect(
-    page.getByText("The administrator list is not available yet.", {
-      exact: false,
-    }),
+    page.getByRole("combobox", { name: "Administrator subtype" }),
   ).toBeVisible();
+  await expect
+    .poll(async () =>
+      (await control()).records.some(
+        (r: any) =>
+          r.path === "/v1/admin/users" && r.query.membership === "admins",
+      ),
+    )
+    .toBeTruthy();
   await expect(
     page.getByText("Select an account", { exact: true }),
   ).toHaveCount(0);
@@ -1015,18 +1124,17 @@ test("super administrators can inspect and reopen closed tickets", async ({
   await control({ ticketStatus: "closed" });
   await page.goto("/support-tickets/ticket-1");
   await expect(page.getByText("Old attachment", { exact: true })).toBeVisible();
-  await openForm(page, "Reopen ticket");
   await page
     .getByRole("button", { name: "Reopen ticket", exact: true })
     .click();
   await expect(
-    page.locator("summary").filter({ hasText: "Close ticket" }),
+    page.getByRole("button", { name: "Close ticket", exact: true }),
   ).toBeVisible();
   const call = (await writes("/v1/admin/support/tickets/ticket-1/status"))[0];
   expect(call.body).toEqual({ status: "open", expectedVersion: 2 });
 });
 
-test("support View opens a closable side panel without losing the table", async ({
+test("claiming from ticket details opens a dedicated chat and preserves the queue", async ({
   page,
 }) => {
   await login(page);
@@ -1045,26 +1153,20 @@ test("support View opens a closable side panel without losing the table", async 
     fullPage: true,
   });
   await panel
-    .getByRole("button", { name: "Open conversation", exact: true })
+    .getByRole("button", { name: "Claim ticket", exact: true })
     .click();
-  await expect(page.getByRole("dialog")).toContainText("Old attachment");
-  await page.keyboard.press("Escape");
+  await expect(page).toHaveURL(/\/support-tickets\/ticket-1$/);
   await expect(page.getByRole("dialog")).toHaveCount(0);
-  await page.setViewportSize({ width: 390, height: 844 });
+  await expect(page.getByRole("table")).toHaveCount(0);
+  await expect(page.getByLabel("Message to customer")).toBeVisible();
   await expect(
-    panel.getByRole("button", { name: "Open conversation", exact: true }),
-  ).toBeFocused();
-  await page.evaluate(() => window.scrollTo(0, 0));
-  await page.screenshot({
-    animations: "disabled",
-    path: "test-results/support-side-panel-mobile.png",
-    fullPage: true,
-  });
-  expect(
-    await page.evaluate(
-      () => document.documentElement.scrollWidth <= window.innerWidth,
-    ),
-  ).toBeTruthy();
+    page.getByText("Assigned to you", { exact: false }),
+  ).toBeVisible();
+  await page.getByRole("link", { name: "Back to support tickets" }).click();
+  await expect(page.getByLabel("Rows per page", { exact: true })).toHaveValue(
+    "10",
+  );
+  await page.getByRole("link", { name: "Open ticket-1", exact: true }).click();
   await panel
     .getByRole("button", { name: "Close details", exact: true })
     .click();
@@ -1147,7 +1249,7 @@ test("loading placeholders retain table and detail layouts and clear after succe
   );
   await page.goto("/head-offices/office-1");
   await expect(
-    page.getByRole("status", { name: "Loading details…", exact: true }),
+    page.getByRole("status", { name: "Loading shipping office…", exact: true }),
   ).toBeVisible();
   await page.screenshot({
     path: "test-results/office-loading-desktop.png",
@@ -1180,12 +1282,14 @@ test("loading placeholders retain table and detail layouts and clear after succe
       },
     }),
   );
-  await page.getByRole("button", { name: "Refresh", exact: true }).click();
+  await page
+    .getByRole("button", { name: "Refresh shipping office", exact: true })
+    .click();
   await expect(
     page.locator("#workspace-content").getByRole("alert"),
   ).toContainText("Office service unavailable");
   await expect(
-    page.getByRole("status", { name: "Loading details…", exact: true }),
+    page.getByRole("status", { name: "Loading shipping office…", exact: true }),
   ).toHaveCount(0);
 });
 
@@ -1409,7 +1513,10 @@ test("shipment actions block unpaid dispatch, stale updates and non-super access
   await expect(
     page.locator("#workspace-content").getByRole("alert"),
   ).toContainText("Shipment changed");
-  await page.getByRole("button", { name: "Refresh", exact: true }).click();
+  await page
+    .getByRole("button", { name: "Refresh", exact: true })
+    .first()
+    .click();
   await openForm(page, "Cancel shipment");
   await page
     .getByLabel("Cancellation reason")

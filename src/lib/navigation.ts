@@ -6,6 +6,7 @@ import {
   IconDashboard,
   IconGift,
   IconGiftCard,
+  IconStopwatch,
   IconHeadset,
   IconLink,
   IconMapPin,
@@ -31,6 +32,18 @@ export interface NavigationItem {
 }
 
 export const navigation: NavigationItem[] = [
+  {
+    title: "Rider applications",
+    url: "/rider-applications",
+    icon: IconMotorbike,
+    group: "People & partners",
+  },
+  {
+    title: "Pricing audit",
+    url: "/pricing-audit",
+    icon: IconCoin,
+    group: "Finance",
+  },
   {
     title: "Report coverage",
     url: "/analytics-coverage",
@@ -69,12 +82,6 @@ export const navigation: NavigationItem[] = [
     group: "Administration",
   },
   {
-    title: "Catalogue",
-    url: "/catalogue",
-    icon: IconShoppingBag,
-    group: "Operations",
-  },
-  {
     title: "Account security",
     url: "/settings",
     icon: IconSettings,
@@ -97,12 +104,6 @@ export const navigation: NavigationItem[] = [
     title: "Shipment orders",
     url: "/shipment-orders",
     icon: IconPlane,
-    group: "Operations",
-  },
-  {
-    title: "Marketplace orders",
-    url: "/product-orders",
-    icon: IconShoppingBag,
     group: "Operations",
   },
   {
@@ -168,6 +169,12 @@ export const navigation: NavigationItem[] = [
     url: "/export-rates",
     icon: IconPlane,
     group: "Finance",
+  },
+  {
+    title: "Game rules",
+    url: "/game-rules",
+    icon: IconStopwatch,
+    group: "Growth",
   },
   { title: "Coupons", url: "/coupons", icon: IconGiftCard, group: "Growth" },
   {

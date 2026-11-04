@@ -1,5 +1,8 @@
 # Fee, zone and tariff administration: backend work
 
+> Superseded for frontend implementation by the [latest API integration](latest-api-integration-2026-11-03.md). The supplied backend handoff now implements the formerly missing account, pricing and shipment contracts. Historical proposals below are retained for context; use the latest handoff for actual wire payloads. Deployment acceptance remains separate.
+
+
 Checked 3 November 2026 against `admin-api-update-reference.md` and the current native backend checkout. This is a source audit, not a live mutation test.
 
 **The native dashboard has price reads, but no mounted administrator API for editing general fees, office pickup prices, local zone prices, international tariffs or their weight-to-amount entries.** The older standalone service defines some similarly named writes; its route declarations and the frontend proxy allowlist do not establish availability in the native runtime. Do not wire the editor to those routes without a supported native contract.

@@ -1,3 +1,4 @@
+import { ShipmentCommands } from "./shipment-commands";
 import { useState, type ReactNode } from "react";
 import { Link } from "react-router-dom";
 import { useCurrentUser } from "@/contexts/UserContext";
@@ -57,117 +58,7 @@ function AccountLink({ id, rider = false }: { id: unknown; rider?: boolean }) {
     <>{id}</>
   );
 }
-export function ShipmentStatusActions({
-  data,
-  reload,
-}: {
-  data: RecordData;
-  reload: () => void;
-}) {
-  const { adminType } = useCurrentUser();
-  if (adminType !== "super") return null;
-  const status = statusName(data.status);
-  const knownType = ["local", "express", "customs_clearance"].includes(
-    data.shipmentType,
-  );
-  if (!knownType || !Number.isSafeInteger(data.version) || data.version < 1)
-    return (
-      <Notice>
-        Status changes are unavailable until this shipment has a supported type
-        and a current version.
-      </Notice>
-    );
-  const actions: Action[] = [];
-  const root = `/v1/shipments/${segment(data.id)}`;
-  const transition = (title: string, targetStatus: string) =>
-    actions.push({
-      title,
-      path: `${root}/transitions`,
-      preserveRetry: true,
-      body: () => ({ expectedVersion: data.version, targetStatus }),
-      success: "Shipment updated. Loading its current details.",
-    });
-  if (status === "placed" && data.assignedRider === null)
-    actions.push({
-      title: "Accept at office",
-      description:
-        "Confirm that the shipment is at the office. This does not assign a rider.",
-      path: `${root}/accept`,
-      preserveRetry: true,
-      body: () => ({ expectedVersion: data.version }),
-    });
-  if (status === "onRouteToPndHQ")
-    transition("Confirm receipt at HQ", "sentToHq");
-  const paid =
-    data.payment?.status === "paid" &&
-    ["not_required", "paid"].includes(data.assessmentStatus);
-  if (status === "sentToHq" && paid)
-    transition("Dispatch to destination", "onrouteToDestination");
-  if (status === "onrouteToDestination" && paid)
-    transition("Mark delivered to destination", "deliveredToDestination");
-  if (["placed", "acceptedByRider"].includes(status))
-    actions.push({
-      title: "Cancel shipment",
-      description:
-        "Cancellation is final. If paid, the backend queues a refund; cancellation does not confirm the refund has completed.",
-      path: `${root}/cancel`,
-      preserveRetry: true,
-      fields: [
-        field("reason", "Cancellation reason", {
-          type: "textarea",
-          maxLength: 500,
-        }),
-      ],
-      body: (values) => {
-        const reason = values.reason.trim();
-        if (!reason || new TextEncoder().encode(reason).length > 500)
-          throw new Error("Enter a cancellation reason of 1–500 bytes.");
-        return { expectedVersion: data.version, reason };
-      },
-    });
-  return (
-    <Section title="Update shipment status">
-      <div className="space-y-4">
-        {actions.map((action) => (
-          <ActionForm
-            key={`${data.id}:${data.version}:${action.title}`}
-            action={action}
-            onSuccess={reload}
-          />
-        ))}
-        {["sentToHq", "onrouteToDestination"].includes(status) && !paid && (
-          <Notice>
-            Payment must be confirmed and outstanding assessments settled before
-            dispatch or delivery.
-          </Notice>
-        )}
-        {status === "acceptedByRider" && (
-          <Notice>
-            The assigned rider must verify pickup before the shipment can
-            proceed to HQ.
-          </Notice>
-        )}
-        {["deliveredToDestination", "cancelled"].includes(status) && (
-          <Notice>
-            This shipment is complete. No further status changes are available.
-          </Notice>
-        )}
-        {!actions.length &&
-          ![
-            "acceptedByRider",
-            "sentToHq",
-            "onrouteToDestination",
-            "deliveredToDestination",
-            "cancelled",
-          ].includes(status) && (
-            <Notice>
-              No administrator status change is available from this state.
-            </Notice>
-          )}
-      </div>
-    </Section>
-  );
-}
+export const ShipmentStatusActions = ShipmentCommands;
 export function ShipmentDetails({
   data,
   reload,
@@ -221,7 +112,12 @@ export function ShipmentDetails({
       </div>
       <div className="grid gap-4 md:grid-cols-3">
         {[
-          ["Order status", shipmentStatusLabel(data.status)],
+          [
+            "Order status",
+            data.clearanceStatus === "completed"
+              ? "Clearance completed"
+              : shipmentStatusLabel(data.status),
+          ],
           [
             "Payment type",
             cancelled ? "—" : display(friendly(data.payment?.method)),
@@ -333,12 +229,6 @@ export function ShipmentDetails({
             <Notice>No documents are available for this shipment.</Notice>
           )}
           {error != null && <ErrorNotice error={error} />}
-          {customs && (
-            <Notice>
-              Customs intake editing and completion with clearance evidence are
-              not available yet.
-            </Notice>
-          )}
         </div>
       </Section>
       <Section title="Payment information">
@@ -377,19 +267,19 @@ export function ShipmentDetails({
           <Notice>No rider is assigned to this shipment.</Notice>
         )}
       </Section>
-      <Section title="Dates and status history">
+      <Section title="Dates">
         <div className="space-y-4">
           <Fields
             values={[
               ["Created at", display(data.createdAt)],
               ["Updated at", display(data.updatedAt)],
-              ["Completed at", display(data.completedAt)],
+              [
+                "Completed at",
+                display(data.clearanceCompletedAt || data.completedAt),
+              ],
               ["Cancelled at", display(data.cancelledAt)],
             ]}
           />
-          <Notice>
-            The complete status history is not available to administrators yet.
-          </Notice>
         </div>
       </Section>
     </div>

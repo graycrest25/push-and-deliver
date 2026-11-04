@@ -7,7 +7,7 @@ export function controlReads(body) {
 }
 export function reads(path, req, res, body, success, error, adminType) {
   const isRead =
-    /^\/v1\/admin\/(users(?:\/[^/]+)?|reports\/(accounts|riders)|rides(?:\/[^/]+)?|shipping\/(settings|offices|countries|tariffs)(?:\/[^/]+)?(?:\/(rates|countries))?|geography\/(states|tariffs)(?:\/[^/]+)?(?:\/rates)?|audit|analytics\/(coverage|backfills))$/.test(
+    /^\/v1\/admin\/(users(?:\/[^/]+)?|reports\/(accounts|riders)|rides(?:\/[^/]+)?|shipping\/(settings|offices|countries|tariffs)(?:\/[^/]+)?(?:\/(rates|countries|snapshot))?|geography\/(states|tariffs)(?:\/[^/]+)?(?:\/(rates|snapshot))?|audit|analytics\/(coverage|backfills))$/.test(
       path,
     ) && !path.endsWith("/role");
   if (!isRead) return false;
@@ -24,7 +24,7 @@ export function reads(path, req, res, body, success, error, adminType) {
       : path === "/v1/admin/analytics/backfills"
         ? []
         : path === "/v1/admin/users"
-          ? ["type", "limit", "cursor"]
+          ? ["type", "limit", "cursor", "membership", "adminType"]
           : path.startsWith("/v1/admin/users/")
             ? ["type"]
             : path.includes("/reports/")
@@ -158,7 +158,7 @@ export function reads(path, req, res, body, success, error, adminType) {
     if (
       req.method !== "POST" ||
       !req.headers["idempotency-key"] ||
-      Object.keys(body).join() !== "report"
+      Object.keys(body).some((key) => !["report", "resume"].includes(key))
     ) {
       error(res, 400, "invalid", "Invalid rebuild command");
       return true;
@@ -235,7 +235,19 @@ export function reads(path, req, res, body, success, error, adminType) {
           historical: false,
           volumetricDivisor: 5000,
         };
-    success(res, path.endsWith("/tariffs") ? paged([row]) : row);
+    success(
+      res,
+      path.endsWith("/tariffs")
+        ? paged([row])
+        : path.endsWith("/snapshot")
+          ? {
+              ...row,
+              version: 2,
+              rates: [{ zone: 1, weightGrams: 500, amountMinor: 150000 }],
+              countries: [{ code: "NG", name: "Nigeria", zone: 1 }],
+            }
+          : row,
+    );
   } else error(res, 404, "not_found", "Not implemented by read fixture");
   return true;
 }

@@ -5,6 +5,7 @@ export class ApiError extends Error {
     message: string,
     public requestId?: string,
     public retryAfter?: string,
+    public details?: RecordData,
   ) {
     super(message);
   }
@@ -108,7 +109,16 @@ export async function apiResponse(
       data.error?.message || fallback,
       response.headers.get("x-request-id") || data.requestId || undefined,
       response.headers.get("retry-after") || undefined,
+      data.error?.details,
     );
+  }
+  if (path === "/v2/auth/logout") {
+    try {
+      for (const key of Object.keys(sessionStorage))
+        if (key.startsWith("pnd-game-rules:")) sessionStorage.removeItem(key);
+    } catch {
+      /* Storage restrictions must not prevent a successful sign-out. */
+    }
   }
   return response;
 }
@@ -122,8 +132,9 @@ export async function api<T = RecordData>(
   // Native auth/profile/reference and financial endpoints use the data envelope.
   return (path.startsWith("/v2/auth/") ||
     path === "/v1/users/me" ||
+    path.startsWith("/v1/shipping/local-types") ||
     path.startsWith("/v1/config/mobile") ||
-    /^\/v1\/(admin\/(users|rides|shipping|geography|audit|reports|coupons|config|support|withdrawals|jobs|referrals|analytics)|shipments|assets|media)(\/|\?|$)/.test(
+    /^\/v1\/(admin\/(users|riders|fees|pricing|shipments|rides|shipping|geography|audit|reports|coupons|config|support|withdrawals|jobs|referrals|analytics)|shipments|assets|media)(\/|\?|$)/.test(
       path,
     ) ||
     /^\/v1\/admin\/users\/[^/]+\/role$/.test(path) ||

@@ -2,8 +2,6 @@ export type AdminType = "super" | "regular" | "customercare" | "verifier";
 const reads = [
   "/reports",
   "/shipment-orders",
-  "/restaurant-orders",
-  "/product-orders",
   "/support-tickets",
   "/withdrawals",
   "/settings",
@@ -15,6 +13,8 @@ const operations = [
   "/jobs",
   "/files",
   "/riders",
+  "/rider-applications",
+  "/pricing-audit",
   "/vendors",
   "/ecommerce-merchants",
   "/dashboard",
@@ -29,7 +29,6 @@ const operations = [
   "/generated",
   "/general-notifications",
   "/payments",
-  "/catalogue",
 ];
 export const adminScreens: Record<AdminType, readonly string[]> = {
   super: [
@@ -38,6 +37,7 @@ export const adminScreens: Record<AdminType, readonly string[]> = {
     "/audit",
     "/analytics-coverage",
     "/app-config",
+    "/game-rules",
     "/coupon-redemption-metrics",
     "/weekly-concentration",
     "/rider-weekly-deliveries",
@@ -46,7 +46,7 @@ export const adminScreens: Record<AdminType, readonly string[]> = {
   ],
   regular: operations,
   customercare: reads,
-  verifier: ["/reports", "/settings"],
+  verifier: ["/reports", "/settings", "/rider-applications"],
 };
 export function isAdminType(value: unknown): value is AdminType {
   return typeof value === "string" && Object.hasOwn(adminScreens, value);

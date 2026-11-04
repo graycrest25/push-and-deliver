@@ -1,8 +1,11 @@
+import { enumLabel, readableEnum } from "@/lib/enum-labels";
+import { tableColumnClass } from "@/lib/table-layout";
 import {
   RecordSkeleton,
   TableSkeleton,
 } from "@/components/ui/loading-skeletons";
 import { RefreshButton } from "@/components/ui/refresh-button";
+import type { UploadPurpose } from "@/lib/uploads";
 import { useTableStateStore } from "./table-state";
 import { canAccessAdminScreen } from "@/lib/admin-access";
 import { useCurrentUser } from "@/contexts/UserContext";
@@ -44,10 +47,23 @@ export const human = (value: string) =>
   value
     .replace(/([a-z])([A-Z])/g, "$1 $2")
     .replace(/_/g, " ")
-    .replace(/\b\w/, (c) => c.toUpperCase());
-export function display(value: unknown, key = "", currency = "NGN"): string {
+    .replace(/\b\w/, (c) => c.toUpperCase())
+    .replace(/\bUid\b/g, "UID")
+    .replace(/\bId\b/g, "ID");
+export function display(
+  value: unknown,
+  key = "",
+  currency = "NGN",
+  scope = "",
+): string {
   if (value === null || value === undefined) return "—";
   if (typeof value === "boolean") return value ? "Yes" : "No";
+  if (Array.isArray(value))
+    return value
+      .map((item) => enumLabel(key, item, scope) ?? String(item))
+      .join(", ");
+  const label = enumLabel(key, value, scope);
+  if (label !== undefined) return label;
   if (typeof value === "number" && /(_minor|Minor)$/.test(key))
     return new Intl.NumberFormat("en-NG", {
       style: "currency",
@@ -83,10 +99,12 @@ function TableValue({
   value,
   name,
   currency,
+  scope,
 }: {
   value: unknown;
   name: string;
   currency: string;
+  scope?: string;
 }) {
   if (
     typeof value === "string" &&
@@ -116,7 +134,7 @@ function TableValue({
       </time>
     );
   }
-  return <>{display(value, name, currency)}</>;
+  return <>{display(value, name, currency, scope)}</>;
 }
 export function Heading({
   title,
@@ -165,10 +183,15 @@ export function ErrorNotice({
       <p className="text-destructive">
         {error instanceof Error ? error.message : String(error)}
       </p>
+      {error instanceof ApiError && error.code === "analytics_not_ready" && (
+        <Link className="text-primary underline" to="/analytics-coverage">
+          Inspect report readiness
+        </Link>
+      )}
       {error instanceof ApiError && error.status === 409 && (
         <p>
-          Refresh the record and check its current state before starting another
-          action.
+          Check the current record and the action’s requirements before starting
+          a new attempt.
         </p>
       )}
       {error instanceof ApiError && error.requestId && (
@@ -254,31 +277,41 @@ export function RecordSections({
       </InformationCard>
       {groups.map(([key, value]) => (
         <InformationCard key={key} title={labels[key] || human(key)}>
-          <RecordView data={value} />
+          <RecordView data={value} scope={key} />
         </InformationCard>
       ))}
     </div>
   );
 }
-export function RecordView({ data }: { data: unknown }) {
+export function RecordView({
+  data,
+  scope = "",
+}: {
+  data: unknown;
+  scope?: string;
+}) {
   const { adminType } = useCurrentUser();
   if (Array.isArray(data))
     return data.length ? (
       <div className="space-y-3">
         {data.map((item, i) => (
           <div key={item?.id ?? i} className="border-b pb-3 last:border-0">
-            <RecordView data={item} />
+            <RecordView data={item} scope={scope} />
           </div>
         ))}
       </div>
     ) : (
       <span className="text-muted-foreground">No entries</span>
     );
-  if (!data || typeof data !== "object") return <span>{display(data)}</span>;
+  if (!data || typeof data !== "object")
+    return <span>{display(data, scope, "NGN", scope)}</span>;
   const entries = Object.entries(data).filter(
     ([key]) =>
       ![
         "quote_id",
+        "quoteId",
+        "pickupOtp",
+        "pickup_otp",
         "latitude_e7",
         "longitude_e7",
         "access_token",
@@ -297,7 +330,7 @@ export function RecordView({ data }: { data: unknown }) {
           </dt>
           <dd className="mt-1 break-words text-sm [overflow-wrap:anywhere]">
             {value && typeof value === "object" ? (
-              <RecordView data={value} />
+              <RecordView data={value} scope={key} />
             ) : recordDestination(
                 key,
                 data as RecordData,
@@ -318,7 +351,7 @@ export function RecordView({ data }: { data: unknown }) {
                 {display(value, key)}
               </Link>
             ) : (
-              display(value, key, (data as RecordData).currency || "NGN")
+              display(value, key, (data as RecordData).currency || "NGN", scope)
             )}
           </dd>
         </div>
@@ -344,9 +377,13 @@ export type Field = {
     | "list"
     | "rows"
     | "group";
+  // Rider selection uses the native paginated directory, not an eligibility guess.
+  riderSelection?: boolean;
   imagesOnly?: boolean;
   vendorOwned?: boolean;
   ownAsset?: boolean;
+  purpose?: UploadPurpose;
+  riderUid?: string;
   options?: string[];
   optionLabels?: Record<string, string>;
   required?: boolean;
@@ -398,6 +435,94 @@ export function defaults(
     ]),
   );
 }
+function RiderSelection({
+  id,
+  label,
+  value,
+  change,
+}: {
+  id: string;
+  label: string;
+  value: string;
+  change: (value: string) => void;
+}) {
+  const [cursors, setCursors] = useState([""]),
+    [page, setPage] = useState(0);
+  const [selectedLabel, setSelectedLabel] = useState("");
+  const resource = useResource(
+    queryPath("/v1/admin/users", {
+      type: "riders",
+      limit: 25,
+      cursor: cursors[page],
+    }),
+  );
+  const rows = resource.data?.items || [];
+  return (
+    <div className="col-span-full space-y-3">
+      <Label htmlFor={id}>{label} *</Label>
+      <select
+        id={id}
+        required
+        className="h-10 w-full rounded-md border border-input bg-card px-3 text-sm"
+        disabled={resource.loading || !!resource.error}
+        value={value}
+        onChange={(event) => {
+          change(event.target.value);
+          setSelectedLabel(
+            rows.find((row: RecordData) => row.uid === event.target.value)
+              ?.username || event.target.value,
+          );
+        }}
+      >
+        <option value="">Select a rider</option>
+        {value && !rows.some((row: RecordData) => row.uid === value) && (
+          <option value={value}>
+            {selectedLabel} · {value}
+          </option>
+        )}
+        {rows.map((row: RecordData) => (
+          <option key={row.uid} value={row.uid}>
+            {row.username || "Name unavailable"} · {row.uid}
+          </option>
+        ))}
+      </select>
+      <p className="text-xs text-muted-foreground">
+        The backend checks the selected rider's availability and capacity when
+        assigning.
+      </p>
+      {resource.error != null && (
+        <ErrorNotice error={resource.error} retry={resource.reload} />
+      )}
+      <div className="flex flex-wrap items-center gap-3">
+        <Button
+          type="button"
+          variant="outline"
+          size="sm"
+          disabled={resource.loading || page === 0}
+          onClick={() => setPage(page - 1)}
+        >
+          Previous riders
+        </Button>
+        <span className="text-xs text-muted-foreground">Page {page + 1}</span>
+        <Button
+          type="button"
+          variant="outline"
+          size="sm"
+          disabled={resource.loading || !resource.data?.nextCursor}
+          onClick={() => {
+            setCursors([
+              ...cursors.slice(0, page + 1),
+              resource.data!.nextCursor,
+            ]);
+            setPage(page + 1);
+          }}
+        >
+          Next riders
+        </Button>
+      </div>
+    </div>
+  );
+}
 function Fields({
   fields,
   value,
@@ -417,6 +542,16 @@ function Fields({
       {fields.map((f) => {
         const id = `${prefix}-${f.name}`;
         const update = (v: unknown) => change({ ...value, [f.name]: v });
+        if (f.riderSelection)
+          return (
+            <RiderSelection
+              key={id}
+              id={id}
+              label={f.label}
+              value={value[f.name] || ""}
+              change={update}
+            />
+          );
         if (f.type === "asset" || f.type === "assets")
           return (
             <AssetField
@@ -428,6 +563,8 @@ function Fields({
               imagesOnly={f.imagesOnly}
               vendorOwned={f.vendorOwned}
               ownAsset={f.ownAsset}
+              purpose={f.purpose}
+              riderUid={f.riderUid}
               multiple={f.type === "assets"}
               value={value[f.name] || (f.type === "assets" ? [] : "")}
               change={update}
@@ -539,7 +676,9 @@ function Fields({
               >
                 {f.options?.map((option) => (
                   <option key={option} value={option}>
-                    {f.optionLabels?.[option] || human(option)}
+                    {f.optionLabels?.[option] ||
+                      enumLabel(f.name, option) ||
+                      human(option)}
                   </option>
                 ))}
               </select>
@@ -611,6 +750,8 @@ function serialize(fields: Field[], value: RecordData): RecordData {
       if (f.type === "group") v = serialize(f.fields || [], v || {});
       if (f.type === "rows")
         v = (v || []).map((r: RecordData) => serialize(f.fields || [], r));
+      if (f.type === "number" && v === "" && !f.required)
+        return [f.name, undefined];
       if (f.type === "number" && (v === "" || !Number.isFinite(v)))
         throw new Error(`${f.label} must be a number.`);
       return [f.name, v];
@@ -621,12 +762,20 @@ export interface Action {
   title: string;
   description?: string;
   path: string | ((data: RecordData) => string);
-  method?: "POST" | "PUT" | "DELETE";
+  method?: "POST" | "PUT" | "PATCH" | "DELETE";
   fields?: Field[];
   initial?: RecordData;
   body?: (data: RecordData) => unknown;
   success?: string;
   preserveRetry?: boolean;
+  operationScope?: string;
+  versionPath?: string;
+  versionRead?: () => Promise<RecordData>;
+  refreshBeforeSubmit?: boolean;
+  validateCurrent?: (current: RecordData) => void;
+  renderCurrent?: (current: RecordData) => ReactNode;
+  conflictHelp?: string;
+  minimumVersion?: 0 | 1;
 }
 export function ActionForm({
   action,
@@ -664,12 +813,24 @@ export function ActionForm({
   const [value, setValue] = useState(() =>
     defaults(action.fields || [], action.initial),
   );
+  const [retryAt, setRetryAt] = useState(0);
+  useEffect(() => {
+    if (!retryAt) return;
+    const timer = setTimeout(
+      () => setRetryAt(0),
+      Math.max(0, retryAt - Date.now()),
+    );
+    return () => clearTimeout(timer);
+  }, [retryAt]);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<unknown>(null);
   const [result, setResult] = useState<unknown>(null);
   const lock = useRef(false);
   const operationStorage = useRef<string>();
   const [conflict, setConflict] = useState(false);
+  const [conflictReference, setConflictReference] = useState<string>();
+  const [latest, setLatest] = useState<RecordData | null>(null);
+  const [reviewedVersion, setReviewedVersion] = useState<number>();
   const pending = useRef<{ path: string; body: string; key: string }>();
   // Persist only a random key and body fingerprint; no personal/financial form values.
   async function submit(event: React.FormEvent) {
@@ -681,17 +842,42 @@ export function ActionForm({
     setError(null);
     setResult(null);
     try {
-      const values = serialize(action.fields || [], value);
+      const values = pending.current
+        ? {}
+        : serialize(action.fields || [], value);
       const path =
         pending.current?.path ??
         (typeof action.path === "function" ? action.path(values) : action.path);
+      const payload = pending.current
+        ? undefined
+        : action.body
+          ? action.body(values)
+          : values;
+      let currentVersion = reviewedVersion;
+      if (action.refreshBeforeSubmit && !pending.current) {
+        const current = action.versionRead
+          ? await action.versionRead()
+          : await api(action.versionPath!);
+        setLatest(current);
+        if (
+          !Number.isSafeInteger(current.version) ||
+          current.version < (action.minimumVersion ?? 1)
+        )
+          throw new Error("A current version is required.");
+        action.validateCurrent?.(current);
+        currentVersion = current.version;
+      }
       const body =
         pending.current?.body ??
-        JSON.stringify(action.body ? action.body(values) : values);
+        JSON.stringify(
+          currentVersion !== undefined && payload && typeof payload === "object"
+            ? { ...payload, expectedVersion: currentVersion }
+            : payload,
+        );
       const digest = await crypto.subtle.digest(
         "SHA-256",
         new TextEncoder().encode(
-          `${user?.id || "anonymous"}:${action.method || "POST"}:${path}:${body}`,
+          `${user?.id || "anonymous"}:${action.method || "POST"}:${path}:${body}${action.operationScope === undefined ? "" : `:scope:${action.operationScope}`}`,
         ),
       );
       const storageKey =
@@ -715,7 +901,7 @@ export function ActionForm({
       if (action.preserveRetry) pending.current = { path, body, key };
       const response = await api(path, {
         method: action.method || "POST",
-        body: action.method === "DELETE" ? undefined : body,
+        body,
         headers: { "Idempotency-Key": key },
       });
       sessionStorage.removeItem(storageKey);
@@ -737,7 +923,27 @@ export function ActionForm({
         pending.current = undefined;
         if (operationStorage.current)
           sessionStorage.removeItem(operationStorage.current);
-        if (e.status === 409) setConflict(true);
+        if (e.status === 409) {
+          setConflict(true);
+          setConflictReference(e.requestId);
+          if (action.versionPath || action.versionRead) {
+            try {
+              setLatest(
+                action.versionRead
+                  ? await action.versionRead()
+                  : await api(action.versionPath!),
+              );
+            } catch {
+              setLatest(null);
+            }
+          }
+        }
+      }
+      if (e instanceof ApiError && e.status === 429 && e.retryAfter) {
+        const until = /^\d+$/.test(e.retryAfter)
+          ? Date.now() + Number(e.retryAfter) * 1000
+          : Date.parse(e.retryAfter);
+        if (Number.isFinite(until) && until > Date.now()) setRetryAt(until);
       }
       setError(e);
     } finally {
@@ -777,6 +983,62 @@ export function ActionForm({
             />
           </fieldset>
           {error != null && <ErrorNotice error={error} />}{" "}
+          {error instanceof ApiError && error.details?.fields && (
+            <RecordView data={error.details.fields} />
+          )}
+          {conflict && (action.versionPath || action.versionRead) && (
+            <div className="space-y-3 rounded-lg border p-4">
+              <p className="text-sm">
+                {action.conflictHelp ||
+                  "Your draft is preserved. Review the current record before resubmitting."}
+              </p>
+              {latest &&
+                (action.renderCurrent ? (
+                  action.renderCurrent(latest)
+                ) : (
+                  <RecordView data={latest} />
+                ))}
+              {conflictReference &&
+                !(
+                  error instanceof ApiError &&
+                  error.requestId === conflictReference
+                ) && (
+                  <p className="break-all text-sm text-muted-foreground">
+                    Request reference: {conflictReference}
+                  </p>
+                )}
+              <Button
+                type="button"
+                variant="outline"
+                onClick={async () => {
+                  try {
+                    const current =
+                      latest ||
+                      (action.versionRead
+                        ? await action.versionRead()
+                        : await api(action.versionPath!));
+                    if (
+                      !current ||
+                      !Number.isSafeInteger(current.version) ||
+                      current.version < (action.minimumVersion ?? 1)
+                    )
+                      throw new Error("A current version is required.");
+                    action.validateCurrent?.(current);
+                    setLatest(current);
+                    setReviewedVersion(current.version);
+                    setConflict(false);
+                    setError(null);
+                  } catch (failure) {
+                    setError(failure);
+                  }
+                }}
+              >
+                {latest
+                  ? "Use refreshed version and review draft"
+                  : "Load current record"}
+              </Button>
+            </div>
+          )}
           {error != null && pending.current && (
             <p className="text-sm text-muted-foreground">
               Retry sends the same details and operation key. Check the record
@@ -797,7 +1059,13 @@ export function ActionForm({
             </p>
           )}
           <Button
-            disabled={busy || conflict || uploadState.pending || result != null}
+            disabled={
+              busy ||
+              !!retryAt ||
+              conflict ||
+              uploadState.pending ||
+              result != null
+            }
             type="submit"
           >
             {busy ? "Submitting…" : action.title}
@@ -863,7 +1131,7 @@ export function recordDestination(
     if (type === "rider" || type === "user")
       destination = `/${type === "rider" ? "riders" : "users"}/${encodeURIComponent(value)}`;
   } else if (name === "referreruid") {
-    const type = row.referrerUserType;
+    const type = row.referrerAccountType;
     if (type === "rider" || type === "user")
       destination = `/${type === "rider" ? "riders" : "users"}/${encodeURIComponent(value)}`;
   } else if (["shipmentid"].includes(name))
@@ -903,6 +1171,7 @@ export interface ListSpec {
   link?: (row: RecordData) => string;
   title?: string;
   filters?: Field[];
+  initialFilters?: RecordData;
   params?: RecordData;
   note?: string;
   pageSizes?: number[];
@@ -930,8 +1199,12 @@ function DataListContent({
   const { adminType } = useCurrentUser();
   const storageKey = `${pathname}:${spec.path}:${JSON.stringify(spec.params || {})}`;
   const saved = store?.get(storageKey);
-  const [filters, setFilters] = useState<RecordData>(saved?.filters ?? {});
-  const [draft, setDraft] = useState<RecordData>(saved?.draft ?? {});
+  const [filters, setFilters] = useState<RecordData>(
+    saved?.filters ?? spec.initialFilters ?? {},
+  );
+  const [draft, setDraft] = useState<RecordData>(
+    saved?.draft ?? spec.initialFilters ?? {},
+  );
   const [size, setSize] = useState(saved?.size ?? spec.pageSizes?.[0] ?? 25);
   const [cursors, setCursors] = useState<string[]>(saved?.cursors ?? [""]);
   const [page, setPage] = useState(saved?.page ?? 0);
@@ -1034,7 +1307,9 @@ function DataListContent({
                       <option value="">All</option>
                       {f.options.filter(Boolean).map((o) => (
                         <option key={o} value={o}>
-                          {f.optionLabels?.[o] || human(o)}
+                          {f.optionLabels?.[o] ||
+                            enumLabel(f.name, o, spec.path) ||
+                            human(o)}
                         </option>
                       ))}
                     </select>
@@ -1083,6 +1358,7 @@ function DataListContent({
                   human(column.key.replace(/(_minor|Minor)$/, "")),
               )}
               rows={size}
+              columnKeys={spec.columns.map((column) => column.key)}
               hasAction={!!spec.link}
             />
           ) : (
@@ -1102,7 +1378,10 @@ function DataListContent({
                 <TableHeader className="sticky top-0 bg-card">
                   <TableRow>
                     {spec.columns.map((c) => (
-                      <TableHead key={c.key}>
+                      <TableHead
+                        key={c.key}
+                        className={tableColumnClass(c.key)}
+                      >
                         {c.label || human(c.key.replace(/(_minor|Minor)$/, ""))}
                       </TableHead>
                     ))}
@@ -1119,13 +1398,13 @@ function DataListContent({
                       {spec.columns.map((c) => (
                         <TableCell
                           key={c.key}
-                          className="max-w-72 whitespace-normal break-words"
+                          className={`${tableColumnClass(c.key)} whitespace-normal break-words align-top`}
                         >
                           {c.render ? (
                             c.render(row)
                           ) : recordDestination(c.key, row, spec, adminType) ? (
                             <Link
-                              className="text-primary underline underline-offset-4 break-all"
+                              className="inline-block max-w-full break-all leading-5 text-primary underline underline-offset-4"
                               to={
                                 recordDestination(c.key, row, spec, adminType)!
                               }
@@ -1138,13 +1417,15 @@ function DataListContent({
                             </Badge>
                           ) : c.key === "status" ? (
                             <Badge variant="secondary">
-                              {human(String(row[c.key] || "Unknown"))}
+                              {enumLabel(c.key, row[c.key], spec.path) ||
+                                "Unknown"}
                             </Badge>
                           ) : (
                             <TableValue
                               value={row[c.key]}
                               name={c.key}
                               currency={row.currency || "NGN"}
+                              scope={spec.path}
                             />
                           )}
                         </TableCell>

@@ -1,3 +1,5 @@
+import { gameApi, controlGame, resetGame } from "./native-game-api.mjs";
+import { latest, resetLatest, controlLatest } from "./native-latest-api.mjs";
 import { reads, resetReads, controlReads } from "./native-admin-reads-api.mjs";
 import {
   dashboard,
@@ -84,6 +86,8 @@ http
         resetFeatures();
         resetDashboard();
         resetReads();
+        resetLatest();
+        resetGame();
         records = [];
         access = "pnd_a2_private";
         refresh = "pnd_r2_private";
@@ -96,6 +100,8 @@ http
         invalidLogin = false;
         failLogout = false;
       }
+      controlGame(body);
+      controlLatest(body);
       controlDashboard(body);
       controlReads(body);
       if (body.expire) expired = true;
@@ -206,6 +212,9 @@ http
       req.headers["x-account-type"] !== "user"
     )
       return error(res, 401, "expired", "Session expired");
+    if (gameApi(path, req, res, body, membership().adminType)) return;
+    if (latest(path, req, res, body, success, error, membership().adminType))
+      return;
     if (reads(path, req, res, body, success, error, membership().adminType))
       return;
     if (dashboard(path, req, res, body, success, error)) return;

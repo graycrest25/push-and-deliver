@@ -10,6 +10,7 @@ export function resetDashboard() {
         validForHours: 24,
         eligibleServices: ["courier"],
         enabled: true,
+        gameEligible: false,
         version: 2,
       },
     ],
@@ -240,6 +241,7 @@ export function dashboard(path, req, res, body, success, error) {
         "validForHours",
         "eligibleServices",
         "enabled",
+        ...(Object.hasOwn(body, "gameEligible") ? ["gameEligible"] : []),
       ])
     ) {
       const record = { ...body, id: "campaign-2", version: 1 };
@@ -248,8 +250,18 @@ export function dashboard(path, req, res, body, success, error) {
     }
   } else if (/\/campaigns\/[^/]+\/status$/.test(path)) {
     const record = state.campaigns.find((c) => c.id === path.split("/")[5]);
-    if (record && exact(["enabled", "expectedVersion"]) && versioned(record)) {
+    if (
+      record &&
+      exact([
+        "enabled",
+        "expectedVersion",
+        ...(Object.hasOwn(body, "gameEligible") ? ["gameEligible"] : []),
+      ]) &&
+      versioned(record)
+    ) {
       record.enabled = body.enabled;
+      if (Object.hasOwn(body, "gameEligible"))
+        record.gameEligible = body.gameEligible;
       save(record);
     }
   } else if (path.endsWith("/grants")) {
@@ -310,7 +322,7 @@ export function dashboard(path, req, res, body, success, error) {
         ...body,
         senderRole: "support",
         senderId: "admin-1",
-        id: "message-2",
+        id: `message-${state.messages.length + 1}`,
         createdAt: new Date().toISOString(),
       };
       state.messages.unshift(record);

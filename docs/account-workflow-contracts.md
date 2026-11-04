@@ -1,5 +1,8 @@
 # Account, rider and support workflow contracts
 
+> Superseded for frontend implementation by the [latest API integration](latest-api-integration-2026-11-03.md). The supplied backend handoff now implements the formerly missing account, pricing and shipment contracts. Historical proposals below are retained for context; use the latest handoff for actual wire payloads. Deployment acceptance remains separate.
+
+
 Updated 3 November 2026. This is a frontend integration specification, not a claim that proposed routes exist or have been deployed.
 
 The UI follows the earlier Firebase account header, personal information, vehicle/documents, verification, wallet and transaction sections, using the current PushNDeliver components and tokens. Firebase is not reintroduced. NIN/BVN collection and verification remain removed.

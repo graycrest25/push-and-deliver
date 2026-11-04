@@ -226,7 +226,7 @@ test("manual withdrawal claim, protected destination and settlement retries", as
       exact: true,
     })
     .click();
-  await expect(page.getByText("succeeded", { exact: true })).toBeVisible();
+  await expect(page.getByText("Successful", { exact: true })).toBeVisible();
   await expect(page.getByText("0123451234", { exact: true })).toHaveCount(0);
   const calls = (await control()).records.filter((r: any) =>
     r.path.endsWith("/mark-successful"),
@@ -248,7 +248,7 @@ test("another assignee and customer care cannot access settlement controls", asy
   ).toHaveCount(0);
   await control({ reset: true });
   await open(page, "/withdrawals/withdrawal-1?role=customercare");
-  await expect(page.getByText("requested", { exact: true })).toBeVisible();
+  await expect(page.getByText("Requested", { exact: true })).toBeVisible();
   await expect(page.locator("details")).toHaveCount(0);
 });
 test("job history pagination and replay bind the reviewed generation", async ({
@@ -266,7 +266,7 @@ test("job history pagination and replay bind the reviewed generation", async ({
   await page
     .getByRole("button", { name: "Replay dead job", exact: true })
     .click();
-  await expect(page.getByText("pending", { exact: true })).toBeVisible();
+  await expect(page.getByText("Pending", { exact: true })).toBeVisible();
   const call = (await control()).records.find((r: any) =>
     r.path.endsWith("/replay"),
   );
@@ -338,8 +338,8 @@ test("proxy rejects confirmed unmounted APIs and keeps native calls authenticate
   await open(page, "/jobs");
   await expect(page.getByText("job-1", { exact: true })).toBeVisible();
   for (const path of [
-    "/v1/payouts/withdrawals",
     "/v1/config",
+    "/v1/payouts/withdrawals",
     "/v1/uploads/asset-1",
   ])
     expect((await page.request.get(`/api/proxy${path}`)).status()).toBe(404);

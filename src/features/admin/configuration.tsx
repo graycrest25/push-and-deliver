@@ -654,16 +654,6 @@ export function NotificationsPage() {
   );
 }
 export function ConfigPage() {
-  const levels = ["easy", "medium", "hard"].map((level) =>
-    group(level, level, [
-      {
-        ...number("speed_multiplier", "Speed multiplier", 0.1, 10),
-        step: 0.1,
-        default: 1,
-      },
-      number("tolerance_ms", "Tolerance (ms)", 0, 1000),
-    ]),
-  );
   const actions: Action[] = [
     {
       title: "Replace referral rewards",
@@ -672,18 +662,6 @@ export function ConfigPage() {
       fields: [
         bool("enabled"),
         field("campaign_id", "Campaign ID", { required: false }),
-      ],
-    },
-    {
-      title: "Replace Ten Seconds rules",
-      path: "/v1/admin/config/ten_seconds",
-      method: "PUT",
-      fields: [
-        bool("enabled"),
-        select("active_level", ["easy", "medium", "hard"]),
-        group("levels", "Level definitions", levels),
-        { ...number("daily_attempts", "Daily attempts", 1, 5), default: 3 },
-        list("campaign_ids", "Reward campaign IDs"),
       ],
     },
   ];
@@ -695,6 +673,9 @@ export function ConfigPage() {
       />
       <MobileReleaseSettings />
       <ResourcePanel title="Published configuration" path="/v1/config" />
+      <Link className="text-primary underline" to="/game-rules">
+        Open Ten Seconds game rules
+      </Link>
       {actions.map((action) => (
         <ActionForm key={action.title} action={action} />
       ))}

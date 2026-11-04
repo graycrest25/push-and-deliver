@@ -1,16 +1,12 @@
+import { RewardCampaignManager } from "./reward-campaigns";
 import { RecordSkeleton } from "@/components/ui/loading-skeletons";
 import { RefreshButton } from "@/components/ui/refresh-button";
-import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-  DialogDescription,
-} from "@/components/ui/dialog";
+import { ClaimTicketButton } from "./support-conversation";
+export { SupportConversation as NativeConversation } from "./support-conversation";
 import { useEffect, useRef, useState, type ReactNode } from "react";
-import { Link, useParams, useSearchParams } from "react-router-dom";
+import { Link, useSearchParams } from "react-router-dom";
 import { useCurrentUser } from "@/contexts/UserContext";
-import { apiURL, segment, type RecordData } from "@/lib/api";
+import { segment, type RecordData } from "@/lib/api";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -33,10 +29,12 @@ export function CurrentRecord({
   path,
   title,
   children,
+  skeleton,
 }: {
   path: string;
   title: string;
   children: (data: RecordData, reload: () => void) => ReactNode;
+  skeleton?: ReactNode;
 }) {
   const resource = useResource(path);
   return (
@@ -47,9 +45,10 @@ export function CurrentRecord({
           Refresh {title.toLowerCase()}
         </RefreshButton>
       </div>
-      {resource.loading && (
-        <RecordSkeleton label={`Loading ${title.toLowerCase()}…`} />
-      )}
+      {resource.loading &&
+        (skeleton || (
+          <RecordSkeleton label={`Loading ${title.toLowerCase()}…`} />
+        ))}
       {resource.error != null && (
         <ErrorNotice error={resource.error} retry={resource.reload} />
       )}
@@ -175,33 +174,51 @@ export function AdminRoles() {
         >
           Administrators
         </Button>
+        <Button
+          variant={tab === "non_admins" ? "default" : "outline"}
+          aria-pressed={tab === "non_admins"}
+          onClick={() => setTab("non_admins")}
+        >
+          Non-admin users
+        </Button>
       </div>
-      {tab === "accounts" ? (
-        <DataList
-          spec={{
-            title: "Select an account",
-            path: "/v1/admin/users",
-            key: "items",
-            paging: "cursor",
-            params: { type: "users" },
-            idKey: "uid",
-            columns: [
-              { key: "username", label: "Name" },
-              { key: "email" },
-              { key: "uid", label: "User ID" },
-              { key: "emailVerified" },
-              { key: "disabled" },
-            ],
-            link: (row) => `/admin/users?uid=${segment(row.uid)}`,
-            note: "This directory includes all user accounts. Select one to read its current administrator membership.",
-          }}
-        />
-      ) : (
-        <Notice>
-          The administrator list is not available yet. You can still find an
-          account by user ID and manage its role above.
-        </Notice>
-      )}
+      <DataList
+        spec={{
+          title: tab === "admins" ? "Administrators" : "Select an account",
+          path: "/v1/admin/users",
+          key: "items",
+          paging: "cursor",
+          params: {
+            type: "users",
+            membership:
+              tab === "admins"
+                ? "admins"
+                : tab === "non_admins"
+                  ? "non_admins"
+                  : "all",
+          },
+          filters:
+            tab === "admins"
+              ? [
+                  select(
+                    "adminType",
+                    ["super", "regular", "customercare", "verifier"],
+                    "Administrator subtype",
+                  ),
+                ]
+              : undefined,
+          idKey: "uid",
+          columns: [
+            { key: "username", label: "Name" },
+            { key: "email" },
+            { key: "uid", label: "User ID" },
+            { key: "emailVerified" },
+            { key: "disabled" },
+          ],
+          link: (row) => `/admin/users?uid=${segment(row.uid)}`,
+          note: "This directory includes all user accounts. Select one to read its current administrator membership.",
+        }}
+      />
     </div>
   );
 }
@@ -234,86 +251,7 @@ export function NativeCoupons() {
       </div>
       {tab === "Campaigns" && (
         <>
-          <ActionForm
-            onSuccess={refresh}
-            action={{
-              title: "Create campaign",
-              path: `${coupons}/campaigns`,
-              preserveRetry: true,
-              fields: [
-                field("title", "Campaign title", { maxLength: 200 }),
-                number("percentageDiscount", "Discount (%)", 1, 100),
-                select("validForHours", ["24", "48"], "Valid for (hours)"),
-                ...["courier", "express", "local", "ridehailing"].map(
-                  (service) =>
-                    bool(
-                      service,
-                      service === "ridehailing"
-                        ? "Ride hailing"
-                        : service[0].toUpperCase() + service.slice(1),
-                    ),
-                ),
-                bool("enabled", "Campaign active"),
-              ],
-              body: (values) => {
-                const eligibleServices = [
-                  "courier",
-                  "express",
-                  "local",
-                  "ridehailing",
-                ].filter((s) => values[s]);
-                if (!eligibleServices.length)
-                  throw new Error("Select at least one eligible service.");
-                return {
-                  title: bytes(values.title, 1, 200, "Title"),
-                  percentageDiscount: values.percentageDiscount,
-                  validForHours: Number(values.validForHours),
-                  eligibleServices,
-                  enabled: values.enabled,
-                };
-              },
-            }}
-          />
-          <DataList
-            revision={revision}
-            spec={{
-              path: `${coupons}/campaigns`,
-              key: "items",
-              paging: "cursor",
-              columns: [
-                { key: "title" },
-                { key: "id", label: "Campaign ID" },
-                { key: "percentageDiscount", label: "Discount (%)" },
-                { key: "validForHours", label: "Hours" },
-                {
-                  key: "eligibleServices",
-                  render: (row) => row.eligibleServices.join(", "),
-                },
-                { key: "enabled", label: "Active" },
-                {
-                  key: "actions",
-                  label: "Status",
-                  render: (row) => (
-                    <ActionForm
-                      key={`${row.id}:${row.version}`}
-                      onSuccess={refresh}
-                      action={{
-                        title: row.enabled
-                          ? "Disable campaign"
-                          : "Enable campaign",
-                        path: `${coupons}/campaigns/${segment(row.id)}/status`,
-                        preserveRetry: true,
-                        body: () => ({
-                          enabled: !row.enabled,
-                          expectedVersion: currentVersion(row),
-                        }),
-                      }}
-                    />
-                  ),
-                },
-              ],
-            }}
-          />
+          <RewardCampaignManager />
           <ActionForm
             action={{
               title: "Generate customer coupon code",
@@ -590,9 +528,7 @@ function SupportTicketPanel({
   onUpdated: () => void;
 }) {
   const resource = useResource(`${tickets}/${segment(id)}`);
-  const [conversation, setConversation] = useState(false);
-  const conversationTrigger = useRef<HTMLButtonElement>(null);
-  const { adminType } = useCurrentUser();
+  const { user, adminType } = useCurrentUser();
   const blocked = resource.data?.status === "closed" && adminType !== "super";
   const refresh = () => {
     resource.reload();
@@ -624,11 +560,21 @@ function SupportTicketPanel({
             />
           </div>
           <div className="flex flex-wrap gap-2">
+            {resource.data.status === "open" &&
+            resource.data.assignedSupportUid !== user?.id ? (
+              <ClaimTicketButton id={id} reload={refresh} />
+            ) : null}
             <Button
-              ref={conversationTrigger}
-              onClick={() => setConversation(true)}
+              asChild
+              variant={
+                resource.data.assignedSupportUid === user?.id
+                  ? "default"
+                  : "outline"
+              }
             >
-              Open conversation
+              <Link to={`/support-tickets/${segment(id)}`}>
+                Open conversation
+              </Link>
             </Button>
             <RefreshButton onClick={refresh} loading={resource.loading}>
               Refresh ticket
@@ -636,171 +582,6 @@ function SupportTicketPanel({
           </div>
         </>
       )}
-      <Dialog open={conversation} onOpenChange={setConversation}>
-        <DialogContent
-          onCloseAutoFocus={(event) => {
-            event.preventDefault();
-            (
-              conversationTrigger.current ||
-              document.getElementById("ticket-details-heading")
-            )?.focus();
-          }}
-          className="sm:max-w-3xl max-h-[90dvh] overflow-y-auto"
-        >
-          <DialogHeader>
-            <DialogTitle>Support conversation</DialogTitle>
-            <DialogDescription>
-              Ticket {id}. Read messages and manage the conversation.
-            </DialogDescription>
-          </DialogHeader>
-          {state}
-          {resource.data && !blocked && (
-            <TicketConversation data={resource.data} reload={refresh} />
-          )}
-        </DialogContent>
-      </Dialog>
-    </>
-  );
-}
-export function NativeConversation() {
-  const { id = "" } = useParams();
-  return (
-    <div className="space-y-6">
-      <Link className="text-sm text-primary underline" to="/support-tickets">
-        Back to support tickets
-      </Link>
-      <Heading title="Support conversation" />
-      <CurrentRecord key={id} title="Ticket" path={`${tickets}/${segment(id)}`}>
-        {(data, reload) => <TicketConversation data={data} reload={reload} />}
-      </CurrentRecord>
-    </div>
-  );
-}
-function TicketConversation({
-  data,
-  reload,
-}: {
-  data: RecordData;
-  reload: () => void;
-}) {
-  const { user } = useCurrentUser();
-  const [clientMessageId] = useState(() => crypto.randomUUID());
-  const path = `${tickets}/${segment(data.id)}`;
-  const claimed = data.assignedSupportUid === user?.id;
-  if (data.status === "closed" && user?.adminType !== "super")
-    return (
-      <Notice>
-        This ticket is closed. Only a super administrator can view or reopen it.
-      </Notice>
-    );
-  return (
-    <>
-      <RecordView data={data} />
-      <div className="grid items-start gap-4 md:grid-cols-2">
-        {!claimed && (
-          <ActionForm
-            onSuccess={reload}
-            action={{
-              title: "Claim ticket",
-              description:
-                "Assign this ticket to yourself to access its customer attachments. This replaces the previous support assignment.",
-              path: `${path}/claim`,
-              preserveRetry: true,
-              body: () => ({ expectedVersion: currentVersion(data) }),
-            }}
-          />
-        )}
-        <ActionForm
-          onSuccess={reload}
-          action={{
-            title: data.status === "open" ? "Close ticket" : "Reopen ticket",
-            method: "PUT",
-            path: `${path}/status`,
-            preserveRetry: true,
-            body: () => ({
-              status: data.status === "open" ? "closed" : "open",
-              expectedVersion: currentVersion(data),
-            }),
-          }}
-        />
-      </div>
-      {data.status === "open" ? (
-        <ActionForm
-          onSuccess={reload}
-          action={{
-            title: "Send reply",
-            path: `${path}/messages`,
-            preserveRetry: true,
-            fields: [
-              field("message", "Message to customer", {
-                type: "textarea",
-                maxLength: 4000,
-              }),
-            ],
-            body: (values) => {
-              if (
-                !values.message.trim() ||
-                values.message.includes("\0") ||
-                [...values.message].length > 4000
-              )
-                throw new Error(
-                  "Enter a message of 1–4,000 characters without null characters.",
-                );
-              return { message: values.message, clientMessageId };
-            },
-          }}
-        />
-      ) : (
-        <Notice>This ticket is closed. Reopen it before replying.</Notice>
-      )}
-      <h2 className="text-lg font-semibold">Messages</h2>
-      <p className="text-sm text-muted-foreground">
-        Newest messages first. Claim the ticket before downloading customer
-        attachments.
-      </p>
-      <DataList
-        spec={{
-          path: `${path}/messages`,
-          key: "items",
-          paging: "cursor",
-          columns: [
-            { key: "senderRole", label: "From" },
-            {
-              key: "message",
-              render: (row) => (
-                <p className="max-w-xl whitespace-pre-wrap break-words">
-                  {row.message}
-                </p>
-              ),
-            },
-            { key: "createdAt", label: "Sent" },
-            {
-              key: "attachment",
-              render: (row) =>
-                row.attachment?.assetId ? (
-                  claimed ? (
-                    <a
-                      className="text-primary underline"
-                      href={apiURL(
-                        `/v1/media/${segment(row.attachment.assetId)}/content`,
-                      )}
-                      target="_blank"
-                      rel="noreferrer"
-                    >
-                      Download attachment
-                    </a>
-                  ) : (
-                    "Claim ticket to download"
-                  )
-                ) : row.attachmentUnavailable ? (
-                  "Attachment unavailable"
-                ) : (
-                  "—"
-                ),
-            },
-          ],
-        }}
-      />
     </>
   );
 }

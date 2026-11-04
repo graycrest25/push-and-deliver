@@ -4,7 +4,12 @@ export default defineConfig({
   testIgnore: "**/standalone-reference/**",
   fullyParallel: false,
   workers: 1,
-  use: { baseURL: "http://localhost:4320", trace: "retain-on-failure" },
+  use: {
+    baseURL: "http://localhost:4320",
+    trace: "retain-on-failure",
+    channel:
+      process.env.PLAYWRIGHT_CHANNEL === "chromium" ? "chromium" : undefined,
+  },
   webServer: [
     {
       command: "node tests/harness/build.cjs && node tests/native-auth-api.mjs",

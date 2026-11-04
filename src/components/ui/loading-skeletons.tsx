@@ -1,3 +1,4 @@
+import { tableColumnClass } from "@/lib/table-layout";
 import type { ReactNode } from "react";
 import { Skeleton } from "./skeleton";
 import {
@@ -85,11 +86,13 @@ export function FormSkeleton({
 }
 export function TableSkeleton({
   columns,
+  columnKeys,
   rows = 6,
   hasAction = false,
   label = "Loading records…",
 }: {
   columns: string[];
+  columnKeys?: string[];
   rows?: number;
   hasAction?: boolean;
   label?: string;
@@ -101,7 +104,12 @@ export function TableSkeleton({
           <TableHeader>
             <TableRow>
               {columns.map((title, i) => (
-                <TableHead key={i}>{title}</TableHead>
+                <TableHead
+                  key={i}
+                  className={tableColumnClass(columnKeys?.[i] || title)}
+                >
+                  {title}
+                </TableHead>
               ))}
               {hasAction && (
                 <TableHead>
@@ -114,7 +122,12 @@ export function TableSkeleton({
             {Array.from({ length: Math.min(rows, 8) }, (_, row) => (
               <TableRow key={row}>
                 {columns.map((_, column) => (
-                  <TableCell key={column}>
+                  <TableCell
+                    key={column}
+                    className={tableColumnClass(
+                      columnKeys?.[column] || columns[column],
+                    )}
+                  >
                     <Skeleton
                       className={`h-4 max-w-full ${column % 3 === 0 ? "w-32" : "w-20"}`}
                     />

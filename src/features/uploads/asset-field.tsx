@@ -43,6 +43,7 @@ export function AssetField({
   vendorOwned,
   ownAsset,
   purpose,
+  riderUid,
 }: {
   id: string;
   path: string;
@@ -55,6 +56,7 @@ export function AssetField({
   vendorOwned?: boolean;
   ownAsset?: boolean;
   purpose?: UploadPurpose;
+  riderUid?: string;
 }) {
   const { user } = useCurrentUser();
   const form = useContext(UploadFormContext);
@@ -219,7 +221,10 @@ export function AssetField({
         await resume(entry, signal, file);
         return;
       }
-      const draft = await prepareUpload(file, !!imagesOnly, purpose);
+      const draft = {
+        ...(await prepareUpload(file, !!imagesOnly, purpose)),
+        ...(riderUid ? { riderUid } : {}),
+      };
       signal.throwIfAborted();
       const next = { draft };
       write([...entryRef.current, next]); // Creation key is durable before the first request.
@@ -376,9 +381,10 @@ export function AssetField({
               disabled={busy}
               onClick={() =>
                 void work(async (signal) => {
-                  await discardUpload(entry.draft, signal, (draft) =>
-                    patch(entry.draft.key, { draft }),
-                  );
+                  if (!entry.draft.riderUid)
+                    await discardUpload(entry.draft, signal, (draft) =>
+                      patch(entry.draft.key, { draft }),
+                    );
                   if (entry.draft.assetId) detach(entry.draft.assetId);
                   files.current.delete(entry.draft.key);
                   write(
@@ -389,7 +395,11 @@ export function AssetField({
                 })
               }
             >
-              {entry.ready ? "Delete unattached file" : "Discard upload"}
+              {entry.draft.riderUid
+                ? "Remove from this draft"
+                : entry.ready
+                  ? "Delete unattached file"
+                  : "Discard upload"}
             </Button>
           </div>
         </div>

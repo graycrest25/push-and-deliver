@@ -1,4 +1,18 @@
-import { BrowserRouter, Navigate, Route, Routes } from "react-router-dom";
+import { GameRulesPage } from "@/features/admin/game-rules";
+import {
+  RiderApplications,
+  RiderApplication,
+} from "@/features/admin/rider-applications";
+import {
+  PricingAudit,
+  FeeEditor,
+  TariffEditor,
+  TariffCreate,
+  OfficePricing,
+  CountryPolicy,
+  StatePolicy,
+} from "@/features/admin/pricing";
+import { BrowserRouter, Link, Navigate, Route, Routes } from "react-router-dom";
 import { Layout } from "@/components/layout";
 import ProtectedRoutes from "./ProtectedRoutes";
 import PublicRoute from "./PublicRoute";
@@ -82,6 +96,20 @@ export default function Router() {
                 <Layout>
                   <Routes>
                     <Route path="/dashboard" element={<NativeDashboard />} />
+                    <Route
+                      path="/rider-applications"
+                      element={<RiderApplications />}
+                    />
+                    <Route
+                      path="/rider-applications/:id"
+                      element={<RiderApplication />}
+                    />
+                    <Route path="/pricing-audit" element={<PricingAudit />} />
+                    <Route path="/fees/:id" element={<FeeEditor />} />
+                    <Route
+                      path="/delivery-zones/states/:id"
+                      element={<StatePolicy />}
+                    />
                     <Route path="/users" element={<NativeAccounts />} />
                     <Route path="/users/:id" element={<NativeAccount />} />
                     <Route path="/riders" element={<NativeAccounts riders />} />
@@ -127,7 +155,12 @@ export default function Router() {
                     />
                     <Route
                       path="/ecommerce-merchants/:id/products"
-                      element={<CataloguePage />}
+                      element={
+                        <UnavailableAdminFeature title="Catalogue unavailable">
+                          Catalogue administration is not available in this
+                          release.
+                        </UnavailableAdminFeature>
+                      }
                     />
                     <Route
                       path="/ecommerce-merchants/:id/products/:productId"
@@ -160,19 +193,39 @@ export default function Router() {
                     <Route path="/ride-hailing/:id" element={<NativeRide />} />
                     <Route
                       path="/restaurant-orders"
-                      element={<OrdersPage kind="marketplace" />}
+                      element={
+                        <UnavailableAdminFeature title="Marketplace unavailable">
+                          Marketplace administration is not available in this
+                          release.
+                        </UnavailableAdminFeature>
+                      }
                     />
                     <Route
                       path="/restaurant-orders/:id"
-                      element={<OrderPage kind="marketplace" />}
+                      element={
+                        <UnavailableAdminFeature title="Marketplace unavailable">
+                          Marketplace administration is not available in this
+                          release.
+                        </UnavailableAdminFeature>
+                      }
                     />
                     <Route
                       path="/product-orders"
-                      element={<OrdersPage kind="marketplace" />}
+                      element={
+                        <UnavailableAdminFeature title="Marketplace unavailable">
+                          Marketplace administration is not available in this
+                          release.
+                        </UnavailableAdminFeature>
+                      }
                     />
                     <Route
                       path="/product-orders/:id"
-                      element={<OrderPage kind="marketplace" />}
+                      element={
+                        <UnavailableAdminFeature title="Marketplace unavailable">
+                          Marketplace administration is not available in this
+                          release.
+                        </UnavailableAdminFeature>
+                      }
                     />
                     <Route
                       path="/withdrawals"
@@ -229,6 +282,7 @@ export default function Router() {
                       path="/dhl-local"
                       element={<Navigate to="/delivery-zones" replace />}
                     />
+                    <Route path="/game-rules" element={<GameRulesPage />} />
                     <Route path="/coupons" element={<NativeCoupons />} />
                     <Route
                       path="/general-notifications"
@@ -239,16 +293,39 @@ export default function Router() {
                       element={
                         <div className="space-y-6">
                           <Heading title="App configuration" />
+                          <Notice>
+                            Manage Ten Seconds timing and rewards from{" "}
+                            <Link
+                              to="/game-rules"
+                              className="text-primary underline"
+                            >
+                              Game rules
+                            </Link>
+                            .
+                          </Notice>
                           <MobileReleaseSettings />
                           <SignupFunding />
                         </div>
                       }
                     />
                     <Route path="/settings" element={<SecurityPage />} />
-                    <Route path="/catalogue" element={<CataloguePage />} />
+                    <Route
+                      path="/catalogue"
+                      element={
+                        <UnavailableAdminFeature title="Catalogue unavailable">
+                          Catalogue administration is not available in this
+                          release.
+                        </UnavailableAdminFeature>
+                      }
+                    />
                     <Route
                       path="/catalogue/:id"
-                      element={<CatalogueItemPage />}
+                      element={
+                        <UnavailableAdminFeature title="Catalogue unavailable">
+                          Catalogue administration is not available in this
+                          release.
+                        </UnavailableAdminFeature>
+                      }
                     />
                     <Route path="/payments" element={<PaymentsPage />} />
                     <Route

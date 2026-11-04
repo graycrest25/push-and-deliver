@@ -23,7 +23,7 @@ export function TableStateProvider({ children }: { children: ReactNode }) {
           pathname.split("/")[1],
         )
       ? "users"
-      : ["riders", "rider-weekly-deliveries"].includes(pathname.split("/")[1])
+      : ["riders", "rider-weekly-deliveries", "rider-applications"].includes(pathname.split("/")[1])
         ? "riders"
         : pathname.split("/")[1];
   const store = useMemo(

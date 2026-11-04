@@ -1,3 +1,13 @@
+import { RideDetails, RideDetailsSkeleton } from "./ride-details";
+import { enumLabel } from "@/lib/enum-labels";
+import {
+  CountryPolicy,
+  FeeEditor,
+  OfficePricing,
+  TariffCreate,
+  TariffEditor,
+} from "./pricing";
+import { CurrentRecord } from "./native-dashboard";
 import { RecordSkeleton } from "@/components/ui/loading-skeletons";
 import { RefreshButton } from "@/components/ui/refresh-button";
 import { useState } from "react";
@@ -228,6 +238,8 @@ export function NativeRides() {
             "customerId",
             "vehicleType",
             "createdAt",
+            "dataQuality",
+            "unavailableFields",
           ]),
           filters: [
             select("status", [
@@ -253,10 +265,13 @@ export function NativeRide() {
     <div className="space-y-6">
       <Back to="/ride-hailing">Back to rides</Back>
       <Heading title="Ride details" description={id} />
-      <ResourcePanel
-        title="Ride, route and payment"
+      <CurrentRecord
+        title="Order details"
         path={`/v1/admin/rides/${segment(id)}`}
-      />
+        skeleton={<RideDetailsSkeleton />}
+      >
+        {(data) => <RideDetails data={data} />}
+      </CurrentRecord>
       <Notice>
         Ride administration is currently available for inspection. Cancellation
         and assignment changes are unavailable here.
@@ -290,9 +305,8 @@ export function NativeFees() {
         <option value="shipping">Shipping settings</option>
       </select>
       <Notice>
-        The two catalogues expose the same fee records. Check each fee type and
-        any invalid fields before relying on a value. Editing is unavailable
-        here.
+        Open a fee to inspect normalized units and edit supported pricing
+        fields.
       </Notice>
       <DataList
         key={view}
@@ -303,6 +317,7 @@ export function NativeFees() {
               : "/v1/admin/shipping/settings",
             [],
           ),
+          link: (row) => `/fees/${segment(row.id)}`,
           columns: [
             ...columns("id", "name", "feeType", "moneyUnit"),
             { key: "value", label: "Value (by fee type)" },
@@ -321,7 +336,12 @@ export function NativeFees() {
             {
               key: "invalidFields",
               label: "Invalid fields",
-              render: (row) => row.invalidFields?.join(", ") || "None",
+              render: (row) =>
+                row.invalidFields
+                  ?.map((name: string) =>
+                    name.replace(/([a-z])([A-Z])/g, "$1 $2"),
+                  )
+                  .join(", ") || "None",
             },
           ],
         }}
@@ -359,10 +379,7 @@ export function NativeOffice() {
     <div className="space-y-6">
       <Back to="/head-offices">Back to offices</Back>
       <Heading title="Office details" />
-      <ResourcePanel
-        title="Shipping office"
-        path={`/v1/admin/shipping/offices/${segment(id)}`}
-      />
+      <OfficePricing id={id} />
     </div>
   );
 }
@@ -374,6 +391,10 @@ export function NativeTariffs({ domestic = false }: { domestic?: boolean }) {
         title={domestic ? "Delivery tariffs" : "Shipping tariffs"}
         description="Inspect current and historical tariffs, including their weight bands and prices."
       />
+      <TariffCreate domestic={domestic} />
+      {domestic && (
+        <DataList spec={page("/v1/shipping/local-types", ["id", "name"])} />
+      )}
       <DataList
         key={root}
         spec={{
@@ -409,11 +430,14 @@ export function NativeTariffs({ domestic = false }: { domestic?: boolean }) {
         <section className="space-y-3">
           <h2 className="text-lg font-semibold">States & local zones</h2>
           <DataList
-            spec={page("/v1/admin/geography/states", [
-              "id",
-              "name",
-              "localZone",
-            ])}
+            spec={{
+              ...page("/v1/admin/geography/states", [
+                "id",
+                "name",
+                "localZone",
+              ]),
+              link: (row) => `/delivery-zones/states/${segment(row.id)}`,
+            }}
           />
         </section>
       ) : (
@@ -437,44 +461,7 @@ export function NativeTariffs({ domestic = false }: { domestic?: boolean }) {
   );
 }
 export function NativeTariff({ domestic = false }: { domestic?: boolean }) {
-  const { id = "" } = useParams(),
-    root = domestic
-      ? "/v1/admin/geography/tariffs"
-      : "/v1/admin/shipping/tariffs";
-  return (
-    <div className="space-y-6">
-      <Back to={domestic ? "/delivery-zones" : "/export-rates"}>
-        Back to tariffs
-      </Back>
-      <Heading title="Tariff details" description={id} />
-      <ResourcePanel title="Tariff" path={`${root}/${segment(id)}`} />
-      <section className="space-y-3">
-        <h2 className="text-lg font-semibold">Weight bands & prices</h2>
-        <DataList
-          key={`${root}:${id}`}
-          spec={page(
-            `${root}/${segment(id)}/rates`,
-            domestic
-              ? ["weightGrams", "amountMinor", "currency"]
-              : ["zone", "weightGrams", "amountMinor", "currency"],
-          )}
-        />
-      </section>
-      {!domestic && (
-        <section className="space-y-3">
-          <h2 className="text-lg font-semibold">Country zones</h2>
-          <DataList
-            spec={page(`${root}/${segment(id)}/countries`, [
-              "code",
-              "name",
-              "zone",
-              "active",
-            ])}
-          />
-        </section>
-      )}
-    </div>
-  );
+  return <TariffEditor domestic={domestic} />;
 }
 export function NativeCountry() {
   const { id = "" } = useParams();
@@ -482,10 +469,7 @@ export function NativeCountry() {
     <div className="space-y-6">
       <Back to="/export-rates">Back to shipping configuration</Back>
       <Heading title="Country details" />
-      <ResourcePanel
-        title="Country"
-        path={`/v1/admin/shipping/countries/${segment(id)}`}
-      />
+      <CountryPolicy id={id} />
     </div>
   );
 }
@@ -513,85 +497,4 @@ export function NativeAudit() {
     </div>
   );
 }
-const reportNames = [
-  "account_summary",
-  "order_summary",
-  "referral_summary",
-  "user_activation",
-  "order_facts",
-  "coupon_reporting",
-];
-export function AnalyticsCoverage() {
-  const [report, setReport] = useState(reportNames[0]);
-  return (
-    <div className="space-y-6">
-      <Heading
-        title="Report coverage"
-        description="Check whether reporting data is complete and inspect the latest rebuild before relying on totals."
-      />
-      <Label htmlFor="coverage-report">Report</Label>
-      <select
-        id="coverage-report"
-        className="h-10 w-full rounded-md border bg-card px-3"
-        value={report}
-        onChange={(e) => setReport(e.target.value)}
-      >
-        {reportNames.map((name) => (
-          <option key={name} value={name}>
-            {name.replaceAll("_", " ")}
-          </option>
-        ))}
-      </select>
-      <CoverageRecord key={report} report={report} />
-    </div>
-  );
-}
-function CoverageRecord({ report }: { report: string }) {
-  const resource = useResource(
-    queryPath("/v1/admin/analytics/coverage", { report }),
-  );
-  const [jobId, setJobId] = useState("");
-  return (
-    <div className="space-y-4">
-      <RefreshButton onClick={resource.reload} loading={resource.loading}>
-        Refresh coverage
-      </RefreshButton>
-      {resource.loading && <RecordSkeleton label="Loading report coverage…" />}
-      {resource.error != null && (
-        <ErrorNotice error={resource.error} retry={resource.reload} />
-      )}
-      {resource.data && (
-        <>
-          <Notice>
-            {resource.data.coverage?.complete
-              ? "This report’s source coverage is complete."
-              : "This report is not ready for complete business totals. A rebuild may still be required or processing."}
-          </Notice>
-          <RecordView data={resource.data} />
-          <ActionForm
-            action={{
-              title: "Queue report rebuild",
-              description:
-                "Queues a background rebuild of this report. Acceptance does not mean the report is ready; refresh coverage and inspect progress afterward.",
-              path: "/v1/admin/analytics/backfills",
-              preserveRetry: true,
-              body: () => ({ report }),
-              success:
-                "Report rebuild accepted. Check progress and refresh coverage.",
-            }}
-            onSuccess={(result) => {
-              setJobId(result.jobId);
-              resource.reload();
-            }}
-          />
-        </>
-      )}
-      {jobId && (
-        <ResourcePanel
-          title="Rebuild progress"
-          path={`/v1/operations/${segment(jobId)}`}
-        />
-      )}
-    </div>
-  );
-}
+export { ReportCoveragePage as AnalyticsCoverage } from "./report-coverage";

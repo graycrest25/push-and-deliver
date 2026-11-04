@@ -1,4 +1,4 @@
-import { api, ApiError, segment } from "./api";
+import { api, apiResponse, ApiError, segment } from "./api";
 export const IMAGE_TYPES = ["image/jpeg", "image/png", "image/webp"];
 export const FILE_TYPES = [...IMAGE_TYPES, "application/pdf"];
 export const UPLOAD_PURPOSES = [
@@ -8,11 +8,20 @@ export const UPLOAD_PURPOSES = [
   "customs_document",
   "packing_list",
   "invoice",
+  "shipment_evidence",
+  "vehicle_photo",
+  "plate_number",
 ] as const;
 export type UploadPurpose = (typeof UPLOAD_PURPOSES)[number];
 export const MAX_UPLOAD_BYTES = 10 * 1024 * 1024;
 export function uploadLimit(purpose: UploadPurpose) {
-  return ["avatar", "support_attachment", "shipment_item"].includes(purpose)
+  return [
+    "avatar",
+    "support_attachment",
+    "shipment_item",
+    "vehicle_photo",
+    "plate_number",
+  ].includes(purpose)
     ? 5 * 1024 * 1024
     : MAX_UPLOAD_BYTES;
 }
@@ -33,9 +42,11 @@ export interface UploadDraft {
   mime: string;
   sha256: string;
   purpose: UploadPurpose;
+  riderUid?: string;
   assetId?: string;
   transferred?: boolean;
   operationId?: string;
+  completionAttempt?: number;
 }
 export interface UploadProgress {
   message: string;
@@ -96,6 +107,13 @@ export async function prepareUpload(
   };
 }
 function validateDraft(draft: UploadDraft) {
+  if (
+    draft.riderUid &&
+    !["vehicle_photo", "plate_number"].includes(draft.purpose)
+  )
+    throw new Error(
+      "Rider documents accept only a vehicle photo or plate-number photo. Start a new upload.",
+    );
   if (draft.version !== 2 || !UPLOAD_PURPOSES.includes(draft.purpose))
     throw new Error(
       "This saved upload uses the retired upload service. Start a new native upload.",
@@ -146,16 +164,22 @@ async function request<T>(
   }
 }
 function create(draft: UploadDraft, signal: AbortSignal) {
-  return request<Intent>("/v1/assets/upload-intents", signal, {
-    method: "POST",
-    headers: { "Idempotency-Key": draft.key },
-    body: JSON.stringify({
-      purpose: draft.purpose,
-      contentType: draft.mime,
-      sizeBytes: draft.size,
-      checksumSha256: draft.sha256,
-    }),
-  });
+  return request<Intent>(
+    draft.riderUid
+      ? `/v1/admin/riders/${segment(draft.riderUid)}/application/upload-intents`
+      : "/v1/assets/upload-intents",
+    signal,
+    {
+      method: "POST",
+      headers: { "Idempotency-Key": draft.key },
+      body: JSON.stringify({
+        purpose: draft.purpose,
+        contentType: draft.mime,
+        sizeBytes: draft.size,
+        checksumSha256: draft.sha256,
+      }),
+    },
+  );
 }
 export async function runUpload(
   draft: UploadDraft,
@@ -188,7 +212,7 @@ export async function runUpload(
       process.env.NODE_ENV !== "production" &&
       ["localhost", "127.0.0.1", "[::1]"].includes(url.hostname);
     if (
-      signed.method !== "PUT" ||
+      !["PUT", "POST"].includes(signed.method) ||
       url.username ||
       url.password ||
       (url.protocol !== "https:" && !(local && url.protocol === "http:")) ||
@@ -207,7 +231,7 @@ export async function runUpload(
     }
     progress({ message: "Uploading file…", percent: 10 });
     const response = await fetch(url, {
-      method: "PUT",
+      method: signed.method,
       headers,
       body: file,
       credentials: "omit",
@@ -227,6 +251,48 @@ export async function runUpload(
   for (;;) {
     signal.throwIfAborted();
     progress({ message: "Validating file…", percent: 95 });
+    if (draft.riderUid) {
+      const response = await apiResponse(
+        `/v1/admin/riders/${segment(draft.riderUid)}/application/assets/${segment(draft.assetId!)}/complete`,
+        {
+          method: "POST",
+          body: "{}",
+          headers: {
+            "Idempotency-Key": `${draft.key}:complete:${draft.completionAttempt || 0}`,
+          },
+          signal: AbortSignal.any([signal, AbortSignal.timeout(30000)]),
+        },
+      );
+      const result =
+        response.status === 202
+          ? await response.json().catch(() => ({}))
+          : await response.json();
+      const completion = (result.data ?? result) as Completion;
+      if (completion.assetId && completion.assetId !== draft.assetId)
+        throw new Error("The completed file does not match this upload.");
+      if (response.status === 200 && completion.status === "ready")
+        return {
+          id: draft.assetId!,
+          status: "ready",
+          mime_type: completion.contentType || draft.mime,
+          size_bytes: completion.sizeBytes ?? draft.size,
+        };
+      if (response.status !== 202)
+        throw new Error(
+          "The service returned an unknown file-processing state.",
+        );
+      // A successful processing response ends this request. Rechecking is a new mutation.
+      draft = {
+        ...draft,
+        completionAttempt: (draft.completionAttempt || 0) + 1,
+      };
+      saved(draft);
+      if (Date.now() > deadline)
+        throw new Error("Processing is still running. Resume to check again.");
+      await pause(delay, signal);
+      delay = Math.min(8000, delay * 1.5);
+      continue;
+    }
     if (draft.operationId) {
       const operation = await request<{
         status: string;

@@ -1,5 +1,8 @@
 # Shipment details and status changes
 
+> Superseded for frontend implementation by the [latest API integration](latest-api-integration-2026-11-03.md). The supplied backend handoff now implements the formerly missing account, pricing and shipment contracts. Historical proposals below are retained for context; use the latest handoff for actual wire payloads. Deployment acceptance remains separate.
+
+
 Updated 3 November 2026. Source audit of the current native checkout; not deployed-backend verification. The frontend keeps the existing PushNDeliver design and restores the former Firebase detail groups without reintroducing browser Firebase access.
 
 ## Implemented

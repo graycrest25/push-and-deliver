@@ -1,3 +1,6 @@
+import { api, queryPath } from "@/lib/api";
+import { toast } from "sonner";
+import { Button } from "@/components/ui/button";
 import { useState } from "react";
 import { Label } from "@/components/ui/label";
 import { ActionForm, Notice, RecordView, bool, field } from "./shared";
@@ -13,6 +16,24 @@ const features = [
   "game",
 ];
 export function MobileReleaseSettings() {
+  const [checking, setChecking] = useState(false);
+  async function verifyPolicy() {
+    setChecking(true);
+    try {
+      await api(queryPath("/v1/config/mobile", { app, platform }));
+      toast.success(
+        "The public release policy is available for this app and platform.",
+      );
+    } catch (error) {
+      toast.error(
+        error instanceof Error
+          ? error.message
+          : "Public release policy is unavailable.",
+      );
+    } finally {
+      setChecking(false);
+    }
+  }
   const [app, setApp] = useState("user");
   const [platform, setPlatform] = useState("android");
   return (
@@ -67,8 +88,26 @@ export function MobileReleaseSettings() {
                   : "The saved release settings need repair. Review and enter the complete configuration below."}
               </Notice>
             )}
+            {data.invalidFields?.length > 0 && (
+              <Notice>
+                Fields requiring repair: {data.invalidFields.join(", ")}
+              </Notice>
+            )}
+            <Button
+              variant="outline"
+              disabled={checking}
+              onClick={verifyPolicy}
+            >
+              {checking
+                ? "Checking public policy…"
+                : "Check public release policy"}
+            </Button>
+            <Notice>Food and ecommerce remain disabled in this release.</Notice>
             <ActionForm
-              onSuccess={reload}
+              onSuccess={() => {
+                reload();
+                void verifyPolicy();
+              }}
               action={{
                 title: "Publish release settings",
                 description:
@@ -76,6 +115,8 @@ export function MobileReleaseSettings() {
                 method: "PUT",
                 path: `/v1/admin/config/mobile/${app}/${platform}`,
                 preserveRetry: true,
+                versionPath: `/v1/admin/config/mobile/${app}/${platform}`,
+                minimumVersion: 0,
                 initial: data.configuration || {
                   latestVersion: "",
                   minimumSupportedVersion: "",
@@ -109,7 +150,9 @@ export function MobileReleaseSettings() {
                   }),
                   field("features", "App features", {
                     type: "group",
-                    fields: features.map((name) => bool(name)),
+                    fields: features
+                      .filter((name) => !["food", "ecommerce"].includes(name))
+                      .map((name) => bool(name)),
                   }),
                 ],
                 body: (values) => {
@@ -145,6 +188,11 @@ export function MobileReleaseSettings() {
                     );
                   return {
                     ...values,
+                    features: {
+                      ...values.features,
+                      food: false,
+                      ecommerce: false,
+                    },
                     maintenance: {
                       enabled: values.maintenance.enabled,
                       message: values.maintenance.message?.trim() || null,
