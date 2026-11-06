@@ -6,7 +6,7 @@ import {
   useCallback,
   useRef,
 } from "react";
-import { api, ApiError } from "@/lib/api";
+import { api, clearSessionCache } from "@/lib/api";
 import { isAdminType, type AdminType } from "@/lib/admin-access";
 export interface SessionUser {
   id: string;
@@ -68,15 +68,11 @@ export function UserProvider({ children }: { children: React.ReactNode }) {
           membershipKnown && session.isAdmin ? session.adminType : undefined,
       });
       return true;
-    } catch (failure) {
+    } catch {
       if (request !== generation.current) return false;
-      if (failure instanceof ApiError && failure.status === 401) setUser(null);
-      else
-        setError(
-          failure instanceof Error
-            ? failure.message
-            : "Unable to load your session. Please retry.",
-        );
+      clearSessionCache();
+      setUser(null);
+      setError("");
       return false;
     } finally {
       if (request === generation.current) setLoading(false);
@@ -86,6 +82,7 @@ export function UserProvider({ children }: { children: React.ReactNode }) {
     void refetchUser();
     const expired = () => {
       generation.current++;
+      clearSessionCache();
       setError("");
       setUser(null);
       setLoading(false);

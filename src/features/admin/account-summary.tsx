@@ -1,4 +1,17 @@
 import { RecordSkeleton } from "@/components/ui/loading-skeletons";
+import {
+  IconCalendar,
+  IconClock,
+  IconCircleCheck,
+  IconHistory,
+  IconLock,
+  IconMinus,
+  IconTrendingDown,
+  IconTrendingUp,
+  IconUserPlus,
+  IconUsers,
+} from "@tabler/icons-react";
+import { metricTone } from "@/lib/data-presentation";
 import { RefreshButton } from "@/components/ui/refresh-button";
 import {
   Table,
@@ -22,19 +35,67 @@ export function AccountSummary({ type }: { type: "users" | "riders" }) {
   );
   const data = resource.data;
   const riders = type === "riders";
-  const statistics: [string, unknown][] = riders
+  const statistics = riders
     ? [
-        ["Total riders", data?.total],
-        ["Verified", data?.verified?.total],
-        ["Pending", data?.pending?.total],
-        ["Blocked", data?.blocked?.total],
+        {
+          label: "Total riders",
+          key: "total",
+          value: data?.total,
+          Icon: IconUsers,
+        },
+        {
+          label: "Verified",
+          key: "verified",
+          value: data?.verified?.total,
+          Icon: IconCircleCheck,
+        },
+        {
+          label: "Pending",
+          key: "pending",
+          value: data?.pending?.total,
+          Icon: IconClock,
+        },
+        {
+          label: "Blocked",
+          key: "blocked",
+          value: data?.blocked?.total,
+          Icon: IconLock,
+        },
       ]
     : [
-        ["Total users", data?.total],
-        ["New today", data?.newToday],
-        ["New this week", data?.newThisWeek],
-        ["New last week", data?.newLastWeek],
+        {
+          label: "Total users",
+          key: "total",
+          value: data?.total,
+          Icon: IconUsers,
+        },
+        {
+          label: "New today",
+          key: "newToday",
+          value: data?.newToday,
+          Icon: IconUserPlus,
+        },
+        {
+          label: "New this week",
+          key: "newThisWeek",
+          value: data?.newThisWeek,
+          Icon: IconCalendar,
+        },
+        {
+          label: "New last week",
+          key: "newLastWeek",
+          value: data?.newLastWeek,
+          Icon: IconHistory,
+        },
       ];
+  const growth = data?.growthRate;
+  const growthKnown = typeof growth === "number" && Number.isFinite(growth);
+  const GrowthIcon =
+    !growthKnown || growth === 0
+      ? IconMinus
+      : growth > 0
+        ? IconTrendingUp
+        : IconTrendingDown;
   const vehicles = [
     ...new Set([
       "0",
@@ -63,10 +124,21 @@ export function AccountSummary({ type }: { type: "users" | "riders" }) {
       )}
       {data && (
         <div className="space-y-5">
-          <dl className="grid grid-cols-2 gap-x-5 gap-y-5 rounded-lg bg-muted/40 p-4 lg:grid-cols-4">
-            {statistics.map(([label, value]) => (
-              <div key={label} className="min-w-0 space-y-1">
-                <dt className="text-sm text-muted-foreground">{label}</dt>
+          <dl className="analytics-stats grid grid-cols-2 lg:grid-cols-4">
+            {statistics.map(({ label, key, value, Icon }) => (
+              <div
+                key={label}
+                className="analytics-stat min-w-0 space-y-2"
+                data-tone={
+                  count(value) === "Unavailable"
+                    ? "neutral"
+                    : metricTone(key, value)
+                }
+              >
+                <dt className="flex items-center gap-2 text-sm">
+                  <Icon size={17} stroke={1.8} aria-hidden="true" />
+                  {label}
+                </dt>
                 <dd
                   className={`${count(value) === "Unavailable" ? "text-sm" : "text-2xl font-semibold"} tabular-nums`}
                 >
@@ -82,10 +154,30 @@ export function AccountSummary({ type }: { type: "users" | "riders" }) {
                 <TableHeader>
                   <TableRow>
                     <TableHead>Vehicle</TableHead>
-                    <TableHead className="text-right">All riders</TableHead>
-                    <TableHead className="text-right">Verified</TableHead>
-                    <TableHead className="text-right">Pending</TableHead>
-                    <TableHead className="text-right">Blocked</TableHead>
+                    <TableHead
+                      className="data-tone-text text-right"
+                      data-tone="info"
+                    >
+                      All riders
+                    </TableHead>
+                    <TableHead
+                      className="data-tone-text text-right"
+                      data-tone="positive"
+                    >
+                      Verified
+                    </TableHead>
+                    <TableHead
+                      className="data-tone-text text-right"
+                      data-tone="attention"
+                    >
+                      Pending
+                    </TableHead>
+                    <TableHead
+                      className="data-tone-text text-right"
+                      data-tone="danger"
+                    >
+                      Blocked
+                    </TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
@@ -94,16 +186,40 @@ export function AccountSummary({ type }: { type: "users" | "riders" }) {
                       <TableCell className="font-medium whitespace-nowrap">
                         {enumLabel("vehicleType", vehicle) || "Unknown vehicle"}
                       </TableCell>
-                      <TableCell className="text-right tabular-nums">
+                      <TableCell
+                        className="data-tone-text text-right tabular-nums"
+                        data-tone={metricTone(
+                          "total",
+                          data.byVehicle?.[vehicle],
+                        )}
+                      >
                         {count(data.byVehicle?.[vehicle])}
                       </TableCell>
-                      <TableCell className="text-right tabular-nums">
+                      <TableCell
+                        className="data-tone-text text-right tabular-nums"
+                        data-tone={metricTone(
+                          "verified",
+                          data.verified?.byVehicle?.[vehicle],
+                        )}
+                      >
                         {count(data.verified?.byVehicle?.[vehicle])}
                       </TableCell>
-                      <TableCell className="text-right tabular-nums">
+                      <TableCell
+                        className="data-tone-text text-right tabular-nums"
+                        data-tone={metricTone(
+                          "pending",
+                          data.pending?.byVehicle?.[vehicle],
+                        )}
+                      >
                         {count(data.pending?.byVehicle?.[vehicle])}
                       </TableCell>
-                      <TableCell className="text-right tabular-nums">
+                      <TableCell
+                        className="data-tone-text text-right tabular-nums"
+                        data-tone={metricTone(
+                          "blocked",
+                          data.blocked?.byVehicle?.[vehicle],
+                        )}
+                      >
                         {count(data.blocked?.byVehicle?.[vehicle])}
                       </TableCell>
                     </TableRow>
@@ -121,10 +237,15 @@ export function AccountSummary({ type }: { type: "users" | "riders" }) {
             {!riders && (
               <p>
                 Week-over-week growth:{" "}
-                {typeof data.growthRate === "number" &&
-                Number.isFinite(data.growthRate)
-                  ? `${data.growthRate > 0 ? "+" : ""}${data.growthRate.toLocaleString("en-NG", { maximumFractionDigits: 1 })}%`
-                  : "Unavailable"}
+                <span
+                  className="analytics-growth"
+                  data-tone={metricTone("growthRate", growth)}
+                >
+                  <GrowthIcon size={15} aria-hidden="true" />
+                  {growthKnown
+                    ? `${growth > 0 ? "+" : ""}${growth.toLocaleString("en-NG", { maximumFractionDigits: 1 })}%`
+                    : "Unavailable"}
+                </span>
               </p>
             )}
           </div>

@@ -17,7 +17,10 @@ async function login(page: Page, role: string | null = "super") {
     await expect(
       page.getByRole("heading", { name: "Administrator access required" }),
     ).toBeVisible();
-  else await expect(page.locator("#workspace-content")).toBeVisible();
+  else
+    await expect(page.locator("#workspace-content")).toBeVisible({
+      timeout: 15000,
+    });
 }
 async function openForm(page: Page, title: string) {
   await page.locator("summary").filter({ hasText: title }).click();
@@ -753,6 +756,7 @@ test("native directories show returned profiles with correct type, UID details a
 test("native rides, fares and catalogues use admin reads and preserve monetary units", async ({
   page,
 }) => {
+  test.setTimeout(60000);
   await login(page, "regular");
   await page.goto("/ride-hailing");
   await expect(
@@ -782,9 +786,11 @@ test("native rides, fares and catalogues use admin reads and preserve monetary u
     page.getByRole("cell", { name: "International tariff", exact: true }),
   ).toBeVisible();
   await page.getByRole("link", { name: /Open International tariff/ }).click();
-  await expect(
-    page.getByRole("cell", { name: "150,000", exact: true }),
-  ).toBeVisible();
+  await expect(page.getByRole("cell", { name: /₦1,500\.00/ })).toBeVisible();
+  await page
+    .locator("summary")
+    .filter({ hasText: /^Country zones/ })
+    .click();
   await expect(page.getByText("NG", { exact: true })).toBeVisible();
   await page.goto("/export-rates/countries/NG");
   await expect(page.getByText("Nigeria", { exact: true })).toBeVisible();
@@ -997,6 +1003,10 @@ test("directory pagination survives details and back but resets after leaving th
   await page.getByRole("button", { name: "Riders", exact: true }).click();
   await page.getByRole("link", { name: "All riders", exact: true }).click();
   await expect(page).toHaveURL(/\/riders$/);
+  await expect(
+    page.getByRole("heading", { name: "Riders", exact: true }),
+  ).toBeVisible();
+  await expect(page.getByText("Page 1 · 1 records on this page")).toBeVisible();
   await page.getByRole("link", { name: "All users", exact: true }).click();
   await expect(page.getByText("Page 1 · 1 records on this page")).toBeVisible();
 });

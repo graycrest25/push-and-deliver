@@ -86,7 +86,7 @@ test("referrals use supported page sizes, scoped cursors and native CSV dates", 
 }) => {
   await open(page, "/referrals");
   await expect(page.getByText("CODE123", { exact: true })).toBeVisible();
-  await expect(page.getByLabel("Rows per page")).toHaveValue("10");
+  await expect(page.getByLabel("Rows per page")).toHaveValue("50");
   await page.getByRole("button", { name: "Next", exact: true }).click();
   await expect(page.getByText("ref-2", { exact: true })).toBeVisible();
   await page.getByLabel("Referred user ID", { exact: true }).fill("user-1");
@@ -124,6 +124,18 @@ test("shipments use native filters, detail and tracking without legacy query par
   page,
 }) => {
   await open(page, "/shipment-orders");
+  await expect(page.getByLabel("Rows per page")).toHaveValue("100");
+  await page.getByRole("button", { name: "Next", exact: true }).click();
+  await expect
+    .poll(async () =>
+      (await control()).records.some(
+        (record: any) =>
+          record.path === "/v1/shipments" &&
+          record.query.limit === "100" &&
+          record.query.cursor === "shipment-next",
+      ),
+    )
+    .toBeTruthy();
   await expect(
     page.getByRole("columnheader", { name: "Shipment ID", exact: true }),
   ).toBeVisible();
@@ -142,6 +154,7 @@ test("shipments use native filters, detail and tracking without legacy query par
     "En route to PND HQ",
   ]);
   await status.selectOption("onRouteToPndHQ");
+  await page.getByLabel("Origin city", { exact: true }).selectOption("ibadan");
   await page
     .getByLabel("Shipment type", { exact: true })
     .selectOption("express");
@@ -152,10 +165,21 @@ test("shipments use native filters, detail and tracking without legacy query par
         (r: any) =>
           r.path === "/v1/shipments" &&
           r.query.shipmentType === "express" &&
+          r.query.city === "ibadan" &&
+          r.query.limit === "100" &&
+          !r.query.cursor &&
           r.query.status === "onRouteToPndHQ",
       ),
     )
     .toBeTruthy();
+  await expect(
+    page.getByRole("cell", { name: "Ibadan", exact: true }),
+  ).toBeVisible();
+  await page.screenshot({
+    path: "test-results/shipment-table-colors.png",
+    fullPage: true,
+    animations: "disabled",
+  });
   await page.goto("/shipment-orders/shipment-1");
   await expect(page.getByText(/350\.00/).first()).toBeVisible();
   await expect

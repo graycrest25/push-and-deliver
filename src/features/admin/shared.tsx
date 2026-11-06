@@ -1,5 +1,8 @@
 import { enumLabel, readableEnum } from "@/lib/enum-labels";
 import { tableColumnClass } from "@/lib/table-layout";
+import { DEFAULT_PAGE_SIZE } from "@/lib/pagination";
+import { metricTone, recordTone } from "@/lib/data-presentation";
+import { DataStatus } from "@/components/ui/data-status";
 import {
   RecordSkeleton,
   TableSkeleton,
@@ -32,7 +35,6 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
-import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import {
   Table,
@@ -257,11 +259,13 @@ export function RecordSections({
   data,
   action,
   labels = {},
+  analytics = false,
 }: {
   title: string;
   data: RecordData;
   action?: ReactNode;
   labels?: Record<string, string>;
+  analytics?: boolean;
 }) {
   const entries = Object.entries(data);
   const fields = entries.filter(
@@ -273,11 +277,11 @@ export function RecordSections({
   return (
     <div className="space-y-6">
       <InformationCard title={title} action={action}>
-        <RecordView data={Object.fromEntries(fields)} />
+        <RecordView data={Object.fromEntries(fields)} analytics={analytics} />
       </InformationCard>
       {groups.map(([key, value]) => (
         <InformationCard key={key} title={labels[key] || human(key)}>
-          <RecordView data={value} scope={key} />
+          <RecordView data={value} scope={key} analytics={analytics} />
         </InformationCard>
       ))}
     </div>
@@ -286,9 +290,11 @@ export function RecordSections({
 export function RecordView({
   data,
   scope = "",
+  analytics = false,
 }: {
   data: unknown;
   scope?: string;
+  analytics?: boolean;
 }) {
   const { adminType } = useCurrentUser();
   if (Array.isArray(data))
@@ -296,7 +302,7 @@ export function RecordView({
       <div className="space-y-3">
         {data.map((item, i) => (
           <div key={item?.id ?? i} className="border-b pb-3 last:border-0">
-            <RecordView data={item} scope={scope} />
+            <RecordView data={item} scope={scope} analytics={analytics} />
           </div>
         ))}
       </div>
@@ -319,18 +325,25 @@ export function RecordView({
       ].includes(key),
   );
   return (
-    <dl className="grid min-w-0 gap-x-6 gap-y-4 md:grid-cols-2 xl:grid-cols-3">
+    <dl
+      className={`grid min-w-0 gap-x-6 gap-y-4 md:grid-cols-2 xl:grid-cols-3 ${analytics ? "analytics-values" : ""}`}
+    >
       {entries.map(([key, value]) => (
         <div
           key={key}
-          className={`min-w-0 ${value && typeof value === "object" ? "col-span-full" : ""}`}
+          className={`min-w-0 ${value && typeof value === "object" ? "col-span-full" : ""} ${analytics && typeof value === "number" ? "analytics-metric" : ""}`}
+          data-tone={
+            analytics && typeof value === "number"
+              ? metricTone(key, value)
+              : undefined
+          }
         >
           <dt className="text-xs font-semibold text-muted-foreground">
             {human(key.replace(/(_minor|Minor)$/, ""))}
           </dt>
           <dd className="mt-1 break-words text-sm [overflow-wrap:anywhere]">
             {value && typeof value === "object" ? (
-              <RecordView data={value} scope={key} />
+              <RecordView data={value} scope={key} analytics={analytics} />
             ) : recordDestination(
                 key,
                 data as RecordData,
@@ -452,7 +465,7 @@ function RiderSelection({
   const resource = useResource(
     queryPath("/v1/admin/users", {
       type: "riders",
-      limit: 25,
+      limit: DEFAULT_PAGE_SIZE,
       cursor: cursors[page],
     }),
   );
@@ -1175,6 +1188,8 @@ export interface ListSpec {
   params?: RecordData;
   note?: string;
   pageSizes?: number[];
+  defaultPageSize?: number;
+  rowClassName?: (row: RecordData) => string;
   overview?: (data: RecordData) => ReactNode;
   overviewLoading?: ReactNode;
 }
@@ -1205,7 +1220,9 @@ function DataListContent({
   const [draft, setDraft] = useState<RecordData>(
     saved?.draft ?? spec.initialFilters ?? {},
   );
-  const [size, setSize] = useState(saved?.size ?? spec.pageSizes?.[0] ?? 25);
+  const [size, setSize] = useState(
+    saved?.size ?? spec.defaultPageSize ?? DEFAULT_PAGE_SIZE,
+  );
   const [cursors, setCursors] = useState<string[]>(saved?.cursors ?? [""]);
   const [page, setPage] = useState(saved?.page ?? 0);
   const viewport = useRef<HTMLDivElement>(null);
@@ -1394,10 +1411,19 @@ function DataListContent({
                 </TableHeader>
                 <TableBody>
                   {rows.map((row, i) => (
-                    <TableRow key={row[spec.idKey || "id"] ?? i}>
+                    <TableRow
+                      key={row[spec.idKey || "id"] ?? i}
+                      className={spec.rowClassName?.(row)}
+                      tone={
+                        spec.rowClassName
+                          ? undefined
+                          : recordTone(row, spec.path)
+                      }
+                    >
                       {spec.columns.map((c) => (
                         <TableCell
                           key={c.key}
+                          data-column={c.key}
                           className={`${tableColumnClass(c.key)} whitespace-normal break-words align-top`}
                         >
                           {c.render ? (
@@ -1412,14 +1438,21 @@ function DataListContent({
                               {String(row[c.key])}
                             </Link>
                           ) : c.key === "verificationStatus" ? (
-                            <Badge variant="secondary">
-                              {verificationLabel(row[c.key])}
-                            </Badge>
+                            <DataStatus
+                              value={row[c.key]}
+                              field="verificationStatus"
+                              label={verificationLabel(row[c.key])}
+                              scope={spec.path}
+                            />
                           ) : c.key === "status" ? (
-                            <Badge variant="secondary">
-                              {enumLabel(c.key, row[c.key], spec.path) ||
-                                "Unknown"}
-                            </Badge>
+                            <DataStatus value={row[c.key]} scope={spec.path} />
+                          ) : ["active", "enabled"].includes(c.key) &&
+                            typeof row[c.key] === "boolean" ? (
+                            <DataStatus
+                              value={row[c.key]}
+                              label={row[c.key] ? "Yes" : "No"}
+                              tone={row[c.key] ? "positive" : "neutral"}
+                            />
                           ) : (
                             <TableValue
                               value={row[c.key]}
@@ -1432,7 +1465,12 @@ function DataListContent({
                       ))}
                       {spec.link && (
                         <TableCell>
-                          <Button asChild variant="ghost" size="sm">
+                          <Button
+                            asChild
+                            variant="ghost"
+                            size="sm"
+                            className="record-view-button"
+                          >
                             <Link
                               to={spec.link(row)}
                               aria-label={`Open ${row.display_name || row.username || row.name || row.id || row.uid || "record"}`}
@@ -1537,6 +1575,8 @@ export function ResourcePanel({
   sectionLabels?: Record<string, string>;
 }) {
   const { data, error, loading, reload } = useResource(path);
+  const analytics =
+    /\/analytics\/|\/dashboard(?:\?|$)|\/referrals\/summary/.test(path);
   if (grouped && loading)
     return (
       <div className="space-y-6">
@@ -1570,6 +1610,7 @@ export function ResourcePanel({
         title={title}
         data={data}
         labels={sectionLabels}
+        analytics={analytics}
         action={
           <RefreshButton loading={loading} onClick={reload}>
             Refresh
@@ -1591,7 +1632,7 @@ export function ResourcePanel({
         ) : loading ? (
           <RecordSkeleton />
         ) : (
-          <RecordView data={data} />
+          <RecordView data={data} analytics={analytics} />
         )}
       </CardContent>
     </Card>

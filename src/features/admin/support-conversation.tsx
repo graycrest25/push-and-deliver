@@ -10,6 +10,7 @@ import {
   type RecordData,
 } from "@/lib/api";
 import { useCurrentUser } from "@/contexts/UserContext";
+import { DEFAULT_PAGE_SIZE } from "@/lib/pagination";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Textarea } from "@/components/ui/textarea";
@@ -155,7 +156,7 @@ function useMessages(id: string, enabled: boolean) {
     const load = async () => {
       try {
         const data = await api(
-          queryPath(`${ticketPath(id)}/messages`, { limit: 25 }),
+          queryPath(`${ticketPath(id)}/messages`, { limit: DEFAULT_PAGE_SIZE }),
           { signal: controller.signal },
         );
         if (controller.signal.aborted) return;
@@ -189,7 +190,10 @@ function useMessages(id: string, enabled: boolean) {
     olderController.current = controller;
     try {
       const data = await api(
-        queryPath(`${ticketPath(id)}/messages`, { limit: 25, cursor }),
+        queryPath(`${ticketPath(id)}/messages`, {
+          limit: DEFAULT_PAGE_SIZE,
+          cursor,
+        }),
         { signal: controller.signal },
       );
       setItems((previous) => mergeMessages(previous, data.items || []));

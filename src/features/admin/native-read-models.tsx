@@ -233,6 +233,7 @@ export function NativeRides() {
           ...page("/v1/admin/rides", [
             "id",
             "service",
+            "originCity",
             "rideType",
             "status",
             "customerId",
@@ -242,6 +243,7 @@ export function NativeRides() {
             "unavailableFields",
           ]),
           filters: [
+            select("city", ["lagos", "ibadan", "unknown"], "Origin city"),
             select("status", [
               "",
               "requested",
@@ -253,6 +255,7 @@ export function NativeRides() {
               "riderarrived",
             ]),
           ],
+          note: "City filters use the order’s origin. Historical orders without a clear origin city are shown as Unknown.",
           link: (row) => `/ride-hailing/${segment(row.id)}`,
         }}
       />
@@ -385,15 +388,41 @@ export function NativeOffice() {
 }
 export function NativeTariffs({ domestic = false }: { domestic?: boolean }) {
   const root = domestic ? "/delivery-zones" : "/export-rates";
+  const [includeInactive, setIncludeInactive] = useState(false);
   return (
     <div className="space-y-6">
       <Heading
         title={domestic ? "Delivery tariffs" : "Shipping tariffs"}
-        description="Inspect current and historical tariffs, including their weight bands and prices."
+        description={
+          domestic
+            ? "Inspect current and historical tariffs, including their weight bands and prices."
+            : "Choose a tariff to review destination countries, weight tiers and prices in naira. Clone an active tariff to make changes in a draft."
+        }
       />
-      <TariffCreate domestic={domestic} />
+      {domestic && <TariffCreate domestic />}
+      {!domestic && (
+        <label className="flex items-center gap-2 text-sm">
+          <input
+            type="checkbox"
+            className="size-4 accent-primary"
+            checked={includeInactive}
+            onChange={(event) => setIncludeInactive(event.target.checked)}
+          />
+          Show drafts and retired tariffs
+        </label>
+      )}
       {domestic && (
-        <DataList spec={page("/v1/shipping/local-types", ["id", "name"])} />
+        <DataList
+          spec={{
+            ...page("/v1/shipping/local-types", [
+              "id",
+              "name",
+              "details",
+              "active",
+            ]),
+            title: "Local shipping types",
+          }}
+        />
       )}
       <DataList
         key={root}
@@ -422,10 +451,28 @@ export function NativeTariffs({ domestic = false }: { domestic?: boolean }) {
                   "createdAt",
                 ],
           ),
-          params: { includeInactive: true },
+          params: domestic || includeInactive ? { includeInactive: true } : {},
+          title: domestic
+            ? "Delivery tariffs"
+            : includeInactive
+              ? "All shipping tariffs"
+              : "Active shipping tariffs",
+          note: domestic
+            ? undefined
+            : "Open a tariff to find a country and review its prices. Changes stay in a draft until you publish them.",
           link: (row) => `${root}/tariffs/${segment(row.id)}`,
         }}
       />
+      {!domestic && (
+        <details className="rounded-lg border bg-card p-5">
+          <summary className="cursor-pointer font-semibold">
+            Create a new shipping tariff
+          </summary>
+          <div className="mt-4">
+            <TariffCreate />
+          </div>
+        </details>
+      )}
       {domestic ? (
         <section className="space-y-3">
           <h2 className="text-lg font-semibold">States & local zones</h2>
@@ -441,8 +488,10 @@ export function NativeTariffs({ domestic = false }: { domestic?: boolean }) {
           />
         </section>
       ) : (
-        <section className="space-y-3">
-          <h2 className="text-lg font-semibold">Shipping countries</h2>
+        <details className="space-y-3 rounded-lg border bg-card p-5">
+          <summary className="cursor-pointer text-lg font-semibold">
+            Manage shipping countries
+          </summary>
           <DataList
             spec={{
               ...page("/v1/admin/shipping/countries", [
@@ -455,7 +504,7 @@ export function NativeTariffs({ domestic = false }: { domestic?: boolean }) {
               link: (row) => `/export-rates/countries/${segment(row.id)}`,
             }}
           />
-        </section>
+        </details>
       )}
     </div>
   );

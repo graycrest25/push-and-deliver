@@ -20,6 +20,7 @@ let records = [],
   device = "",
   rotations = 0,
   failRefresh = false,
+  failSession = false,
   denyRefresh = false,
   badContext = false,
   invalidLogin = false,
@@ -95,6 +96,7 @@ http
         device = "";
         rotations = 0;
         failRefresh = false;
+        failSession = false;
         denyRefresh = false;
         badContext = false;
         invalidLogin = false;
@@ -106,6 +108,7 @@ http
       controlReads(body);
       if (body.expire) expired = true;
       if (body.failRefresh !== undefined) failRefresh = body.failRefresh;
+      if (body.failSession !== undefined) failSession = body.failSession;
       if (body.denyRefresh !== undefined) denyRefresh = body.denyRefresh;
       if (body.badContext !== undefined) badContext = body.badContext;
       if (body.invalidLogin !== undefined) invalidLogin = body.invalidLogin;
@@ -219,6 +222,8 @@ http
       return;
     if (dashboard(path, req, res, body, success, error)) return;
     if (features(path, req, res, body, success, error)) return;
+    if (path === "/v2/auth/session" && failSession)
+      return error(res, 502, "unavailable", "Session unavailable");
     if (path === "/v2/auth/session")
       return success(res, {
         uid: "admin-1",

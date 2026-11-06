@@ -53,6 +53,8 @@ export function controlLatest(body) {
   if (body.latestConflict) state.conflict = true;
   if (body.latestShipment)
     state.shipments[body.latestShipment.id] = body.latestShipment;
+  if (body.latestTariff)
+    state.tariffs[body.latestTariff.id] = body.latestTariff;
   if (body.latestVehicle) Object.assign(state.vehicle, body.latestVehicle);
   if (body.latestFee) Object.assign(state.fee, body.latestFee);
 }
@@ -383,7 +385,16 @@ export function latest(path, req, res, body, success, error, role) {
     }
   }
   if (path === "/v1/shipping/local-types")
-    return reply(page([{ id: "premium", name: "Premium" }]));
+    return reply(
+      page([
+        {
+          id: "premium",
+          name: "Premium",
+          details: "Deliveries are 2 - 3 days",
+          active: true,
+        },
+      ]),
+    );
   const fee = path.match(/^\/v1\/admin\/fees\/([^/]+)$/);
   if (fee) {
     if (!["super", "regular"].includes(role))

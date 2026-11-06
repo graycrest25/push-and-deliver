@@ -15,6 +15,8 @@ import { Link, useNavigate, useParams } from "react-router-dom";
 import { toast } from "sonner";
 import { api, queryPath, segment, type RecordData } from "@/lib/api";
 import { Button } from "@/components/ui/button";
+import { InternationalTariffPrices } from "./international-tariff-prices";
+import { PricingAuditHistory } from "./pricing-audit-history";
 import { CurrentRecord } from "./native-dashboard";
 import {
   ActionForm,
@@ -417,6 +419,25 @@ export function TariffEditor({ domestic = false }: { domestic?: boolean }) {
         Back to tariffs
       </Link>
       <Heading title="Tariff details" description={id} />
+      {!domestic && (
+        <nav
+          aria-label="Tariff sections"
+          className="flex flex-wrap gap-4 text-sm text-primary"
+        >
+          <a href="#tariff-prices" className="underline underline-offset-4">
+            Destination prices
+          </a>
+          <a
+            href="#tariff-information"
+            className="underline underline-offset-4"
+          >
+            Tariff information
+          </a>
+          <a href="#tariff-workflow" className="underline underline-offset-4">
+            Edit & publish
+          </a>
+        </nav>
+      )}
       <CurrentRecord
         title="Tariff snapshot"
         path={path}
@@ -430,7 +451,7 @@ export function TariffEditor({ domestic = false }: { domestic?: boolean }) {
                 columns={
                   domestic
                     ? ["Weight (grams)", "Amount (NGN kobo)"]
-                    : ["Zone", "Weight (grams)", "Amount (NGN kobo)"]
+                    : ["Zone", "Destinations", "Weight (kg)", "Price (NGN)"]
                 }
                 rows={5}
               />
@@ -528,196 +549,226 @@ export function TariffEditor({ domestic = false }: { domestic?: boolean }) {
           }
           return (
             <>
-              <InformationCard title="Tariff information">
-                <RecordView data={metadata} />
-              </InformationCard>
-              <InformationCard title="Weight bands & prices">
-                <Rates data={data} domestic={domestic} />
-              </InformationCard>
-              {!domestic && (
-                <InformationCard title="Country zones">
-                  <RecordView data={data.countries} />
+              {domestic ? (
+                <InformationCard title="Tariff information">
+                  <RecordView data={metadata} />
                 </InformationCard>
+              ) : (
+                <div
+                  id="tariff-information"
+                  className="scroll-mt-6 space-y-3 rounded-lg border bg-card p-5"
+                >
+                  <div className="flex flex-wrap items-center justify-between gap-3">
+                    <p className="font-semibold">{data.name || data.id}</p>
+                    <span className="text-sm capitalize text-muted-foreground">
+                      {data.status} · {data.carrier} ·{" "}
+                      {String(data.cargo || "").replaceAll("_", " ")}
+                    </span>
+                  </div>
+                  <details>
+                    <summary className="cursor-pointer text-sm text-primary">
+                      View tariff information
+                    </summary>
+                    <div className="mt-4">
+                      <RecordView data={metadata} />
+                    </div>
+                  </details>
+                </div>
               )}
-              <InformationCard title="Draft workflow">
-                <div className="space-y-4">
-                  <Notice>
-                    New prices apply to new quotes. Accepted shipments and
-                    unexpired quotes retain their captured prices. Active and
-                    retired tariffs must be cloned before editing.
-                  </Notice>
-                  {draft && (
-                    <>
-                      <ActionForm
-                        key={`metadata:${data.version}`}
-                        onSuccess={receipt(reload)}
-                        action={{
-                          title: "Save draft information",
-                          path: root,
-                          method: "PATCH",
-                          versionPath: path,
-                          preserveRetry: true,
-                          initial: data,
-                          fields: [...fields, reasonField],
-                          body: (values) => ({
-                            ...fence(values),
-                            changes: requireChanges(
-                              changed(
-                                values,
-                                data,
-                                fields.map((f) => f.name),
-                              ),
-                            ),
-                          }),
-                        }}
-                      />
-                      {[false, true].map((remove) => (
+              {domestic ? (
+                <InformationCard title="Weight bands & prices">
+                  <Rates data={data} domestic />
+                </InformationCard>
+              ) : (
+                <div id="tariff-prices" className="scroll-mt-6">
+                  <InternationalTariffPrices
+                    data={data}
+                    root={root}
+                    reload={reload}
+                  />
+                </div>
+              )}
+              <div id="tariff-workflow" className="scroll-mt-6">
+                <InformationCard title="Draft workflow">
+                  <div className="space-y-4">
+                    <Notice>
+                      New prices apply to new quotes. Accepted shipments and
+                      unexpired quotes retain their captured prices. Active and
+                      retired tariffs must be cloned before editing.
+                    </Notice>
+                    {draft && (
+                      <>
                         <ActionForm
-                          key={`${remove}:${data.version}`}
+                          key={`metadata:${data.version}`}
                           onSuccess={receipt(reload)}
                           action={{
-                            title: remove
-                              ? "Delete weight bands"
-                              : "Add or update weight bands",
-                            path: `${root}/rates`,
-                            method: remove ? "DELETE" : "PUT",
+                            title: "Save draft information",
+                            path: root,
+                            method: "PATCH",
                             versionPath: path,
                             preserveRetry: true,
-                            description: remove
-                              ? "Only the listed keys will be removed from this draft."
-                              : "Only these bands are added or changed. Omitted bands are retained.",
-                            fields: [
-                              field("rates", "Weight bands", {
-                                type: "rows",
-                                fields: [
-                                  ...weightFields,
-                                  ...(!remove
-                                    ? [
-                                        moneyField(
-                                          "amountMinor",
-                                          "Amount (kobo)",
-                                        ),
-                                      ]
-                                    : []),
-                                ],
-                              }),
-                              reasonField,
-                            ],
+                            initial: data,
+                            fields: [...fields, reasonField],
                             body: (values) => ({
                               ...fence(values),
-                              rates: validateRows(values, remove),
+                              changes: requireChanges(
+                                changed(
+                                  values,
+                                  data,
+                                  fields.map((f) => f.name),
+                                ),
+                              ),
                             }),
                           }}
                         />
-                      ))}
-                      {!domestic &&
-                        [false, true].map((remove) => (
+                        {[false, true].map((remove) => (
                           <ActionForm
-                            key={`countries:${remove}:${data.version}`}
+                            key={`${remove}:${data.version}`}
                             onSuccess={receipt(reload)}
                             action={{
                               title: remove
-                                ? "Delete country mappings"
-                                : "Add or update country mappings",
-                              path: `${root}/countries`,
+                                ? "Delete weight bands"
+                                : "Add or update weight bands",
+                              path: `${root}/rates`,
                               method: remove ? "DELETE" : "PUT",
                               versionPath: path,
                               preserveRetry: true,
+                              description: remove
+                                ? "Only the listed keys will be removed from this draft."
+                                : "Only these bands are added or changed. Omitted bands are retained.",
                               fields: [
-                                field("countries", "Country mappings", {
+                                field("rates", "Weight bands", {
                                   type: "rows",
                                   fields: [
-                                    field("code", "Country code", {
-                                      pattern: "[A-Z]{2}",
-                                      help: "Existing uppercase country code.",
-                                    }),
+                                    ...weightFields,
                                     ...(!remove
                                       ? [
-                                          field("zone", "Zone", {
-                                            type: "number",
-                                            min: 1,
-                                            max: 100,
-                                          }),
+                                          moneyField(
+                                            "amountMinor",
+                                            "Amount (kobo)",
+                                          ),
                                         ]
                                       : []),
                                   ],
                                 }),
                                 reasonField,
                               ],
-                              body: (values) => {
-                                if (
-                                  !values.countries.length ||
-                                  values.countries.length > 200
-                                )
-                                  throw new Error(
-                                    "Add 1–200 unique countries.",
-                                  );
-                                if (
-                                  new Set(
-                                    values.countries.map((c: any) => c.code),
-                                  ).size !== values.countries.length
-                                )
-                                  throw new Error(
-                                    "Country codes must be unique.",
-                                  );
-                                return {
-                                  ...fence(values),
-                                  countries: values.countries,
-                                };
-                              },
+                              body: (values) => ({
+                                ...fence(values),
+                                rates: validateRows(values, remove),
+                              }),
                             }}
                           />
                         ))}
-                      {publishIssues.length ? (
-                        <Notice>{publishIssues.join(" ")}</Notice>
-                      ) : (
+                        {!domestic &&
+                          [false, true].map((remove) => (
+                            <ActionForm
+                              key={`countries:${remove}:${data.version}`}
+                              onSuccess={receipt(reload)}
+                              action={{
+                                title: remove
+                                  ? "Delete country mappings"
+                                  : "Add or update country mappings",
+                                path: `${root}/countries`,
+                                method: remove ? "DELETE" : "PUT",
+                                versionPath: path,
+                                preserveRetry: true,
+                                fields: [
+                                  field("countries", "Country mappings", {
+                                    type: "rows",
+                                    fields: [
+                                      field("code", "Country code", {
+                                        pattern: "[A-Z]{2}",
+                                        help: "Existing uppercase country code.",
+                                      }),
+                                      ...(!remove
+                                        ? [
+                                            field("zone", "Zone", {
+                                              type: "number",
+                                              min: 1,
+                                              max: 100,
+                                            }),
+                                          ]
+                                        : []),
+                                    ],
+                                  }),
+                                  reasonField,
+                                ],
+                                body: (values) => {
+                                  if (
+                                    !values.countries.length ||
+                                    values.countries.length > 200
+                                  )
+                                    throw new Error(
+                                      "Add 1–200 unique countries.",
+                                    );
+                                  if (
+                                    new Set(
+                                      values.countries.map((c: any) => c.code),
+                                    ).size !== values.countries.length
+                                  )
+                                    throw new Error(
+                                      "Country codes must be unique.",
+                                    );
+                                  return {
+                                    ...fence(values),
+                                    countries: values.countries,
+                                  };
+                                },
+                              }}
+                            />
+                          ))}
+                        {publishIssues.length ? (
+                          <Notice>{publishIssues.join(" ")}</Notice>
+                        ) : (
+                          <ActionForm
+                            key={`publish:${data.version}`}
+                            onSuccess={receipt(reload)}
+                            action={{
+                              title: "Publish reviewed tariff",
+                              path: `${root}/publish`,
+                              versionPath: path,
+                              preserveRetry: true,
+                              description:
+                                "Publication activates this complete snapshot and retires its predecessor. Review all rates and destinations above.",
+                              fields: [reasonField],
+                              body: fence,
+                            }}
+                          />
+                        )}
                         <ActionForm
-                          key={`publish:${data.version}`}
+                          key={`archive:${data.version}`}
                           onSuccess={receipt(reload)}
                           action={{
-                            title: "Publish reviewed tariff",
-                            path: `${root}/publish`,
+                            title: "Archive unused draft",
+                            path: `${root}/archive`,
                             versionPath: path,
                             preserveRetry: true,
-                            description:
-                              "Publication activates this complete snapshot and retires its predecessor. Review all rates and destinations above.",
                             fields: [reasonField],
                             body: fence,
                           }}
                         />
-                      )}
-                      <ActionForm
-                        key={`archive:${data.version}`}
-                        onSuccess={receipt(reload)}
-                        action={{
-                          title: "Archive unused draft",
-                          path: `${root}/archive`,
-                          versionPath: path,
-                          preserveRetry: true,
-                          fields: [reasonField],
-                          body: fence,
-                        }}
-                      />
-                    </>
-                  )}
-                  <ActionForm
-                    key={`clone:${data.version}`}
-                    onSuccess={(result) =>
-                      navigate(
-                        `${sections(domestic)}/tariffs/${segment(result.id)}`,
-                      )
-                    }
-                    action={{
-                      title: "Clone as a new draft",
-                      path: `${root}/clone`,
-                      versionPath: path,
-                      preserveRetry: true,
-                      fields: [reasonField],
-                      body: fence,
-                    }}
-                  />
-                </div>
-              </InformationCard>
+                      </>
+                    )}
+                    <ActionForm
+                      key={`clone:${data.version}`}
+                      onSuccess={(result) =>
+                        navigate(
+                          `${sections(domestic)}/tariffs/${segment(result.id)}`,
+                        )
+                      }
+                      action={{
+                        title: "Clone as a new draft",
+                        path: `${root}/clone`,
+                        versionPath: path,
+                        preserveRetry: true,
+                        fields: [reasonField],
+                        body: fence,
+                      }}
+                    />
+                  </div>
+                </InformationCard>
+              </div>
             </>
           );
         }}
@@ -730,7 +781,7 @@ export function PricingAudit() {
     <div className="space-y-6">
       <Heading
         title="Pricing audit"
-        description="Review recorded price changes, publication effects and the latest revision watermark."
+        description="See who changed pricing, why it changed, and the values recorded before and after each change."
       />
       <CurrentRecord
         title="Latest pricing revision"
@@ -738,24 +789,7 @@ export function PricingAudit() {
       >
         {(data) => <RecordView data={data.items} />}
       </CurrentRecord>
-      <DataList
-        spec={{
-          path: "/v1/admin/pricing/audit",
-          title: "Price change history",
-          paging: "cursor",
-          key: "items",
-          columns: [
-            { key: "actorUid" },
-            { key: "action" },
-            { key: "resourceId" },
-            { key: "reason" },
-            { key: "before" },
-            { key: "after" },
-            { key: "effects" },
-            { key: "createdAt" },
-          ],
-        }}
-      />
+      <PricingAuditHistory />
     </div>
   );
 }

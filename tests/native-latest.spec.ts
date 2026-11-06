@@ -50,6 +50,77 @@ const shipment = (id: string, overrides: Record<string, unknown> = {}) => ({
   ...overrides,
 });
 test.beforeEach(() => control({ reset: true }));
+test("local shipping types show all fields and lists start at 100 rows", async ({
+  page,
+}) => {
+  await login(page);
+  await page.goto("/delivery-zones");
+  const table = page.getByRole("table").filter({
+    has: page.getByRole("columnheader", { name: "Details", exact: true }),
+  });
+  await expect(table.getByRole("columnheader")).toHaveText([
+    "ID",
+    "Name",
+    "Details",
+    "Active",
+  ]);
+  const row = table
+    .getByRole("row")
+    .filter({ has: page.getByRole("cell", { name: "premium", exact: true }) });
+  await expect(row.getByRole("cell")).toHaveText([
+    "premium",
+    "Premium",
+    "Deliveries are 2 - 3 days",
+    "Yes",
+  ]);
+  const sizes = page.getByLabel("Rows per page");
+  await expect(sizes).toHaveCount(3);
+  for (const size of await sizes.all()) await expect(size).toHaveValue("100");
+  const records = (await control()).records;
+  for (const path of [
+    "/v1/shipping/local-types",
+    "/v1/admin/geography/tariffs",
+  ])
+    expect(
+      records.find((record: any) => record.path === path).query.limit,
+    ).toBe("100");
+});
+
+test("rides filter by origin city while preserving status and clearing city", async ({
+  page,
+}) => {
+  await login(page);
+  await page.goto("/ride-hailing");
+  await expect(
+    page.getByRole("columnheader", { name: /^Origin city$/i }),
+  ).toBeVisible();
+  const city = page.getByLabel("Origin city", { exact: true });
+  await expect(city.locator("option")).toHaveText([
+    "All",
+    "Lagos",
+    "Ibadan",
+    "Unknown",
+  ]);
+  await page.getByLabel("Status", { exact: true }).selectOption("accepted");
+  for (const value of ["lagos", "ibadan", "unknown", ""]) {
+    await city.selectOption(value);
+    const response = page.waitForResponse((response) => {
+      const url = new URL(response.url());
+      return (
+        url.pathname === "/api/proxy/v1/admin/rides" &&
+        (url.searchParams.get("city") || "") === value &&
+        url.searchParams.get("status") === "accepted"
+      );
+    });
+    await page.getByRole("button", { name: /Apply filters/ }).click();
+    expect((await response).status()).toBe(200);
+    const label = value ? value[0].toUpperCase() + value.slice(1) : "Lagos";
+    await expect(
+      page.getByRole("cell", { name: label, exact: true }),
+    ).toBeVisible();
+  }
+});
+
 test("latest profiles show target finances and submit only changed fields", async ({
   page,
 }) => {
@@ -254,6 +325,148 @@ test("latest fee editor retains conflict drafts and resubmits a reviewed version
   expect(calls[1].body.expectedVersion).toBe(4);
   expect(calls[1].key).not.toBe(calls[0].key);
 });
+test("international prices join paged countries, show kg and naira, and edit a cloned draft", async ({
+  page,
+}) => {
+  await login(page, "regular");
+  const id = "dhl-2026-11-06-non-document";
+  await control({
+    latestTariff: {
+      id,
+      name: "DHL international · Non-document",
+      status: "active",
+      version: 7,
+      carrier: "dhl",
+      cargo: "non_document",
+      direction: "export",
+      volumetricDivisor: 5000,
+      countries: [
+        { code: "GB", zone: 1 },
+        { code: "NG", zone: 2 },
+        { code: "XX", zone: 3 },
+      ],
+      rates: [
+        { zone: 1, weightGrams: 500, amountMinor: 150000 },
+        { zone: 1, weightGrams: 1000, amountMinor: 9000000 },
+        { zone: 2, weightGrams: 1500, amountMinor: 2500501 },
+      ],
+    },
+  });
+  const countryQueries: URLSearchParams[] = [];
+  await page.route(
+    "**/api/proxy/v1/admin/shipping/countries?*",
+    async (route) => {
+      const query = new URL(route.request().url()).searchParams;
+      countryQueries.push(query);
+      await route.fulfill({
+        json: {
+          data: query.has("cursor")
+            ? {
+                items: [{ code: "NG", name: "Nigeria", active: false }],
+                nextCursor: null,
+              }
+            : {
+                items: [{ code: "GB", name: "United Kingdom", active: true }],
+                nextCursor: "country-next",
+              },
+        },
+      });
+    },
+  );
+  await page.setViewportSize({ width: 1440, height: 1000 });
+  await page.goto(`/export-rates/tariffs/${id}`);
+  const destination = page.getByLabel("Destination country");
+  await expect(destination.locator('option[value="NG"]')).toContainText(
+    "Nigeria (NG) · Disabled",
+  );
+  expect(
+    countryQueries.every(
+      (query) =>
+        query.get("limit") === "100" && query.get("includeInactive") === "true",
+    ),
+  ).toBe(true);
+  expect(
+    countryQueries.some((query) => query.get("cursor") === "country-next"),
+  ).toBe(true);
+  const prices = page.getByRole("table", {
+    name: "International tariff prices",
+  });
+  await destination.selectOption("GB");
+  await expect(prices.getByRole("row")).toHaveCount(3);
+  await expect(
+    prices.getByRole("cell", { name: "0.5", exact: true }),
+  ).toBeVisible();
+  await expect(prices.getByRole("cell", { name: /₦1,500\.00/ })).toBeVisible();
+  await expect(
+    prices.locator("summary").filter({ hasText: "Edit price" }),
+  ).toHaveCount(0);
+  await page.getByLabel("Find a country").fill("Nigeria");
+  await destination.selectOption("NG");
+  await expect(prices.getByRole("row")).toHaveCount(2);
+  await expect(prices.getByRole("cell", { name: /₦25,005\.01/ })).toBeVisible();
+  await expect(
+    page.getByText("This country is disabled.", { exact: false }),
+  ).toBeVisible();
+  await page.getByLabel("Find a country").clear();
+  await destination.selectOption("XX");
+  await expect(
+    page.getByText("Availability unknown", { exact: true }),
+  ).toBeVisible();
+  await expect(
+    prices.getByText("No prices for this selection.", { exact: false }),
+  ).toBeVisible();
+  await destination.selectOption("GB");
+  await expect(prices.getByRole("row")).toHaveCount(3);
+  await page.screenshot({
+    path: "test-results/international-prices-desktop.png",
+    fullPage: true,
+  });
+  const clone = await form(page, "Clone as a new draft");
+  await clone
+    .getByLabel("Reason for change")
+    .fill("Review international destination prices");
+  await clone
+    .getByRole("button", { name: "Clone as a new draft", exact: true })
+    .click();
+  await expect(page).toHaveURL(/cloned-draft$/);
+  await page.getByLabel("Destination country").selectOption("GB");
+  const row = page
+    .getByRole("table", { name: "International tariff prices" })
+    .getByRole("row")
+    .filter({ has: page.getByRole("cell", { name: "0.5", exact: true }) });
+  await row.locator("summary").filter({ hasText: "Edit price" }).click();
+  await row.getByLabel("Price (NGN)").fill("1234.56");
+  await row.getByLabel("Reason for change").fill("Review half-kilogram price");
+  await row.getByRole("button", { name: "Edit price", exact: true }).click();
+  await expect(row.getByRole("cell", { name: /₦1,234\.56/ })).toBeVisible();
+  await expect(page.getByLabel("Destination country")).toHaveValue("GB");
+  const updates = await writes("/v1/admin/shipping/tariffs/cloned-draft/rates");
+  expect(updates[0].body).toEqual({
+    expectedVersion: 1,
+    reason: "Review half-kilogram price",
+    rates: [{ zone: 1, weightGrams: 500, amountMinor: 123456 }],
+  });
+  await page.setViewportSize({ width: 390, height: 844 });
+  const priceBounds = await row
+    .getByRole("cell", { name: /₦1,234\.56/ })
+    .boundingBox();
+  expect(priceBounds!.x + priceBounds!.width).toBeLessThanOrEqual(390);
+  expect(
+    await page.evaluate(
+      () => document.documentElement.scrollWidth <= innerWidth,
+    ),
+  ).toBe(true);
+  await page.evaluate(() => {
+    if (document.activeElement instanceof HTMLElement)
+      document.activeElement.blur();
+    window.scrollTo(0, 0);
+  });
+  await page.screenshot({
+    path: "test-results/international-prices-mobile.png",
+    fullPage: true,
+  });
+});
+
 test("latest tariff drafts preserve omitted rates, delete explicit keys and publish reviewed snapshots", async ({
   page,
 }) => {
@@ -349,7 +562,9 @@ test("latest international country batches keep deletion JSON and version scope"
       exact: true,
     })
     .click();
-  await expect(page.getByText("NG", { exact: true })).toBeVisible();
+  await expect(
+    page.getByLabel("Destination country").locator('option[value="NG"]'),
+  ).toHaveCount(1);
   const remove = await form(page, "Delete country mappings");
   await remove
     .getByRole("button", { name: "Add country mapping", exact: true })
@@ -361,7 +576,9 @@ test("latest international country batches keep deletion JSON and version scope"
   await remove
     .getByRole("button", { name: "Delete country mappings", exact: true })
     .click();
-  await expect(page.getByText("NG", { exact: true })).toHaveCount(0);
+  await expect(
+    page.getByLabel("Destination country").locator('option[value="NG"]'),
+  ).toHaveCount(0);
   expect(
     (await writes("/v1/admin/shipping/tariffs/draft-export/countries"))[1].body,
   ).toEqual({

@@ -36,7 +36,7 @@ export function reads(path, req, res, body, success, error, adminType) {
                     !path.endsWith("/fares"))
                 ? []
                 : path === "/v1/admin/rides"
-                  ? ["status", "limit", "cursor"]
+                  ? ["status", "city", "limit", "cursor"]
                   : ["includeInactive", "limit", "cursor"];
   if ([...q.keys()].some((k) => !allowed.includes(k))) {
     error(res, 400, "invalid_query", "Unsupported native read query");
@@ -119,6 +119,7 @@ export function reads(path, req, res, body, success, error, adminType) {
     const row = {
       id: "ride-1",
       service: "ridehailing",
+      originCity: q.get("city") || "lagos",
       rideType: "standard",
       status: "accepted",
       customerId: "customer-1",

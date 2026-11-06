@@ -203,6 +203,7 @@ export function features(path, req, res, body, success, error) {
       items: [
         {
           id: "shipment-1",
+          originCity: q.get("city") || "lagos",
           shipmentType: "express",
           status: "placed",
           totalAmountMinor: 35000,

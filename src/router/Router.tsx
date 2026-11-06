@@ -73,12 +73,16 @@ export default function Router() {
       <TableStateProvider>
         <Routes>
           <Route
-            path="/sign-in"
+            path="/login"
             element={
               <PublicRoute>
                 <SignInPage />
               </PublicRoute>
             }
+          />
+          <Route
+            path="/sign-in"
+            element={<Navigate to="/login" replace />}
           />
           <Route
             path="/forgot-password"

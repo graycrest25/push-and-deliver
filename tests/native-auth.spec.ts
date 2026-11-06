@@ -104,39 +104,70 @@ test("refresh retains device, rotates tokens, and is serialized across tabs", as
   )!;
   expect(session.value).toContain("rotated-1");
 });
-test("transient refresh failure preserves cookies and retry key; rejected refresh returns to sign in", async ({
-  page,
-  context,
-}) => {
-  await login(page);
-  await control({ expire: true, failRefresh: true });
-  await page.getByRole("button", { name: "Retry access check" }).click();
-  await expect(
-    page.locator('[role="alert"]:not(#__next-route-announcer__)'),
-  ).toContainText("temporarily unavailable");
-  expect(
-    (await context.cookies()).some((c) => c.name === "pnd-session-v2"),
-  ).toBe(true);
-  await control({ failRefresh: false });
-  await page.getByRole("button", { name: "Retry session" }).click();
-  await expect(
-    page.getByRole("heading", { name: "Admin access cannot be verified yet" }),
-  ).toBeVisible();
-  const refreshes = (await control()).records.filter(
-    (r: any) => r.path === "/v2/auth/refresh" && r.body.refreshToken,
-  );
-  expect(refreshes).toHaveLength(2);
-  expect(refreshes[0].key).toBe(refreshes[1].key);
-  expect(refreshes[0].body).toEqual(refreshes[1].body);
-  await control({ expire: true, denyRefresh: true });
-  await page.getByRole("button", { name: "Retry access check" }).click();
-  await expect(
-    page.getByRole("button", { name: "Sign In", exact: true }),
-  ).toBeVisible();
-  expect(
-    (await context.cookies()).some((c) => c.name === "pnd-session-v2"),
-  ).toBe(false);
-});
+for (const failure of ["failRefresh", "denyRefresh"] as const) {
+  test(`${failure} clears the session and returns to login`, async ({
+    page,
+    context,
+  }) => {
+    await login(page);
+    await control({ expire: true, [failure]: true });
+    await page.getByRole("button", { name: "Retry access check" }).click();
+    await expect(page).toHaveURL(/\/login$/);
+    await expect(
+      page.getByRole("button", { name: "Sign In", exact: true }),
+    ).toBeVisible();
+    expect(
+      (await context.cookies()).some((c) => c.name === "pnd-session-v2"),
+    ).toBe(false);
+  });
+}
+
+for (const path of ["/dashboard", "/login"]) {
+  test(`session 502 clears cached data and shows login from ${path}`, async ({
+    page,
+    context,
+  }) => {
+    await login(page);
+    await page.evaluate(() => {
+      localStorage.setItem("pnd-refresh-started", "123");
+      sessionStorage.setItem("pnd-game-rules:test:draft", "private draft");
+      sessionStorage.setItem("pnd-upload:test", "private upload");
+      sessionStorage.setItem("pnd-operation:test", "private operation");
+      localStorage.setItem("pushndeliver-theme", "dark");
+    });
+    await control({ failSession: true });
+    await page.goto(path);
+    await expect(page).toHaveURL(/\/login$/);
+    await expect(
+      page.getByRole("button", { name: "Sign In", exact: true }),
+    ).toBeVisible();
+    await expect(
+      page.getByRole("button", { name: "Retry session" }),
+    ).toHaveCount(0);
+    expect(
+      (await context.cookies()).some((c) => c.name === "pnd-session-v2"),
+    ).toBe(false);
+    expect(
+      await page.evaluate(() => ({
+        refresh: localStorage.getItem("pnd-refresh-started"),
+        cache: Object.keys(sessionStorage).filter((key) =>
+          key.startsWith("pnd-"),
+        ),
+        theme: localStorage.getItem("pushndeliver-theme"),
+      })),
+    ).toEqual({ refresh: null, cache: [], theme: "dark" });
+    await control({ failSession: false });
+    await page.getByLabel("Email", { exact: true }).fill("admin@example.test");
+    await page.getByLabel("Password", { exact: true }).fill("example-password");
+    await page.getByRole("button", { name: "Sign In", exact: true }).click();
+    await expect(
+      page.getByRole("heading", {
+        name: "Admin access cannot be verified yet",
+      }),
+    ).toBeVisible();
+  });
+}
+
 test("logout uses native boolean body and stable receipt key before clearing private cookies", async ({
   page,
   context,

@@ -17,6 +17,18 @@ export const apiURL = (path: string) => {
   return `/api/proxy${path}`;
 };
 let refreshing: Promise<boolean> | undefined;
+export function clearSessionCache() {
+  // Preserve preferences while discarding auth and account-scoped cached work.
+  for (const storageName of ["localStorage", "sessionStorage"] as const) {
+    try {
+      const storage = window[storageName];
+      for (const key of Object.keys(storage))
+        if (key.startsWith("pnd-")) storage.removeItem(key);
+    } catch {
+      /* Storage restrictions must not prevent returning to login. */
+    }
+  }
+}
 async function refreshSession() {
   if (!refreshing) {
     const refresh = async () => {

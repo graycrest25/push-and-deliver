@@ -36,6 +36,7 @@ export function RewardCampaignManager({
   const refresh = () => setRevision((value) => value + 1);
   const fresh = (row: RecordData) => ({
     versionRead: () => currentCampaign(row.id),
+    minimumVersion: 0 as const,
     refreshBeforeSubmit: true,
     validateCurrent: (current: RecordData) => {
       if (
@@ -160,23 +161,27 @@ export function RewardCampaignManager({
                       }),
                     }}
                   />
-                  <ActionForm
-                    key={`eligible:${row.id}:${row.version}`}
-                    onSuccess={refresh}
-                    action={{
-                      title: row.gameEligible
-                        ? "Remove from game rewards"
-                        : "Include in game rewards",
-                      path: `${campaigns}/${segment(row.id)}/status`,
-                      preserveRetry: true,
-                      ...fresh(row),
-                      body: () => ({
-                        enabled: row.enabled,
-                        expectedVersion: currentVersion(row),
-                        gameEligible: !row.gameEligible,
-                      }),
-                    }}
-                  />
+                  {(row.gameEligible === true ||
+                    (typeof row.title === "string" &&
+                      row.title.trim().length > 0)) && (
+                    <ActionForm
+                      key={`eligible:${row.id}:${row.version}`}
+                      onSuccess={refresh}
+                      action={{
+                        title: row.gameEligible
+                          ? "Remove from game rewards"
+                          : "Include in game rewards",
+                        path: `${campaigns}/${segment(row.id)}/status`,
+                        preserveRetry: true,
+                        ...fresh(row),
+                        body: () => ({
+                          enabled: row.enabled,
+                          expectedVersion: currentVersion(row),
+                          gameEligible: !row.gameEligible,
+                        }),
+                      }}
+                    />
+                  )}
                 </div>
               ),
             },

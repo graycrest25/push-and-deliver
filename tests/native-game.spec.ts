@@ -443,6 +443,51 @@ test("game campaigns use gameEligible and current native campaign versions", asy
   ).toBeChecked();
 });
 
+test("version-zero campaigns can be included in game rewards and disabled", async ({
+  page,
+}) => {
+  await login(page);
+  await control({
+    gameCampaigns: [
+      {
+        id: "version-zero-campaign",
+        title: "Existing reward campaign",
+        percentageDiscount: 10,
+        validForHours: 24,
+        eligibleServices: ["courier"],
+        enabled: true,
+        gameEligible: false,
+        version: 0,
+      },
+    ],
+  });
+  await page.goto("/game-rules");
+  const row = page.getByRole("row").filter({
+    has: page.getByRole("cell", { name: "version-zero-campaign", exact: true }),
+  });
+  const include = await openForm(row, "Include in game rewards");
+  await include
+    .getByRole("button", { name: "Include in game rewards", exact: true })
+    .click();
+  await expect(
+    row.locator("summary").filter({ hasText: "Remove from game rewards" }),
+  ).toBeVisible();
+  const disable = await openForm(row, "Disable campaign");
+  await disable
+    .getByRole("button", { name: "Disable campaign", exact: true })
+    .click();
+  await expect(
+    row.locator("summary").filter({ hasText: "Enable campaign" }),
+  ).toBeVisible();
+  const writes = (await control()).records.filter((r: any) =>
+    r.path.endsWith("/version-zero-campaign/status"),
+  );
+  expect(writes.map((r: any) => r.body)).toEqual([
+    { enabled: true, expectedVersion: 0, gameEligible: true },
+    { enabled: false, expectedVersion: 1 },
+  ]);
+});
+
 for (const role of ["regular", "customercare", "verifier"])
   test(`${role} cannot open or bypass super-only game rule access`, async ({
     page,
@@ -558,7 +603,7 @@ test("retired endpoints are blocked and retained rules are isolated by environme
   await expect(alert(page)).toContainText("API environment changed");
   expect(await mutations()).toHaveLength(1);
   await page.getByRole("button", { name: "Sign out", exact: true }).click();
-  await expect(page).toHaveURL(/sign-in/);
+  await expect(page).toHaveURL(/login/);
   expect(
     await page.evaluate(() =>
       Object.keys(sessionStorage).filter((key) =>

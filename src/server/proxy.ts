@@ -90,6 +90,25 @@ function redact(value: unknown, base: URL): unknown {
 }
 
 export async function proxy(request: NextRequest, segments: string[]) {
+  const response = await proxyRequest(request, segments);
+  const path = "/" + segments.join("/");
+  // An initial 401 can still be recovered through the normal refresh flow.
+  if (
+    (request.method === "GET" &&
+      path === "/v2/auth/session" &&
+      !response.ok &&
+      response.status !== 401) ||
+    (request.method === "POST" &&
+      path === "/v2/auth/refresh" &&
+      request.headers.get("origin") === request.nextUrl.origin &&
+      request.headers.get("sec-fetch-site") !== "cross-site" &&
+      !response.ok)
+  )
+    clearSession(response);
+  return response;
+}
+
+async function proxyRequest(request: NextRequest, segments: string[]) {
   const method = request.method;
   // Decoded route segments cannot inject hosts, dot traversal, query strings or slashes.
   if (

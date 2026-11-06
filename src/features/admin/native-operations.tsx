@@ -3,7 +3,8 @@ import { ShipmentTimeline } from "./shipment-commands";
 import { WithdrawalExport } from "./withdrawal-export";
 import { ShipmentDetails } from "./shipment-details";
 import { shipmentStatuses, shipmentStatusLabel } from "@/lib/shipment-status";
-import { Badge } from "@/components/ui/badge";
+import { DEFAULT_PAGE_SIZE } from "@/lib/pagination";
+import { DataStatus } from "@/components/ui/data-status";
 import {
   RecordSkeleton,
   ShipmentSkeleton,
@@ -52,7 +53,10 @@ export function NativeSummaries({
     <div className="space-y-6">
       {section !== "orders" && (
         <section className="space-y-3" aria-label="Account summary">
-          <label className="block space-y-2 text-sm">
+          <label
+            className="analytics-selector-label block space-y-2 text-sm"
+            data-tone="info"
+          >
             Account summary
             <select
               className="block h-10 w-full rounded-md border bg-card px-3 sm:w-64"
@@ -71,7 +75,10 @@ export function NativeSummaries({
       )}
       {section !== "accounts" && !verifier && (
         <section className="space-y-3" aria-label="Order summary">
-          <label className="block space-y-2 text-sm">
+          <label
+            className="analytics-selector-label block space-y-2 text-sm"
+            data-tone="teal"
+          >
             Order summary
             <select
               className="block h-10 w-full rounded-md border bg-card px-3 sm:w-64"
@@ -155,6 +162,7 @@ export function NativeShipments() {
           paging: "cursor",
           columns: [
             { key: "id", label: "Shipment ID" },
+            { key: "originCity", label: "Origin city" },
             {
               key: "shipmentType",
               label: "Shipment type",
@@ -169,15 +177,18 @@ export function NativeShipments() {
             {
               key: "status",
               render: (row) => (
-                <Badge variant="secondary">
-                  {shipmentStatusLabel(row.status)}
-                </Badge>
+                <DataStatus
+                  value={row.status}
+                  label={shipmentStatusLabel(row.status)}
+                  scope="/v1/shipments"
+                />
               ),
             },
             { key: "totalAmountMinor", label: "Total amount" },
             { key: "createdAt", label: "Created at" },
           ],
           filters: [
+            select("city", ["lagos", "ibadan", "unknown"], "Origin city"),
             select(
               "shipmentType",
               ["local", "express", "customs_clearance"],
@@ -188,6 +199,7 @@ export function NativeShipments() {
               optionLabels: shipmentStatuses,
             },
           ],
+          note: "City filters use the shipment’s origin. Historical shipments without a clear origin city are shown as Unknown.",
           link: (r) => `/shipment-orders/${segment(r.id)}`,
         }}
       />
@@ -487,7 +499,10 @@ export function NativeJob() {
   const cursor = cursors[cursors.length - 1];
   const root = `/v1/admin/jobs/${segment(id)}`;
   const record = useResource(
-    queryPath(root, { attemptsLimit: 25, attemptsCursor: cursor }),
+    queryPath(root, {
+      attemptsLimit: DEFAULT_PAGE_SIZE,
+      attemptsCursor: cursor,
+    }),
   );
   const data = record.data;
   return (
@@ -574,6 +589,7 @@ export function NativeReferrals() {
           key: "items",
           paging: "cursor",
           pageSizes: [10, 20, 30, 50],
+          defaultPageSize: 50,
           columns: cols(
             "id",
             "referredUid",

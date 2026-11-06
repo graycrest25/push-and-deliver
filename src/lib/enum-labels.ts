@@ -170,6 +170,7 @@ const enumKeys = new Set([
   "direction",
   "cargo",
   "service",
+  "origincity",
   "decision",
   "senderrole",
   "lastsender",

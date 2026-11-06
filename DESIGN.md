@@ -38,6 +38,11 @@ colors:
   success-soft: "#e7f5ef"
   warning: "#8b5c10"
   warning-soft: "#fff5dc"
+  danger-soft: "#fceff0"
+  violet: "#6947a5"
+  violet-soft: "#f1ecfa"
+  teal: "#0f6f78"
+  teal-soft: "#e7f6f8"
   dark-background: "#111a2d"
   dark-foreground: "#e8effc"
   dark-card: "#19243a"
@@ -73,6 +78,11 @@ colors:
   dark-success-soft: "#213e3a"
   dark-warning: "#f3cd7b"
   dark-warning-soft: "#413722"
+  dark-danger-soft: "#422b35"
+  dark-violet: "#d3c2f4"
+  dark-violet-soft: "#332844"
+  dark-teal: "#87dce5"
+  dark-teal-soft: "#1f3c43"
   navigation-hover: "#364e99"
   welcome-foreground: "#233d75"
   dark-welcome: "#263b66"
@@ -292,3 +302,5 @@ All API enum displays use readable, field-specific labels; wire values remain un
 Ten Seconds rules use the existing cards, semantic colors, labelled controls, badges and notices for super administrators. Versioned camelCase replacements include timing and UTC reward quotas; five attempts, a ten-second virtual target and a 24-hour cooldown remain fixed. Missing or invalid configuration requires explicit setup. Approximate elapsed timing explains scaled-microsecond judging and two-minute expiry without starting gameplay. Presets change only the draft; conflicts preserve it for review, and actor- and API-environment-scoped pending saves retain the exact body, version and key. The shared native campaign manager lists real campaigns and exposes versioned status and gameEligible controls for super and regular administrators.
 
 Account summaries use compact metric grids, locale-formatted counts, readable rider vehicle/status tables and a quiet calculation-time/growth footer; missing values remain Unavailable. Report coverage separates source readiness, processing diagnostics and latest-backfill progress into existing information cards with readable statuses and timestamps. Explicit super-only order rebuilds cover both shipment and ride/courier summaries, with bounded readiness polling, clear accepted/failed/timed-out states and totals shown only after complete coverage and successful reads. Loading, error, refresh and mobile table behavior retain the workspace patterns.
+
+Shared data presentation extends the audit palette across record tables and analytics. Green marks completed/verified states; amber marks pending work; red marks failed/blocked states and negative growth; blue marks totals and work in progress. Violet distinguishes drafts and weekly categories; teal distinguishes recent activity. Labels and status icons accompany color. Tables without a known state use neutral row shading. Account periods remain explicit categories, and missing figures remain Unavailable rather than zero. Both themes use the same meaning with separate surface and foreground values.

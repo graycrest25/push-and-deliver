@@ -307,7 +307,7 @@ export function AnalyticsPage({
                 <>
                   {kind === "time-to-first-order" && data.summary && (
                     <InformationCard title="Activation summary">
-                      <RecordView data={data.summary} />
+                      <RecordView data={data.summary} analytics />
                     </InformationCard>
                   )}
                   {data.asOfDate && (
@@ -360,7 +360,7 @@ export function AnalyticsPage({
                             <summary className="cursor-pointer">
                               Weekly breakdown
                             </summary>
-                            <RecordView data={row.weeks} />
+                            <RecordView data={row.weeks} analytics />
                           </details>
                         ),
                       },
