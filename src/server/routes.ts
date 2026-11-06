@@ -54,6 +54,7 @@ export const routes: readonly [string, string][] = [
   ["GET", "/v1/admin/users/{id}"],
   ["GET", "/v1/admin/rides"],
   ["GET", "/v1/admin/rides/{id}"],
+  ["POST", "/v1/admin/rides/{id}/cancel"],
   ["GET", "/v1/admin/rides/fares"],
   ["GET", "/v1/admin/analytics/coverage"],
   ["POST", "/v1/admin/analytics/backfills"],

@@ -64,6 +64,14 @@ export function RideDetails({ data }: { data: RecordData }) {
           </Card>
         ))}
       </div>
+      {typeof data.cancellationReason === "string" &&
+        data.cancellationReason.trim() && (
+          <InformationCard title="Cancellation reason">
+            <p className="whitespace-pre-wrap break-words text-sm">
+              {data.cancellationReason}
+            </p>
+          </InformationCard>
+        )}
       <InformationCard title="Order information">
         <RecordView
           scope="rides"
@@ -135,7 +143,6 @@ export function RideDetails({ data }: { data: RecordData }) {
             createdAt: data.createdAt,
             completedAt: data.completedAt,
             cancelledAt: data.cancelledAt,
-            cancellationReason: data.cancellationReason,
           }}
         />
       </InformationCard>

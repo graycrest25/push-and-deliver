@@ -1,4 +1,5 @@
 import { RideDetails, RideDetailsSkeleton } from "./ride-details";
+import { RideCommands } from "./ride-commands";
 import { enumLabel } from "@/lib/enum-labels";
 import {
   CountryPolicy,
@@ -279,12 +280,13 @@ export function NativeRide() {
         path={`/v1/admin/rides/${segment(id)}`}
         skeleton={<RideDetailsSkeleton />}
       >
-        {(data) => <RideDetails data={data} />}
+        {(data, reload) => (
+          <>
+            <RideCommands key={id} data={data} reload={reload} />
+            <RideDetails data={data} />
+          </>
+        )}
       </CurrentRecord>
-      <Notice>
-        Ride administration is currently available for inspection. Cancellation
-        and assignment changes are unavailable here.
-      </Notice>
     </div>
   );
 }
