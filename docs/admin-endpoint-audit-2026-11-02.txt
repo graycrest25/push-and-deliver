@@ -1,0 +1,749 @@
+LIVE ADMIN WEBAPP ENDPOINT AUDIT — 2 NOVEMBER 2026
+Completed: 2026-11-02 23:18:51 WAT
+Authenticated administrator subtype: super
+
+Findings: 25 failing endpoint families, 34 exact failed GET request cases, and 2 frontend display failures despite HTTP 200.
+All request bodies below are empty because these were GET requests. The backend address and credentials remain redacted.
+
+SCOPE AND LIMITS
+- Current local Next.js webapp was checked against the live backend configured in BASE_URL. This is not a deployed-frontend audit.
+- All 35 static admin destinations, their tested report/configuration tabs, and 9 discovered detail URLs were visited. Not every database record or every filter/pagination combination was sampled.
+- Only read operations and authentication login/logout were exercised. Role changes, settings writes, coupon issuance, support replies/claims, wallet actions, notification sending, job replay, uploads and destructive commands were not executed.
+- General notifications, account security and Files were visited, but their mutation-only controls or file lifecycle were not tested. A page without a read failure is not proof that its write endpoints work.
+- Detail routes requiring records from failed/empty lists were not tested: user/rider/vendor/merchant profiles, ride/marketplace orders, office/tariff/catalogue details, withdrawal detail and payment receipt detail. No made-up identifiers were used to manufacture 404s.
+- Referral detail and merchant transaction/product placeholder routes have no established record-detail behavior; they were not exercised using fabricated IDs.
+- Password recovery, Google OAuth provider sign-in and revoked/other-subtype sessions were outside this supplied password-admin audit.
+- Expected unauthenticated startup 401s, React development-mode aborted duplicate requests, and corrected audit-script selector errors are excluded from failures.
+- Error bodies are the actual JSON returned through the proxy; BASE_URL, passwords, cookies and access/refresh credentials are omitted. Header descriptions reflect server proxy behavior, not browser-visible bearer headers.
+- No application implementation changes were made during this audit.
+
+FAILED ENDPOINTS — REQUESTS AND RESPONSES
+
+1. GET /v1/admin/analytics/account-summary
+Pages: /dashboard, /reports, /reports [rider accounts]
+Error: HTTP 503 / temporarily_unavailable — Analytics is temporarily unavailable.
+
+  Request 1: GET /v1/admin/analytics/account-summary?type=users
+  Browser proxy: /api/proxy/v1/admin/analytics/account-summary?type=users
+  Upstream headers: {"Accept": "application/json", "Authorization": "Bearer [REDACTED; server supplied]", "X-Account-Type": "user"}
+  Request body: none
+  Response status: 503
+  Response body:
+{
+  "error": {
+    "code": "temporarily_unavailable",
+    "details": {},
+    "message": "Analytics is temporarily unavailable."
+  },
+  "requestId": "9550abad2fffe70bcd7783d166862f99"
+}
+
+  Request 2: GET /v1/admin/analytics/account-summary?type=riders
+  Browser proxy: /api/proxy/v1/admin/analytics/account-summary?type=riders
+  Upstream headers: {"Accept": "application/json", "Authorization": "Bearer [REDACTED; server supplied]", "X-Account-Type": "user"}
+  Request body: none
+  Response status: 503
+  Response body:
+{
+  "error": {
+    "code": "temporarily_unavailable",
+    "details": {},
+    "message": "Analytics is temporarily unavailable."
+  },
+  "requestId": "362d287f61253065d962430068a0fcbf"
+}
+
+2. GET /v1/admin/analytics/order-summary
+Pages: /dashboard, /reports, /reports [ride-courier], /reports [food], /reports [ecommerce]
+Error: HTTP 503 / temporarily_unavailable — Analytics is temporarily unavailable.
+
+  Request 1: GET /v1/admin/analytics/order-summary?type=shipment
+  Browser proxy: /api/proxy/v1/admin/analytics/order-summary?type=shipment
+  Upstream headers: {"Accept": "application/json", "Authorization": "Bearer [REDACTED; server supplied]", "X-Account-Type": "user"}
+  Request body: none
+  Response status: 503
+  Response body:
+{
+  "error": {
+    "code": "temporarily_unavailable",
+    "details": {},
+    "message": "Analytics is temporarily unavailable."
+  },
+  "requestId": "8163b4457a8c605373e5528aedd1d4c4"
+}
+
+  Request 2: GET /v1/admin/analytics/order-summary?type=ride-courier
+  Browser proxy: /api/proxy/v1/admin/analytics/order-summary?type=ride-courier
+  Upstream headers: {"Accept": "application/json", "Authorization": "Bearer [REDACTED; server supplied]", "X-Account-Type": "user"}
+  Request body: none
+  Response status: 503
+  Response body:
+{
+  "error": {
+    "code": "temporarily_unavailable",
+    "details": {},
+    "message": "Analytics is temporarily unavailable."
+  },
+  "requestId": "a11fd663036d4706d45f0f05a8297ec1"
+}
+
+  Request 3: GET /v1/admin/analytics/order-summary?type=food
+  Browser proxy: /api/proxy/v1/admin/analytics/order-summary?type=food
+  Upstream headers: {"Accept": "application/json", "Authorization": "Bearer [REDACTED; server supplied]", "X-Account-Type": "user"}
+  Request body: none
+  Response status: 503
+  Response body:
+{
+  "error": {
+    "code": "temporarily_unavailable",
+    "details": {},
+    "message": "Analytics is temporarily unavailable."
+  },
+  "requestId": "3ae94ed38359128300accb3b709549a8"
+}
+
+  Request 4: GET /v1/admin/analytics/order-summary?type=ecommerce
+  Browser proxy: /api/proxy/v1/admin/analytics/order-summary?type=ecommerce
+  Upstream headers: {"Accept": "application/json", "Authorization": "Bearer [REDACTED; server supplied]", "X-Account-Type": "user"}
+  Request body: none
+  Response status: 503
+  Response body:
+{
+  "error": {
+    "code": "temporarily_unavailable",
+    "details": {},
+    "message": "Analytics is temporarily unavailable."
+  },
+  "requestId": "71547a5c5806ae536753a0a944626d72"
+}
+
+3. GET /v1/admin/users
+Pages: /users, /riders, /vendors, /ecommerce-merchants
+Error: HTTP 404 / not_found — Route not found
+
+  Request 1: GET /v1/admin/users?limit=25
+  Browser proxy: /api/proxy/v1/admin/users?limit=25
+  Upstream headers: {"Accept": "application/json", "Authorization": "Bearer [REDACTED; server supplied]", "X-Account-Type": "user"}
+  Request body: none
+  Response status: 404
+  Response body:
+{
+  "error": {
+    "code": "not_found",
+    "details": {},
+    "message": "Route not found"
+  },
+  "requestId": "5ae2ad49f16be2aa802fab2347bcb4e0"
+}
+
+4. GET /v1/rides/trips
+Pages: /ride-hailing
+Error: HTTP 400 / invalid_request — The ride request is invalid.
+
+  Request 1: GET /v1/rides/trips?limit=25
+  Browser proxy: /api/proxy/v1/rides/trips?limit=25
+  Upstream headers: {"Accept": "application/json", "Authorization": "Bearer [REDACTED; server supplied]", "X-Account-Type": "user"}
+  Request body: none
+  Response status: 400
+  Response body:
+{
+  "error": {
+    "code": "invalid_request",
+    "details": {},
+    "message": "The ride request is invalid."
+  },
+  "requestId": "e4486d890cf776868773f9e45dfc9211"
+}
+
+5. GET /v1/marketplace/orders
+Pages: /restaurant-orders, /product-orders
+Error: HTTP 404 / not_found — Route not found
+
+  Request 1: GET /v1/marketplace/orders?limit=25
+  Browser proxy: /api/proxy/v1/marketplace/orders?limit=25
+  Upstream headers: {"Accept": "application/json", "Authorization": "Bearer [REDACTED; server supplied]", "X-Account-Type": "user"}
+  Request body: none
+  Response status: 404
+  Response body:
+{
+  "error": {
+    "code": "not_found",
+    "details": {},
+    "message": "Route not found"
+  },
+  "requestId": "9a48a158201d629e9841d49a21b90f15"
+}
+
+6. GET /v1/admin/referrals/summary
+Pages: /referrals, /generated
+Error: HTTP 503 / temporarily_unavailable — Analytics is temporarily unavailable.
+
+  Request 1: GET /v1/admin/referrals/summary
+  Browser proxy: /api/proxy/v1/admin/referrals/summary
+  Upstream headers: {"Accept": "application/json", "Authorization": "Bearer [REDACTED; server supplied]", "X-Account-Type": "user"}
+  Request body: none
+  Response status: 503
+  Response body:
+{
+  "error": {
+    "code": "temporarily_unavailable",
+    "details": {},
+    "message": "Analytics is temporarily unavailable."
+  },
+  "requestId": "6bea7442798a821956f9d570145ad09f"
+}
+
+7. GET /v1/admin/referrals
+Pages: /referrals, /generated
+Error: HTTP 503 / temporarily_unavailable — Analytics is temporarily unavailable.
+
+  Request 1: GET /v1/admin/referrals?limit=10
+  Browser proxy: /api/proxy/v1/admin/referrals?limit=10
+  Upstream headers: {"Accept": "application/json", "Authorization": "Bearer [REDACTED; server supplied]", "X-Account-Type": "user"}
+  Request body: none
+  Response status: 503
+  Response body:
+{
+  "error": {
+    "code": "temporarily_unavailable",
+    "details": {},
+    "message": "Analytics is temporarily unavailable."
+  },
+  "requestId": "1fb452d503ae825712983c088ecf5d3f"
+}
+
+8. GET /v1/shipping/offices
+Pages: /head-offices
+Error: HTTP 400 / invalid_request — The reference request is invalid.
+
+  Request 1: GET /v1/shipping/offices?include_inactive=true
+  Browser proxy: /api/proxy/v1/shipping/offices?include_inactive=true
+  Upstream headers: {"Accept": "application/json", "Authorization": "Bearer [REDACTED; server supplied]", "X-Account-Type": "user"}
+  Request body: none
+  Response status: 400
+  Response body:
+{
+  "error": {
+    "code": "invalid_request",
+    "details": {},
+    "message": "The reference request is invalid."
+  },
+  "requestId": "58cc3cfcdebccf8dfbc5e89c5a4f5b05"
+}
+
+9. GET /v1/admin/shipping/settings
+Pages: /fees
+Error: HTTP 404 / not_found — Route not found
+
+  Request 1: GET /v1/admin/shipping/settings
+  Browser proxy: /api/proxy/v1/admin/shipping/settings
+  Upstream headers: {"Accept": "application/json", "Authorization": "Bearer [REDACTED; server supplied]", "X-Account-Type": "user"}
+  Request body: none
+  Response status: 404
+  Response body:
+{
+  "error": {
+    "code": "not_found",
+    "details": {},
+    "message": "Route not found"
+  },
+  "requestId": "89aa74834f2b66e207cca4c92681b1ef"
+}
+
+10. GET /v1/rides/fares
+Pages: /fees
+Error: HTTP 404 / not_found — Ride not found.
+
+  Request 1: GET /v1/rides/fares
+  Browser proxy: /api/proxy/v1/rides/fares
+  Upstream headers: {"Accept": "application/json", "Authorization": "Bearer [REDACTED; server supplied]", "X-Account-Type": "user"}
+  Request body: none
+  Response status: 404
+  Response body:
+{
+  "error": {
+    "code": "not_found",
+    "details": {},
+    "message": "Ride not found."
+  },
+  "requestId": "9df0344d65423c61ff369339c4976d61"
+}
+
+11. GET /v1/shipping/tariffs
+Pages: /export-rates, /dhl-zones
+Error: HTTP 404 / not_found — Route not found
+
+  Request 1: GET /v1/shipping/tariffs?include_inactive=true
+  Browser proxy: /api/proxy/v1/shipping/tariffs?include_inactive=true
+  Upstream headers: {"Accept": "application/json", "Authorization": "Bearer [REDACTED; server supplied]", "X-Account-Type": "user"}
+  Request body: none
+  Response status: 404
+  Response body:
+{
+  "error": {
+    "code": "not_found",
+    "details": {},
+    "message": "Route not found"
+  },
+  "requestId": "bca15e5ee149a198790cd44ddc0ea3a0"
+}
+
+12. GET /v1/shipping/countries
+Pages: /export-rates, /dhl-zones
+Error: HTTP 400 / invalid_request — The reference request is invalid.
+
+  Request 1: GET /v1/shipping/countries?include_inactive=true
+  Browser proxy: /api/proxy/v1/shipping/countries?include_inactive=true
+  Upstream headers: {"Accept": "application/json", "Authorization": "Bearer [REDACTED; server supplied]", "X-Account-Type": "user"}
+  Request body: none
+  Response status: 400
+  Response body:
+{
+  "error": {
+    "code": "invalid_request",
+    "details": {},
+    "message": "The reference request is invalid."
+  },
+  "requestId": "04338dd79b128c6ba9d447aec8ab19bd"
+}
+
+13. GET /v1/admin/geography/tariffs
+Pages: /delivery-zones, /dhl-local
+Error: HTTP 404 / not_found — Route not found
+
+  Request 1: GET /v1/admin/geography/tariffs
+  Browser proxy: /api/proxy/v1/admin/geography/tariffs
+  Upstream headers: {"Accept": "application/json", "Authorization": "Bearer [REDACTED; server supplied]", "X-Account-Type": "user"}
+  Request body: none
+  Response status: 404
+  Response body:
+{
+  "error": {
+    "code": "not_found",
+    "details": {},
+    "message": "Route not found"
+  },
+  "requestId": "56677c7ebd3fe21be003e7e9e8853b69"
+}
+
+14. GET /v1/geography/states
+Pages: /delivery-zones, /dhl-local
+Error: HTTP 404 / not_found — Route not found
+
+  Request 1: GET /v1/geography/states
+  Browser proxy: /api/proxy/v1/geography/states
+  Upstream headers: {"Accept": "application/json", "Authorization": "Bearer [REDACTED; server supplied]", "X-Account-Type": "user"}
+  Request body: none
+  Response status: 404
+  Response body:
+{
+  "error": {
+    "code": "not_found",
+    "details": {},
+    "message": "Route not found"
+  },
+  "requestId": "321064c5caef6356c92362b584ede533"
+}
+
+15. GET /v1/config/mobile
+Pages: /app-config, /app-config [user/ios], /app-config [rider/android], /app-config [rider/ios]
+Error: HTTP 503 / reference_unavailable — Customer reference data is temporarily unavailable.
+
+  Request 1: GET /v1/config/mobile?app=user&platform=android
+  Browser proxy: /api/proxy/v1/config/mobile?app=user&platform=android
+  Upstream headers: {"Accept": "application/json"}
+  Request body: none
+  Response status: 503
+  Response body:
+{
+  "error": {
+    "code": "reference_unavailable",
+    "details": {},
+    "message": "Customer reference data is temporarily unavailable."
+  },
+  "requestId": "7eee1eb37ce7e174bc43a6d7f8087591"
+}
+
+  Request 2: GET /v1/config/mobile?app=user&platform=ios
+  Browser proxy: /api/proxy/v1/config/mobile?app=user&platform=ios
+  Upstream headers: {"Accept": "application/json"}
+  Request body: none
+  Response status: 503
+  Response body:
+{
+  "error": {
+    "code": "reference_unavailable",
+    "details": {},
+    "message": "Customer reference data is temporarily unavailable."
+  },
+  "requestId": "ff512f3d67ec850c45163f751c363474"
+}
+
+  Request 3: GET /v1/config/mobile?app=rider&platform=android
+  Browser proxy: /api/proxy/v1/config/mobile?app=rider&platform=android
+  Upstream headers: {"Accept": "application/json"}
+  Request body: none
+  Response status: 503
+  Response body:
+{
+  "error": {
+    "code": "reference_unavailable",
+    "details": {},
+    "message": "Customer reference data is temporarily unavailable."
+  },
+  "requestId": "c6f532abc2d0896e11dc49df74473376"
+}
+
+  Request 4: GET /v1/config/mobile?app=rider&platform=ios
+  Browser proxy: /api/proxy/v1/config/mobile?app=rider&platform=ios
+  Upstream headers: {"Accept": "application/json"}
+  Request body: none
+  Response status: 503
+  Response body:
+{
+  "error": {
+    "code": "reference_unavailable",
+    "details": {},
+    "message": "Customer reference data is temporarily unavailable."
+  },
+  "requestId": "42bea1c66c48feba77c4366359101366"
+}
+
+16. GET /v1/marketplace/categories
+Pages: /catalogue
+Error: HTTP 404 / not_found — Route not found
+
+  Request 1: GET /v1/marketplace/categories
+  Browser proxy: /api/proxy/v1/marketplace/categories
+  Upstream headers: {"Accept": "application/json", "Authorization": "Bearer [REDACTED; server supplied]", "X-Account-Type": "user"}
+  Request body: none
+  Response status: 404
+  Response body:
+{
+  "error": {
+    "code": "not_found",
+    "details": {},
+    "message": "Route not found"
+  },
+  "requestId": "fe71e1422e8ecc8690dbfa4d679e5ad8"
+}
+
+17. GET /v1/marketplace/items
+Pages: /catalogue
+Error: HTTP 404 / not_found — Route not found
+
+  Request 1: GET /v1/marketplace/items?limit=25
+  Browser proxy: /api/proxy/v1/marketplace/items?limit=25
+  Upstream headers: {"Accept": "application/json", "Authorization": "Bearer [REDACTED; server supplied]", "X-Account-Type": "user"}
+  Request body: none
+  Response status: 404
+  Response body:
+{
+  "error": {
+    "code": "not_found",
+    "details": {},
+    "message": "Route not found"
+  },
+  "requestId": "c16c832777634239ff954bc34b73610f"
+}
+
+18. GET /v1/admin/audit
+Pages: /audit
+Error: HTTP 404 / not_found — Route not found
+
+  Request 1: GET /v1/admin/audit?limit=25
+  Browser proxy: /api/proxy/v1/admin/audit?limit=25
+  Upstream headers: {"Accept": "application/json", "Authorization": "Bearer [REDACTED; server supplied]", "X-Account-Type": "user"}
+  Request body: none
+  Response status: 404
+  Response body:
+{
+  "error": {
+    "code": "not_found",
+    "details": {},
+    "message": "Route not found"
+  },
+  "requestId": "77946c4793d87cefa06a736d9d9b14a4"
+}
+
+19. GET /v1/admin/analytics/time-to-first-order
+Pages: /user-activation
+Error: HTTP 400 / invalid_request — The analytics request is invalid.
+
+  Request 1: GET /v1/admin/analytics/time-to-first-order?summary_only=true
+  Browser proxy: /api/proxy/v1/admin/analytics/time-to-first-order?summary_only=true
+  Upstream headers: {"Accept": "application/json", "Authorization": "Bearer [REDACTED; server supplied]", "X-Account-Type": "user"}
+  Request body: none
+  Response status: 400
+  Response body:
+{
+  "error": {
+    "code": "invalid_request",
+    "details": {},
+    "message": "The analytics request is invalid."
+  },
+  "requestId": "5d6d2cf7f4c507f38c0e1f1454480deb"
+}
+
+20. GET /v1/admin/analytics/coupon-redemptions
+Pages: /coupon-redemption-metrics [2026-10-26 to 2026-11-02]
+Error: HTTP 400 / invalid_request — The analytics request is invalid.
+
+  Request 1: GET /v1/admin/analytics/coupon-redemptions?start_date=2026-10-26&end_date=2026-11-02
+  Browser proxy: /api/proxy/v1/admin/analytics/coupon-redemptions?start_date=2026-10-26&end_date=2026-11-02
+  Upstream headers: {"Accept": "application/json", "Authorization": "Bearer [REDACTED; server supplied]", "X-Account-Type": "user"}
+  Request body: none
+  Response status: 400
+  Response body:
+{
+  "error": {
+    "code": "invalid_request",
+    "details": {},
+    "message": "The analytics request is invalid."
+  },
+  "requestId": "150ee3a1bef1f6b3b72b75b6c281a818"
+}
+
+21. GET /v1/shipments/{id}/tracking
+Pages: /shipment-orders/d276de00bab3da49023ff7925813421a09c142f2f47ab0cd8e3692930185ef9b, /shipment-orders/cb8aa7eace2556d74bde05f10fb6db91cf701ee804c88d7d8d30d44eb2ad73d5, /shipment-orders/192ae579d756147cab31462e32297a4eac5b1cd8783132b84ba8c940ce3df190
+Error: HTTP 404 / not_found — Tracking not found
+Tracking was missing for all three sampled, existing shipments. Shipment detail reads succeeded; this is not evidence that the tracking route is unmounted.
+
+  Request 1: GET /v1/shipments/d276de00bab3da49023ff7925813421a09c142f2f47ab0cd8e3692930185ef9b/tracking
+  Browser proxy: /api/proxy/v1/shipments/d276de00bab3da49023ff7925813421a09c142f2f47ab0cd8e3692930185ef9b/tracking
+  Upstream headers: {"Accept": "application/json", "Authorization": "Bearer [REDACTED; server supplied]", "X-Account-Type": "user"}
+  Request body: none
+  Response status: 404
+  Response body:
+{
+  "error": {
+    "code": "not_found",
+    "details": {},
+    "message": "Tracking not found"
+  },
+  "requestId": "848866e9a949b6f0d29fd7d33228761b"
+}
+
+  Request 2: GET /v1/shipments/cb8aa7eace2556d74bde05f10fb6db91cf701ee804c88d7d8d30d44eb2ad73d5/tracking
+  Browser proxy: /api/proxy/v1/shipments/cb8aa7eace2556d74bde05f10fb6db91cf701ee804c88d7d8d30d44eb2ad73d5/tracking
+  Upstream headers: {"Accept": "application/json", "Authorization": "Bearer [REDACTED; server supplied]", "X-Account-Type": "user"}
+  Request body: none
+  Response status: 404
+  Response body:
+{
+  "error": {
+    "code": "not_found",
+    "details": {},
+    "message": "Tracking not found"
+  },
+  "requestId": "88ac07c2e2ad15f63fa0271979f6ead8"
+}
+
+  Request 3: GET /v1/shipments/192ae579d756147cab31462e32297a4eac5b1cd8783132b84ba8c940ce3df190/tracking
+  Browser proxy: /api/proxy/v1/shipments/192ae579d756147cab31462e32297a4eac5b1cd8783132b84ba8c940ce3df190/tracking
+  Upstream headers: {"Accept": "application/json", "Authorization": "Bearer [REDACTED; server supplied]", "X-Account-Type": "user"}
+  Request body: none
+  Response status: 404
+  Response body:
+{
+  "error": {
+    "code": "not_found",
+    "details": {},
+    "message": "Tracking not found"
+  },
+  "requestId": "48fb7dd5651cc0b6d6713abd05e116e7"
+}
+
+22. GET /v1/admin/support/tickets/{id}/messages
+Pages: /support-tickets/AQGwx67wSWJz40futLkw
+Error: HTTP 503 / unavailable — Administration is temporarily unavailable
+Repeated 503 for ticket AQGwx67wSWJz40futLkw. Two other sampled conversations loaded successfully; this is a ticket-specific observed failure.
+
+  Request 1: GET /v1/admin/support/tickets/AQGwx67wSWJz40futLkw/messages?limit=25
+  Browser proxy: /api/proxy/v1/admin/support/tickets/AQGwx67wSWJz40futLkw/messages?limit=25
+  Upstream headers: {"Accept": "application/json", "Authorization": "Bearer [REDACTED; server supplied]", "X-Account-Type": "user"}
+  Request body: none
+  Response status: 503
+  Response body:
+{
+  "error": {
+    "code": "unavailable",
+    "details": {},
+    "message": "Administration is temporarily unavailable"
+  },
+  "requestId": "ce0e1ccbe9bd3946f4d429055037a2e7"
+}
+
+23. GET /v1/admin/referrals/export.csv
+Pages: /referrals [export 2026-10-26 to 2026-11-02]
+Error: HTTP 503 / temporarily_unavailable — Analytics is temporarily unavailable.
+
+  Request 1: GET /v1/admin/referrals/export.csv?startDate=2026-10-26&endDate=2026-11-02
+  Browser proxy: /api/proxy/v1/admin/referrals/export.csv?startDate=2026-10-26&endDate=2026-11-02
+  Upstream headers: {"Accept": "application/json", "Authorization": "Bearer [REDACTED; server supplied]", "X-Account-Type": "user"}
+  Request body: none
+  Response status: 503
+  Response body:
+{
+  "error": {
+    "code": "temporarily_unavailable",
+    "details": {},
+    "message": "Analytics is temporarily unavailable."
+  },
+  "requestId": "cba0aafc4cfc5f7effbfc373e5f42a74"
+}
+
+24. GET /v1/admin/reports/accounts
+Pages: /users [export read]
+Error: HTTP 404 / not_found — Route not found
+
+  Request 1: GET /v1/admin/reports/accounts?type=users&limit=2000
+  Browser proxy: /api/proxy/v1/admin/reports/accounts?type=users&limit=2000
+  Upstream headers: {"Accept": "application/json", "Authorization": "Bearer [REDACTED; server supplied]", "X-Account-Type": "user"}
+  Request body: none
+  Response status: 404
+  Response body:
+{
+  "error": {
+    "code": "not_found",
+    "details": {},
+    "message": "Route not found"
+  },
+  "requestId": "8a45292bf8dc0a9c6db7467aad262e67"
+}
+
+25. GET /v1/admin/reports/riders
+Pages: /riders [export read]
+Error: HTTP 404 / not_found — Route not found
+
+  Request 1: GET /v1/admin/reports/riders?format=csv&limit=2000
+  Browser proxy: /api/proxy/v1/admin/reports/riders?format=csv&limit=2000
+  Upstream headers: {"Accept": "application/json", "Authorization": "Bearer [REDACTED; server supplied]", "X-Account-Type": "user"}
+  Request body: none
+  Response status: 404
+  Response body:
+{
+  "error": {
+    "code": "not_found",
+    "details": {},
+    "message": "Route not found"
+  },
+  "requestId": "16ab173d1b6bd4fee71944ea2d6ac40c"
+}
+
+FRONTEND FAILURES WITH SUCCESSFUL API RESPONSES
+
+1. /rider-weekly-deliveries
+The API returned 16 records, but the table displayed 0 records.
+Request: GET /v1/admin/analytics/rider-weekly-deliveries?limit=25
+Response status: 200
+Observed response structure (record values omitted):
+{
+  "topLevelKeys": [
+    "data",
+    "requestId"
+  ],
+  "dataKeys": [
+    "asOfDate",
+    "coverage",
+    "items",
+    "nextCursor"
+  ],
+  "itemCount": 16,
+  "firstItemKeys": [
+    "riderId",
+    "weeks"
+  ]
+}
+Response request ID: 11d7f56030bf490e4f0b316c920dce65
+Visible table: Page 1 · 0 records on this page
+Cause: Frontend integration mismatch: api.ts does not unwrap the data envelope for this analytics route; reports.tsx selects riders instead of data.items and uses legacy snake_case columns.
+
+2. /user-activation
+The API returned 25 records, but the table displayed 0 records.
+Request: GET /v1/admin/analytics/time-to-first-order?limit=25
+Response status: 200
+Observed response structure (record values omitted):
+{
+  "topLevelKeys": [
+    "data",
+    "requestId"
+  ],
+  "dataKeys": [
+    "coverage",
+    "items",
+    "nextCursor",
+    "summary"
+  ],
+  "itemCount": 25,
+  "firstItemKeys": [
+    "userId",
+    "status",
+    "createdAt",
+    "firstOrderAt",
+    "timeToFirstOrderDays"
+  ]
+}
+Response request ID: 8b2bccf640e3e17df1c3f873a07d6cba
+Visible table: Page 1 · 0 records on this page
+Cause: Frontend integration mismatch: api.ts does not unwrap the data envelope for this analytics route; reports.tsx selects users instead of data.items and uses legacy snake_case columns.
+
+PAGE COVERAGE
+/dashboard — read failures: 503 /v1/admin/analytics/account-summary, 503 /v1/admin/analytics/order-summary
+/reports — read failures: 503 /v1/admin/analytics/account-summary, 503 /v1/admin/analytics/order-summary
+/users — read failures: 404 /v1/admin/users
+/riders — read failures: 404 /v1/admin/users
+/vendors — read failures: 404 /v1/admin/users
+/ecommerce-merchants — read failures: 404 /v1/admin/users
+/admin/users — no captured read failure; see scope limitations
+/admin/users [current administrator role lookup] — no captured read failure; see scope limitations
+/shipment-orders — no captured read failure; see scope limitations
+/ride-hailing — read failures: 400 /v1/rides/trips
+/restaurant-orders — read failures: 404 /v1/marketplace/orders
+/product-orders — read failures: 404 /v1/marketplace/orders
+/withdrawals — no captured read failure; see scope limitations
+/support-tickets — no captured read failure; see scope limitations
+/referrals — read failures: 503 /v1/admin/referrals/summary, 503 /v1/admin/referrals
+/generated — read failures: 503 /v1/admin/referrals, 503 /v1/admin/referrals/summary
+/head-offices — read failures: 400 /v1/shipping/offices
+/fees — read failures: 404 /v1/admin/shipping/settings, 404 /v1/rides/fares
+/export-rates — read failures: 404 /v1/shipping/tariffs, 400 /v1/shipping/countries
+/delivery-zones — read failures: 404 /v1/admin/geography/tariffs, 404 /v1/geography/states
+/dhl-zones — read failures: 404 /v1/shipping/tariffs, 400 /v1/shipping/countries
+/dhl-local — read failures: 404 /v1/admin/geography/tariffs, 404 /v1/geography/states
+/coupons — no captured read failure; see scope limitations
+/coupons [Signup coupons] — no captured read failure; see scope limitations
+/coupons [Processing] — no captured read failure; see scope limitations
+/general-notifications — no captured read failure; see scope limitations
+/app-config — read failures: 503 /v1/config/mobile
+/app-config [user/ios] — read failures: 503 /v1/config/mobile
+/app-config [rider/android] — read failures: 503 /v1/config/mobile
+/app-config [rider/ios] — read failures: 503 /v1/config/mobile
+/settings — no captured read failure; see scope limitations
+/catalogue — read failures: 404 /v1/marketplace/categories, 404 /v1/marketplace/items
+/payments — no captured read failure; see scope limitations
+/audit — read failures: 404 /v1/admin/audit
+/jobs — no captured read failure; see scope limitations
+/files — no captured read failure; see scope limitations
+/weekly-overview — no captured read failure; see scope limitations
+/weekly-concentration — no captured read failure; see scope limitations
+/rider-weekly-deliveries — no captured read failure; see scope limitations
+/user-activation — read failures: 400 /v1/admin/analytics/time-to-first-order
+/coupon-redemption-metrics — no captured read failure; see scope limitations
+/coupon-redemption-metrics [2026-10-26 to 2026-11-02] — read failures: 400 /v1/admin/analytics/coupon-redemptions
+/shipment-orders/d276de00bab3da49023ff7925813421a09c142f2f47ab0cd8e3692930185ef9b — read failures: 404 /v1/shipments/d276de00bab3da49023ff7925813421a09c142f2f47ab0cd8e3692930185ef9b/tracking
+/shipment-orders/cb8aa7eace2556d74bde05f10fb6db91cf701ee804c88d7d8d30d44eb2ad73d5 — read failures: 404 /v1/shipments/cb8aa7eace2556d74bde05f10fb6db91cf701ee804c88d7d8d30d44eb2ad73d5/tracking
+/shipment-orders/192ae579d756147cab31462e32297a4eac5b1cd8783132b84ba8c940ce3df190 — read failures: 404 /v1/shipments/192ae579d756147cab31462e32297a4eac5b1cd8783132b84ba8c940ce3df190/tracking
+/support-tickets/xbV7uSmIGkXnJS2GsPtV — no captured read failure; see scope limitations
+/support-tickets/UGfsyJEc6ps7uAffzBvk — no captured read failure; see scope limitations
+/support-tickets/AQGwx67wSWJz40futLkw — read failures: 503 /v1/admin/support/tickets/AQGwx67wSWJz40futLkw/messages
+/jobs/cd6d8cdc039977153a600eb135d3deaac4db554ce439eac67b31701baa05e064 — no captured read failure; see scope limitations
+/jobs/3f63a11515940c0b30f607aaa40321504a55b231f4be4d01332bc6ca6594552e — no captured read failure; see scope limitations
+/jobs/sql_ffb28ae3e3673ec553298308844d14571f62a9e164756361810340102703575c — no captured read failure; see scope limitations
+/reports [rider accounts] — read failures: 503 /v1/admin/analytics/account-summary
+/reports [ride-courier] — read failures: 503 /v1/admin/analytics/order-summary
+/reports [food] — read failures: 503 /v1/admin/analytics/order-summary
+/reports [ecommerce] — read failures: 503 /v1/admin/analytics/order-summary
+/referrals [export 2026-10-26 to 2026-11-02] — read failures: 503 /v1/admin/referrals/export.csv
+/users [export read] — read failures: 404 /v1/admin/reports/accounts
+/riders [export read] — read failures: 404 /v1/admin/reports/riders

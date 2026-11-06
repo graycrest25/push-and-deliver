@@ -38,6 +38,11 @@ colors:
   success-soft: "#e7f5ef"
   warning: "#8b5c10"
   warning-soft: "#fff5dc"
+  danger-soft: "#fceff0"
+  violet: "#6947a5"
+  violet-soft: "#f1ecfa"
+  teal: "#0f6f78"
+  teal-soft: "#e7f6f8"
   dark-background: "#111a2d"
   dark-foreground: "#e8effc"
   dark-card: "#19243a"
@@ -73,6 +78,11 @@ colors:
   dark-success-soft: "#213e3a"
   dark-warning: "#f3cd7b"
   dark-warning-soft: "#413722"
+  dark-danger-soft: "#422b35"
+  dark-violet: "#d3c2f4"
+  dark-violet-soft: "#332844"
+  dark-teal: "#87dce5"
+  dark-teal-soft: "#1f3c43"
   navigation-hover: "#364e99"
   welcome-foreground: "#233d75"
   dark-welcome: "#263b66"
@@ -253,13 +263,15 @@ The page finder searches only allowed destinations. Cmd/Ctrl K toggles its dialo
 
 ### Tables / Pagination
 
-The Referrals screen shows one referral per row in a fixed 32rem scroll region, with sticky headers and pagination below it. Exact referred-user-ID search and type/code filters run on the API before cursor pagination. Its page-size choices are 10, 20, 30, and 50; filters and size changes return to page one. Global referral summary cards load independently. CSV exports cover the selected Lagos date range and user type across all pages.
+API lists retain the existing table, toolbar, and semantic status treatments. Pagination shows the current page and returned row count; endpoint cursors and offsets replace database snapshots. Search appears only where the service supports it. Bounded catalogues disclose their limit. Exports follow all returned continuation headers and download a separate file per page.
 
-Support tickets and ticket details share a viewport-based fixed height. Each panel scrolls independently; table column headers stay pinned and pagination remains below the scroll area. Conversations open in a right-side drawer with a blurred backdrop, filling the width on mobile. The newest messages appear first on opening; scrolling upward expands the live history in batches of 25 while preserving the reading position. The header and reply controls remain visible.
+Support ticket View links open a compact details panel beside the queue at desktop widths and below it on smaller screens. Close details preserves the queue filters, page size and cursor and returns focus to the opening link; the queue also retains its state when returning from a conversation. Claiming a ticket from the queue opens its dedicated conversation page, and Open conversation links support direct navigation. The chat uses existing card and muted surfaces, semantic primary colors, borders and shared controls, with customer messages on the left and support replies on the right in chronological order. A compact status and action header sits above the scrollable thread, with a labelled reply composer anchored below it and ticket details in a disclosure. Older messages load through cursor pagination while preserving the reading position; new messages refresh every 15 seconds while the page is visible, with manual refresh also available. Replies and attachment downloads require assignment to the current agent, and replies require an open ticket. Closed tickets are visible and reopenable only by super administrators. Responsive controls, explicit loading and error states, and retry feedback follow the existing workspace patterns.
+
+API actions use expandable forms with visible field labels, inline errors, busy controls, and explicit success receipts. Shipping commands follow the current lifecycle; pricing uses draft review and publication. Unsupported legacy features have explanatory empty states rather than controls that cannot save. All existing brand, typography, theme, focus, sidebar and mobile-sheet tokens remain authoritative.
 
 Headers are 46px high with 16px horizontal padding and 12px semibold muted text. Cells use 14px records, approximately 14.4px 16px padding, and tabular numerals. Clickable rows are keyboard reachable and activate with Enter or Space when focus is on the row itself; child controls keep their own interactions. Focus supplies an inset outline and accent background.
 
-Pagination wraps responsively, exposes its status through role=status, and disables unavailable or busy actions. Zero totals display “Loading records…” while busy and “No records” when settled, rather than an empty page fraction. Search, filters, summaries, and exports keep their current-page disclosure.
+Pagination wraps responsively, exposes its status through role=status, and disables unavailable or busy actions. Loading and empty states are explicit. Lists show the returned row count without inventing a total. Reports and exports identify their full period or bounded catalogue scope.
 
 ### Motion / Keyboard
 Shared button and navigation state transitions take 160ms. Sidebar width and sheet behavior use the existing 200ms transitions. The shipped system has no entrance choreography. Reduced-motion mode reduces transitions and animations to 0.01ms, limits animation iterations to one, and restores automatic scroll behavior. Global focus uses a 2px ring outline with 3px offset; controls add their own focus treatment and clickable table rows use a negative offset.
@@ -268,7 +280,7 @@ Shared button and navigation state transitions take 160ms. Sidebar width and she
 
 ### Do:
 - **Do** use semantic colors and both theme mappings from src/index.css.
-- **Do** keep current-page filtering, summaries, and exports visibly scoped.
+- **Do** keep server filters, page counts, summaries, and exports visibly scoped.
 - **Do** preserve route access and action permissions.
 - **Do** retain keyboard focus, mobile toolbar wrapping, and reduced-motion behavior.
 
@@ -276,3 +288,19 @@ Shared button and navigation state transitions take 160ms. Sidebar width and she
 - **Don't** replace semantic status roles with arbitrary brand-blue states.
 - **Don't** present fixture counts or invented claims as production data.
 - **Don't** hide records behind optional charts or create inaccessible click-only rows.
+
+Account details preserve the earlier personal information, verification, vehicle/documents, wallet and transaction sections. Unknown data is explicit; unavailable financial data never becomes a zero balance. Profile and vehicle editors submit only changed fields with the current profile revision and an operator reason. Contact edits show session/verification consequences. Rider applications use their allowed decisions and ready evidence. Section navigation retains table state while viewing details and resets it on leaving the section.
+
+Refresh and retry actions share the outlined secondary control with a Tabler refresh icon, compact sizing and busy/disabled states. Detail-card headers explicitly use a wrapping horizontal layout. Loading reads use semantic-colour shimmer placeholders matching definition lists, table columns/rows, profile sections, shipment groups and the authentication/workspace shell. Existing headings and filters stay visible; loading is announced once, decorative blocks are hidden from assistive technology, and reduced motion disables shimmer. Shipment filters display native status names through readable labels; the primary table reference is the clickable native shipment ID.
+
+Report details reuse the shipment information-card pattern: descriptive section headings, compact label/value grids, related records and coverage in sibling cards. Report filters have their own titled card. Activation and rider summaries sit above the paginated table, and their skeletons preserve that arrangement. User activation/concentration and user profiles share the Users navigation state; rider delivery reports and rider profiles share Riders state. Leaving those sections clears pagination.
+
+Pricing editors read normalized units and full tariff snapshots. Active/retired tariffs offer cloning; only drafts expose metadata, explicit rate/mapping batches, publication and archive. Publication identifies predecessor retirement. Shipment controls follow returned allowed actions and show pending commands; clearance-only completion retains its distinct meaning. Version conflicts preserve the draft and require review of the latest record before a new submission.
+
+All API enum displays use readable, field-specific labels; wire values remain unchanged. Long IDs/references have minimum table-column widths and wrap within them; wide tables scroll horizontally. Ride details follow shipment-style Order information, Customer and receiver, Rider and vehicle, Locations, Payment information and Dates cards. Incomplete ride fields remain unavailable, and cancelled/expired records hide payment state. Rider approval includes an observable-requirements checklist; conflict recovery checks the current requirements before a new attempt.
+
+Ten Seconds rules use the existing cards, semantic colors, labelled controls, badges and notices for super administrators. Versioned camelCase replacements include timing and UTC reward quotas; five attempts, a ten-second virtual target and a 24-hour cooldown remain fixed. Missing or invalid configuration requires explicit setup. Approximate elapsed timing explains scaled-microsecond judging and two-minute expiry without starting gameplay. Presets change only the draft; conflicts preserve it for review, and actor- and API-environment-scoped pending saves retain the exact body, version and key. The shared native campaign manager lists real campaigns and exposes versioned status and gameEligible controls for super and regular administrators.
+
+Account summaries use compact metric grids, locale-formatted counts, readable rider vehicle/status tables and a quiet calculation-time/growth footer; missing values remain Unavailable. Report coverage separates source readiness, processing diagnostics and latest-backfill progress into existing information cards with readable statuses and timestamps. Explicit super-only order rebuilds cover both shipment and ride/courier summaries, with bounded readiness polling, clear accepted/failed/timed-out states and totals shown only after complete coverage and successful reads. Loading, error, refresh and mobile table behavior retain the workspace patterns.
+
+Shared data presentation extends the audit palette across record tables and analytics. Green marks completed/verified states; amber marks pending work; red marks failed/blocked states and negative growth; blue marks totals and work in progress. Violet distinguishes drafts and weekly categories; teal distinguishes recent activity. Labels and status icons accompany color. Tables without a known state use neutral row shading. Account periods remain explicit categories, and missing figures remain Unavailable rather than zero. Both themes use the same meaning with separate surface and foreground values.

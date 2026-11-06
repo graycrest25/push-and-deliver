@@ -1,11 +1,8 @@
-import { useState } from "react";
 import { Link, useLocation } from "react-router-dom";
-import { IconChevronRight, IconArrowsExchange } from "@tabler/icons-react";
+import { IconChevronRight } from "@tabler/icons-react";
 import { SidebarProvider, SidebarTrigger } from "@/components/ui/sidebar";
 import { AppSidebar } from "@/components/app-sidebar";
-import { Button } from "@/components/ui/button";
 import { useCurrentUser } from "@/contexts/UserContext";
-import { TransactModal } from "@/components/TransactModal";
 import { PageFinder } from "@/components/page-finder";
 import { ThemeToggle } from "@/components/theme-toggle";
 import { PageHelp, TutorialProvider } from "@/components/section-help";
@@ -16,7 +13,6 @@ export function Layout({ children }: { children: React.ReactNode }) {
   const location = useLocation();
   const current = navigationForPath(location.pathname);
   const isDetail = current && location.pathname !== current.url;
-  const [transactModalOpen, setTransactModalOpen] = useState(false);
   return (
     <TutorialProvider pathname={location.pathname}>
       <SidebarProvider
@@ -65,13 +61,6 @@ export function Layout({ children }: { children: React.ReactNode }) {
                 {adminRoleLabels[user?.adminType || ""] || "Admin"}
               </span>
               <ThemeToggle />
-              {user?.adminType === "super" && (
-                <Button size="sm" onClick={() => setTransactModalOpen(true)}>
-                  <IconArrowsExchange />
-                  <span className="hidden sm:inline">Transact</span>
-                  <span className="sr-only sm:hidden">Transact</span>
-                </Button>
-              )}
             </div>
           </header>
           <div id="workspace-content" tabIndex={-1} className="app-content">
@@ -82,10 +71,6 @@ export function Layout({ children }: { children: React.ReactNode }) {
             <span>{adminRoleLabels[user?.adminType || ""] || "Admin"}</span>
           </footer>
         </main>
-        <TransactModal
-          open={transactModalOpen}
-          onOpenChange={setTransactModalOpen}
-        />
       </SidebarProvider>
     </TutorialProvider>
   );

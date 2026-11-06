@@ -1,15 +1,14 @@
-# User and Admin Types
+# Admin access
 
-The project defines four admin types, plus a user with no admin access.
+`GET /v2/auth/session` now supplies authoritative `isAdmin` and nullable `adminType`. The webapp accepts only `super`, `regular`, `customercare`, and `verifier`, after checking the active user-context session and matching profile UID. Missing or inconsistent membership remains blocked. Roles are never inferred from permissions, tokens, browser storage or endpoint failures.
 
-| Type | `adminType` value | Access shown in the project |
-|---|---|---|
-| Super Admin | `super` | Broadest access; manages user roles and has exclusive sidebar access to Fees, DHL Zones, Delivery Zones, Export Rates, Head Offices, and User Activation, plus Coupons → Redemption metrics. Also sees weekly overview activity and user/rider ride counts, filters shipments by head office, and reads closed support conversations. |
-| Regular Admin | `regular` | General dashboard administration, including express shipment checkout links, excluding super-admin-only features. |
-| Customer Care | `customercare` | Customer support sections, users, riders, merchants, and orders; several pages restrict this role to viewing. |
-| Verifier | `verifier` | Restricted to rider pages; can upload rider verification documents. |
-| User (No Admin Access) | `""`, with `isAdmin: false` | Cannot access the admin dashboard. |
+| Subtype | New dashboard modules |
+|---|---|
+| Super | Releases/editor, roles, coupons, signup bonus funding, support, native directories/exports, rides/configuration reads, audit and coverage/rebuilds |
+| Regular | Coupons, support, native directories/exports, rides and shipping/geography/fee reads |
+| Customer care | Support; existing separately authorized order/withdrawal/report reads. The new directory endpoints require super/regular. |
+| Verifier | Existing supported report view; the new directory, audit and management modules do not grant verifier access. |
 
-Admin access requires `isAdmin: true`. The role is stored in `adminType`.
+Super admins manage access with `GET/POST /v1/admin/users/{id}/role`, using an existing UID, current version and reason. A null subtype removes admin access. Actual membership changes invalidate the target's sessions. The private operator-key endpoint is never used by the browser.
 
-These options are defined in [User Management](src/pages/admin/user-management.tsx). Access descriptions reflect the frontend's navigation, route, and page checks.
+UI visibility is a convenience; the backend authorizes every request. Older screens still need native reconciliation independently of these roles. See [integration status and remaining gaps](docs/api-migration.md).

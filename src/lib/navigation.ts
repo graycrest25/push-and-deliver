@@ -6,6 +6,7 @@ import {
   IconDashboard,
   IconGift,
   IconGiftCard,
+  IconStopwatch,
   IconHeadset,
   IconLink,
   IconMapPin,
@@ -32,6 +33,68 @@ export interface NavigationItem {
 
 export const navigation: NavigationItem[] = [
   {
+    title: "Rider applications",
+    url: "/rider-applications",
+    icon: IconMotorbike,
+    group: "People & partners",
+  },
+  {
+    title: "Pricing audit",
+    url: "/pricing-audit",
+    icon: IconCoin,
+    group: "Finance",
+  },
+  {
+    title: "Report coverage",
+    url: "/analytics-coverage",
+    icon: IconDashboard,
+    group: "Workspace",
+    parentUrl: "/reports",
+  },
+  {
+    title: "Account & order reports",
+    url: "/reports",
+    icon: IconDashboard,
+    group: "Workspace",
+  },
+  {
+    title: "Background jobs",
+    url: "/jobs",
+    icon: IconSettings,
+    group: "Administration",
+  },
+  {
+    title: "Files",
+    url: "/files",
+    icon: IconShoppingBag,
+    group: "Administration",
+  },
+  {
+    title: "Payment review",
+    url: "/payments",
+    icon: IconCash,
+    group: "Finance",
+  },
+  {
+    title: "Audit history",
+    url: "/audit",
+    icon: IconUserShield,
+    group: "Administration",
+  },
+  {
+    title: "Account security",
+    url: "/settings",
+    icon: IconSettings,
+    group: "Administration",
+  },
+  {
+    title: "Weekly overview",
+    url: "/weekly-overview",
+    icon: IconDashboard,
+    group: "Workspace",
+    parentUrl: "/dashboard",
+  },
+  {
     title: "Overview",
     url: "/dashboard",
     icon: IconDashboard,
@@ -41,18 +104,6 @@ export const navigation: NavigationItem[] = [
     title: "Shipment orders",
     url: "/shipment-orders",
     icon: IconPlane,
-    group: "Operations",
-  },
-  {
-    title: "Restaurant orders",
-    url: "/restaurant-orders",
-    icon: IconShoppingCart,
-    group: "Operations",
-  },
-  {
-    title: "Product orders",
-    url: "/product-orders",
-    icon: IconShoppingBag,
     group: "Operations",
   },
   {
@@ -73,25 +124,37 @@ export const navigation: NavigationItem[] = [
     icon: IconUsers,
     group: "People & partners",
   },
-  { title: "User activation", url: "/user-activation", icon: IconDashboard, group: "People & partners", parentUrl: "/users" },
-  { title: "Weekly concentration", url: "/weekly-concentration", icon: IconDashboard, group: "People & partners", parentUrl: "/users" },
+  {
+    title: "User activation",
+    url: "/user-activation",
+    icon: IconDashboard,
+    group: "People & partners",
+    parentUrl: "/users",
+  },
+  {
+    title: "Weekly concentration",
+    url: "/weekly-concentration",
+    icon: IconDashboard,
+    group: "People & partners",
+    parentUrl: "/users",
+  },
   {
     title: "Riders",
     url: "/riders",
     icon: IconMotorbike,
     group: "People & partners",
   },
-  { title: "Weekly deliveries", url: "/rider-weekly-deliveries", icon: IconMotorbike, group: "People & partners", parentUrl: "/riders" },
   {
-    title: "Restaurants",
-    url: "/vendors",
-    icon: IconTruckDelivery,
+    title: "Weekly deliveries",
+    url: "/rider-weekly-deliveries",
+    icon: IconMotorbike,
     group: "People & partners",
+    parentUrl: "/riders",
   },
   {
-    title: "E-commerce merchants",
-    url: "/ecommerce-merchants",
-    icon: IconShoppingBag,
+    title: "Vendor applications",
+    url: "/vendors",
+    icon: IconTruckDelivery,
     group: "People & partners",
   },
   {
@@ -100,19 +163,30 @@ export const navigation: NavigationItem[] = [
     icon: IconCash,
     group: "Finance",
   },
-  { title: "Fees", url: "/fees", icon: IconCoin, group: "Finance" },
+  { title: "Fees & pricing", url: "/fees", icon: IconCoin, group: "Finance" },
   {
-    title: "Export rates",
+    title: "Shipping tariffs",
     url: "/export-rates",
     icon: IconPlane,
     group: "Finance",
   },
-  { title: "Coupons", url: "/coupons", icon: IconGiftCard, group: "Growth" },
-  { title: "Redemption metrics", url: "/coupon-redemption-metrics", icon: IconGiftCard, group: "Growth", parentUrl: "/coupons" },
-  { title: "Referrals", url: "/referrals", icon: IconGift, group: "Growth" },
   {
-    title: "Generated referrals",
-    url: "/generated",
+    title: "Game rules",
+    url: "/game-rules",
+    icon: IconStopwatch,
+    group: "Growth",
+  },
+  { title: "Coupons", url: "/coupons", icon: IconGiftCard, group: "Growth" },
+  {
+    title: "Redemption metrics",
+    url: "/coupon-redemption-metrics",
+    icon: IconGiftCard,
+    group: "Growth",
+    parentUrl: "/coupons",
+  },
+  {
+    title: "Referrals",
+    url: "/referrals",
     icon: IconLink,
     group: "Growth",
   },
@@ -123,29 +197,23 @@ export const navigation: NavigationItem[] = [
     group: "Growth",
   },
   {
+    title: "Promoter links",
+    url: "/promoter-links",
+    icon: IconLink,
+    group: "Growth",
+    parentUrl: "/referrals",
+  },
+  {
     title: "Head offices",
     url: "/head-offices",
     icon: IconMapPin,
     group: "Administration",
   },
   {
-    title: "Delivery zones",
+    title: "Delivery tariffs",
     url: "/delivery-zones",
     icon: IconMapPin,
     group: "Administration",
-  },
-  {
-    title: "DHL zones",
-    url: "/dhl-zones",
-    icon: IconWorld,
-    group: "Administration",
-  },
-  {
-    title: "DHL Local",
-    url: "/dhl-local",
-    icon: IconTruckDelivery,
-    group: "Administration",
-    parentUrl: "/dhl-zones",
   },
   {
     title: "App configuration",
@@ -161,16 +229,30 @@ export const navigation: NavigationItem[] = [
   },
 ];
 
+const groupOrder = [
+  "Workspace",
+  "Operations",
+  "People & partners",
+  "Finance",
+  "Growth",
+  "Administration",
+];
+navigation.sort(
+  (a, b) => groupOrder.indexOf(a.group) - groupOrder.indexOf(b.group),
+);
+
 export function allowedNavigation(adminType: unknown) {
   return navigation.filter((item) => canAccessAdminScreen(adminType, item.url));
 }
 
 export function sidebarNavigation(adminType: unknown) {
   const allowed = allowedNavigation(adminType);
-  return allowed.filter((item) => !item.parentUrl).map((item) => ({
-    ...item,
-    children: allowed.filter((child) => child.parentUrl === item.url),
-  }));
+  return allowed
+    .filter((item) => !item.parentUrl)
+    .map((item) => ({
+      ...item,
+      children: allowed.filter((child) => child.parentUrl === item.url),
+    }));
 }
 
 export function navigationForPath(pathname: string) {
@@ -181,7 +263,7 @@ export function navigationForPath(pathname: string) {
 
 export const adminRoleLabels: Record<string, string> = {
   super: "Super admin",
-  regular: "Admin",
+  regular: "Regular admin",
   customercare: "Customer care",
   verifier: "Verifier",
 };

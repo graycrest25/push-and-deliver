@@ -1,74 +1,51 @@
-# React + TypeScript + Vite
+# PushNDeliver admin workspace
 
+Next.js hosts the existing React operations UI and a server-side proxy to the Go/PostgreSQL API.
 
-This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
+## Run locally
 
-Currently, two official plugins are available:
-
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Babel](https://babeljs.io/) (or [oxc](https://oxc.rs) when used in [rolldown-vite](https://vite.dev/guide/rolldown)) for Fast Refresh
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/) for Fast Refresh
-
-## React Compiler
-
-The React Compiler is not enabled on this template because of its impact on dev & build performances. To add it, see [this documentation](https://react.dev/learn/react-compiler/installation).
-
-## Expanding the ESLint configuration
-
-If you are developing a production application, we recommend updating the configuration to enable type-aware lint rules:
-
-```js
-export default defineConfig([
-  globalIgnores(['dist']),
-  {
-    files: ['**/*.{ts,tsx}'],
-    extends: [
-      // Other configs...
-
-      // Remove tseslint.configs.recommended and replace with this
-      tseslint.configs.recommendedTypeChecked,
-      // Alternatively, use this for stricter rules
-      tseslint.configs.strictTypeChecked,
-      // Optionally, add this for stylistic rules
-      tseslint.configs.stylisticTypeChecked,
-
-      // Other configs...
-    ],
-    languageOptions: {
-      parserOptions: {
-        project: ['./tsconfig.node.json', './tsconfig.app.json'],
-        tsconfigRootDir: import.meta.dirname,
-      },
-      // other options...
-    },
-  },
-])
+```sh
+npm install
+# Set BASE_URL in .env using .env.example as a reference.
+npm run dev
 ```
 
-You can also install [eslint-plugin-react-x](https://github.com/Rel1cx/eslint-react/tree/main/packages/plugins/eslint-plugin-react-x) and [eslint-plugin-react-dom](https://github.com/Rel1cx/eslint-react/tree/main/packages/plugins/eslint-plugin-react-dom) for React-specific lint rules:
+`BASE_URL` is server-only. Do not prefix proxy variables with `NEXT_` and do not expose them in Next.js config. Browsers call `/api/proxy/v2/auth/...` and allowlisted `/api/proxy/v1/...` routes; session credentials stay in HttpOnly cookies. Production requires an HTTPS API origin.
 
-```js
-// eslint.config.js
-import reactX from 'eslint-plugin-react-x'
-import reactDom from 'eslint-plugin-react-dom'
-
-export default defineConfig([
-  globalIgnores(['dist']),
-  {
-    files: ['**/*.{ts,tsx}'],
-    extends: [
-      // Other configs...
-      // Enable lint rules for React
-      reactX.configs['recommended-typescript'],
-      // Enable lint rules for React DOM
-      reactDom.configs.recommended,
-    ],
-    languageOptions: {
-      parserOptions: {
-        project: ['./tsconfig.node.json', './tsconfig.app.json'],
-        tsconfigRootDir: import.meta.dirname,
-      },
-      // other options...
-    },
-  },
-])
+```sh
+npm run typecheck
+npm run build
+npm start
 ```
+
+Webpack is selected for both dev and build so the project works in environments that restrict Turbopack's helper process ports. React Router preserves existing workspace URLs inside a browser-only Next client boundary.
+
+## Tests
+
+```sh
+npx playwright install chromium
+npm test
+```
+
+Tests use an isolated mock API on port 4319 and Next.js on port 4320. Their private `ADMIN_TEST_BUILD=1` flag selects `.next-verification` so a normal dev preview can keep running. They exercise the native authentication contract, credential privacy, context headers, refresh recovery, logout, removed password-change controls, missing/non-admin membership, all four admin roles and the new dashboard workflows. Historical standalone fixtures are excluded from the native test run.
+
+## API and deployment
+
+- [Current native admin endpoint reference](../pnd-backend/docs/admin-api-update-reference.md)
+- [Historical standalone endpoint reference](admin-endpoints-reference.md)
+- [Upload lifecycle contract](uploads.md)
+- [Migration mapping, missing endpoints and deployment notes](docs/api-migration.md)
+- [Membership access](ADMIN_TYPES.md)
+- [Design context](DESIGN.md)
+
+Vercel must use the Next.js framework preset with no old `dist` output override. Configure `BASE_URL` separately for each environment. Firebase, Clerk and browser-side provider secrets are no longer used.
+
+## Native runtime correction
+
+Authentication now uses `/v2/auth/login`, `/session`, `/refresh` and `/logout`, with user account context and server-only opaque tokens. Password recovery uses the native reset-token contract. The signed-in change-password feature and its proxy routes have been removed; account security retains session sign-out controls.
+
+The updated native session contract now supplies administrator membership. The dashboard uses `isAdmin` and `adminType` from `/v2/auth/session`, with fail-closed handling for older or inconsistent responses. The new native reference is integrated for release settings (both apps/platforms), all four admin roles, coupon campaigns/codes/signup processing, signup wallet funding, and support conversations. The 3 November update also integrates native account directories/details/exports, admin rides, fee and shipping catalogues, tariff child records, audit history, report coverage/rebuilds, and mobile settings creation/repair.
+
+Optional Google administrator sign-in uses the native nonce challenge and token exchange. Configure server-only `GOOGLE_CLIENT_ID` (no NEXT_ prefix), authorize the dashboard origin in Google and allow the same audience in backend `GOOGLE_CLIENT_IDS`. Only the public OAuth audience is returned by `/api/auth/options`; BASE_URL and session credentials remain private.
+
+Native reports, referrals/export, jobs/replay, shipment reads, manual withdrawals and asset uploads remain integrated. The login forgot-password option and signed-in change-password feature remain removed. See [remaining deployment and contract gaps](docs/api-migration.md#remaining-gaps-and-blockers) for shipment actions, historical screen reconciliation, attachment limitations and deployed verification. No private management key is exposed or used.

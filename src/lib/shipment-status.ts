@@ -1,37 +1,22 @@
-import { IntlShipmentType, ShipmentOrderStatus, type ShipmentOrder } from "@/types";
-import type { AdminShipmentStatus } from "@/services/shipment-orders.service";
-
-export const shipmentStatusLabels: Record<number, string> = {
-  [ShipmentOrderStatus.placed]: "Placed",
-  [ShipmentOrderStatus.acceptedByRider]: "Accepted by Rider",
-  [ShipmentOrderStatus.onRouteToPndHQ]: "On Route to HQ",
-  [ShipmentOrderStatus.sentToHq]: "Received at HQ",
-  [ShipmentOrderStatus.onrouteToDestination]: "On Route to Destination",
-  [ShipmentOrderStatus.deliveredToDestination]: "Delivered to Destination",
-  [ShipmentOrderStatus.cancelled]: "Cancelled",
-};
-
-export function getShipmentStatusActions(order: ShipmentOrder, allowRiderAssignment = false): { value: AdminShipmentStatus; label: string }[] {
-  switch (order.orderStatus) {
-    case ShipmentOrderStatus.placed:
-      return [
-        ...(allowRiderAssignment && !order.riderID && (order.quoteType === "local" || order.shipmentType === IntlShipmentType.express)
-          ? [{ value: "AcceptedByRider" as const, label: "Assign rider (development)" }] : []),
-        ...(order.quoteType !== "local" && order.shipmentType === IntlShipmentType.customclearance
-          ? [{ value: "SentToHq" as const, label: "Confirm HQ receipt" }] : []),
-        { value: "Cancelled", label: "Cancel shipment" },
-      ];
-    case ShipmentOrderStatus.acceptedByRider:
-      return [{ value: "Cancelled", label: "Cancel shipment" }];
-    case ShipmentOrderStatus.onRouteToPndHQ:
-      return [{ value: "SentToHq", label: "Confirm HQ receipt" }];
-    case ShipmentOrderStatus.sentToHq:
-      return [{ value: "OnrouteToDestination", label: "Confirm onward dispatch" }];
-    case ShipmentOrderStatus.onrouteToDestination:
-      return order.paylater === true && order.ispaid !== true ? [] : [
-        { value: "DeliveredToDestination", label: "Confirm delivery" },
-      ];
-    default:
-      return [];
-  }
+// Mounted native shippingcommands.List encodes these names with ShipmentStatus.
+// Keep API values separate from labels shown in filters and tables.
+export const shipmentStatuses = {
+  placed: "Placed",
+  acceptedByRider: "Accepted by rider",
+  sentToHq: "Sent to HQ",
+  onrouteToDestination: "En route to destination",
+  deliveredToDestination: "Delivered to destination",
+  cancelled: "Cancelled",
+  onRouteToPndHQ: "En route to PND HQ",
+} as const;
+export function shipmentStatusLabel(value: unknown) {
+  if (value === null || value === undefined || value === "") return "Unknown";
+  const key =
+    typeof value === "number" || /^[0-6]$/.test(String(value))
+      ? Object.keys(shipmentStatuses)[Number(value)]
+      : String(value);
+  return (
+    shipmentStatuses[key as keyof typeof shipmentStatuses] ||
+    `Unknown (${String(value)})`
+  );
 }
