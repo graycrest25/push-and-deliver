@@ -1,4 +1,5 @@
 import { AccountSummary } from "./account-summary";
+import { OrderSummary } from "./order-summary";
 import { ShipmentTimeline } from "./shipment-commands";
 import { WithdrawalExport } from "./withdrawal-export";
 import { ShipmentDetails } from "./shipment-details";
@@ -95,14 +96,7 @@ export function NativeSummaries({
               ))}
             </select>
           </label>
-          <div role="region" aria-label="Order totals">
-            <ResourcePanel
-              title="Order totals"
-              path={queryPath("/v1/admin/analytics/order-summary", {
-                type: order,
-              })}
-            />
-          </div>
+          <OrderSummary key={order} type={order} />
           {adminType === "super" && (
             <Link
               className="inline-flex text-sm text-primary underline"
@@ -578,7 +572,11 @@ export function NativeReferrals() {
       <Heading
         title="Referrals"
         description="Referral attribution and totals. Export dates include both selected days in Africa/Lagos."
-      />
+      >
+        <Button asChild variant="outline">
+          <Link to="/promoter-links">Manage promoter links</Link>
+        </Button>
+      </Heading>
       <ResourcePanel
         title="Referral totals"
         path="/v1/admin/referrals/summary"

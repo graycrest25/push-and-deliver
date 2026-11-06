@@ -134,6 +134,7 @@ export const routes: readonly [string, string][] = [
   ["GET", "/v1/admin/riders/{id}"],
   ["GET", "/v1/admin/shipping/settings"],
   ["GET", "/v1/admin/users"],
+  ["GET", "/v1/admin/users/search"],
   ["GET", "/v1/admin/vendors/{id}"],
   ["GET", "/v1/config/mobile"],
   ["GET", "/v1/geography/states"],

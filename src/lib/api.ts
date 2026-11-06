@@ -146,7 +146,7 @@ export async function api<T = RecordData>(
     path === "/v1/users/me" ||
     path.startsWith("/v1/shipping/local-types") ||
     path.startsWith("/v1/config/mobile") ||
-    /^\/v1\/(admin\/(users|riders|fees|pricing|shipments|rides|shipping|geography|audit|reports|coupons|config|support|withdrawals|jobs|referrals|analytics)|shipments|assets|media)(\/|\?|$)/.test(
+    /^\/v1\/(admin\/(users|riders|fees|pricing|shipments|rides|shipping|geography|audit|reports|coupons|config|support|withdrawals|jobs|referrals|analytics|notifications)|shipments|assets|media)(\/|\?|$)/.test(
       path,
     ) ||
     /^\/v1\/admin\/users\/[^/]+\/role$/.test(path) ||

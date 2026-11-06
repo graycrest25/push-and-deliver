@@ -1,5 +1,14 @@
 # Native admin integration status
 
+## 6 November 2026 follow-up
+
+- User and rider directories use the existing `GET /v1/admin/users` with a trimmed, URL-encoded `q` name search, a 300 ms debounce, cursor reset on search/type changes, and stale-response protection. Clearing restores the directory without `q`; backend order is retained. Directory exports remain scoped to the full account type.
+- Broadcasts use the normal bearer-backed proxy and accept only `rider`, `customer`, or `all`. Title and body limits use UTF-8 bytes. The form requires HTTP 202 with a queued receipt, prevents pending duplicates, and preserves the operation key on retries. Queuing is not delivery confirmation.
+- Order summaries retain `type=shipment|ride-courier`, render the returned counts and NGN minor-unit totals, and explain the actual `roundedPaidOrders` count. No client-side recomputation or automatic backfill is performed. Readiness, invalid-data, and temporary errors are distinct and retain request IDs.
+- Promoter links are available at `/promoter-links` to super/regular administrators; `/generated` redirects there. Creation/renewal sends only an ASCII alphanumeric name and requires HTTP 201. `503 referral_pending` honors `Retry-After` and reuses the body/key. Lists use `items` and `nextCursor`; availability updates use `documentId` and only `{active}`. Returned code capitalization, share URLs, counts and expiry are preserved. Link attribution does not configure commissions or payments.
+
+These changes are verified with local fixtures; integration tests do not send production broadcasts.
+
 Current follow-up: see [Latest native admin integration](latest-api-integration-2026-11-03.md) for the resolved account, pricing and shipment gaps, new UI and remaining acceptance work. Earlier entries below describe the previous integration.
 
 

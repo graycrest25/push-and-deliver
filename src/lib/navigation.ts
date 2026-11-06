@@ -197,6 +197,13 @@ export const navigation: NavigationItem[] = [
     group: "Growth",
   },
   {
+    title: "Promoter links",
+    url: "/promoter-links",
+    icon: IconLink,
+    group: "Growth",
+    parentUrl: "/referrals",
+  },
+  {
     title: "Head offices",
     url: "/head-offices",
     icon: IconMapPin,

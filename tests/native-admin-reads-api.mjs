@@ -23,8 +23,8 @@ export function reads(path, req, res, body, success, error, adminType) {
       ? ["report"]
       : path === "/v1/admin/analytics/backfills"
         ? []
-        : path === "/v1/admin/users"
-          ? ["type", "limit", "cursor", "membership", "adminType"]
+        : path === "/v1/admin/users" || path === "/v1/admin/users/search"
+          ? ["type", "limit", "cursor", "membership", "adminType", "q"]
           : path.startsWith("/v1/admin/users/")
             ? ["type"]
             : path.includes("/reports/")
@@ -74,7 +74,19 @@ export function reads(path, req, res, body, success, error, adminType) {
       return true;
     }
     const row = account(type, q.has("cursor"));
-    if (path.startsWith("/v1/admin/users/"))
+    if (
+      q.has("q") &&
+      ["/v1/admin/users", "/v1/admin/users/search"].includes(path)
+    ) {
+      const second = q.has("cursor");
+      success(res, {
+        items: [
+          { ...row, username: `${q.get("q")} ${second ? "Older" : "Newest"}` },
+        ],
+        nextCursor: second ? null : "name-next",
+        hasMore: !second,
+      });
+    } else if (path.startsWith("/v1/admin/users/"))
       success(res, account(type, path.endsWith("-2")));
     else if (q.get("format") === "csv") {
       res.writeHead(200, {

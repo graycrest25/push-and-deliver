@@ -27,6 +27,7 @@ const operations = [
   "/coupons",
   "/referrals",
   "/generated",
+  "/promoter-links",
   "/general-notifications",
   "/payments",
 ];

@@ -13,6 +13,12 @@ import {
   controlFeatures,
 } from "./native-features-api.mjs";
 import http from "node:http";
+import {
+  engagement,
+  resetEngagement,
+  controlEngagement,
+  engagementState,
+} from "./native-engagement-api.mjs";
 let records = [],
   access = "pnd_a2_private",
   refresh = "pnd_r2_private",
@@ -89,6 +95,7 @@ http
         resetReads();
         resetLatest();
         resetGame();
+        resetEngagement();
         records = [];
         access = "pnd_a2_private";
         refresh = "pnd_r2_private";
@@ -103,6 +110,7 @@ http
         failLogout = false;
       }
       controlGame(body);
+      controlEngagement(body);
       controlLatest(body);
       controlDashboard(body);
       controlReads(body);
@@ -113,7 +121,11 @@ http
       if (body.badContext !== undefined) badContext = body.badContext;
       if (body.invalidLogin !== undefined) invalidLogin = body.invalidLogin;
       if (body.failLogout) failLogout = true;
-      return success(res, { records, rotations });
+      return success(res, {
+        records,
+        rotations,
+        engagement: engagementState(),
+      });
     }
     records.push({
       path,
@@ -215,6 +227,18 @@ http
       req.headers["x-account-type"] !== "user"
     )
       return error(res, 401, "expired", "Session expired");
+    if (
+      await engagement(
+        path,
+        req,
+        res,
+        body,
+        success,
+        error,
+        membership().adminType,
+      )
+    )
+      return;
     if (gameApi(path, req, res, body, membership().adminType)) return;
     if (latest(path, req, res, body, success, error, membership().adminType))
       return;

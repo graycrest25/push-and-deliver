@@ -5,6 +5,7 @@ import { MobileReleaseSettings } from "./release-settings";
 import { useState } from "react";
 import { useParams } from "react-router-dom";
 import { segment } from "@/lib/api";
+import { broadcastBody } from "@/lib/admin-contracts";
 import {
   Heading,
   human,
@@ -630,25 +631,42 @@ export function NotificationsPage() {
         action={{
           title: "Queue broadcast",
           path: "/v1/admin/notifications/broadcasts",
+          expectedStatus: 202,
+          preserveRetry: true,
           fields: [
-            select("audience", [
-              "all",
-              "customer",
-              "rider",
-              "vendor",
-              "restaurant",
-              "ecommerce",
-            ]),
-            field("title", "Title", { maxLength: 160 }),
-            field("body", "Message", { type: "textarea", maxLength: 4000 }),
+            {
+              ...select("audience", ["", "rider", "customer", "all"]),
+              optionLabels: {
+                "": "Choose an audience",
+                rider: "Riders",
+                customer: "Customers",
+                all: "All accounts",
+              },
+            },
+            field("title", "Title", {
+              maxLength: 160,
+              help: "Maximum 160 UTF-8 bytes; emoji and accented characters use multiple bytes.",
+            }),
+            field("body", "Message", {
+              type: "textarea",
+              maxLength: 4000,
+              help: "Maximum 4,000 UTF-8 bytes.",
+            }),
           ],
-          success:
-            "Broadcast saved and queued. This does not confirm delivery to every recipient.",
+          body: broadcastBody,
+          validateResult: (result) => {
+            if (!result.id || result.status !== "queued")
+              throw new Error(
+                "Notification acceptance could not be confirmed. Retry with the same details.",
+              );
+          },
+          success: "Notification queued",
         }}
       />
       <Notice>
-        Broadcast history, delivery status, scheduling, editing, and deletion
-        are not available in the current service.
+        Delivery happens asynchronously and depends on eligible registered
+        devices. Queuing does not confirm delivery to every account. Customer
+        inbox entries use the existing notification inbox.
       </Notice>
     </div>
   );

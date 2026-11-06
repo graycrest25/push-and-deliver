@@ -73,6 +73,12 @@ export function NativeAccounts({ riders = false }: { riders?: boolean }) {
             "createdAt",
           ]),
           params: { type },
+          search: {
+            param: "q",
+            label: riders ? "Search riders by name" : "Search users by name",
+            placeholder: "Enter a saved name",
+            help: "Matches saved names. Results are newest first; clear the search to show the full directory.",
+          },
           idKey: "uid",
           link: (row) => `/${type}/${segment(row.uid)}`,
         }}
@@ -159,8 +165,8 @@ function DirectoryExport({ riders }: { riders: boolean }) {
       </summary>
       <div className="mt-4 space-y-4">
         <p className="text-sm text-muted-foreground">
-          Download the current directory in separate pages. Continue until all
-          pages have been downloaded.
+          Directory exports include all {riders ? "riders" : "users"} and use
+          separate pagination. Continue until all pages have been downloaded.
         </p>
         <fieldset
           disabled={busy || downloaded > 0}

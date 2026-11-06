@@ -173,9 +173,11 @@ export function Notice({ children }: { children: ReactNode }) {
 export function ErrorNotice({
   error,
   retry,
+  showReadinessLink = true,
 }: {
   error: unknown;
   retry?: () => void;
+  showReadinessLink?: boolean;
 }) {
   return (
     <div
@@ -185,11 +187,13 @@ export function ErrorNotice({
       <p className="text-destructive">
         {error instanceof Error ? error.message : String(error)}
       </p>
-      {error instanceof ApiError && error.code === "analytics_not_ready" && (
-        <Link className="text-primary underline" to="/analytics-coverage">
-          Inspect report readiness
-        </Link>
-      )}
+      {showReadinessLink &&
+        error instanceof ApiError &&
+        error.code === "analytics_not_ready" && (
+          <Link className="text-primary underline" to="/analytics-coverage">
+            Inspect report readiness
+          </Link>
+        )}
       {error instanceof ApiError && error.status === 409 && (
         <p>
           Check the current record and the action’s requirements before starting
@@ -213,8 +217,10 @@ export function useResource(path: string | null) {
   const [error, setError] = useState<unknown>(null);
   const [loading, setLoading] = useState(!!path);
   const [revision, setRevision] = useState(0);
+  const [resourcePath, setResourcePath] = useState(path);
   useEffect(() => {
     const abort = new AbortController();
+    setResourcePath(path);
     setData(null);
     setError(null);
     setLoading(!!path);
@@ -231,7 +237,12 @@ export function useResource(path: string | null) {
         });
     return () => abort.abort();
   }, [path, revision]);
-  return { data, error, loading, reload: () => setRevision((n) => n + 1) };
+  return {
+    data: resourcePath === path ? data : null,
+    error: resourcePath === path ? error : null,
+    loading: resourcePath === path ? loading : !!path,
+    reload: () => setRevision((n) => n + 1),
+  };
 }
 export function InformationCard({
   title,
@@ -789,6 +800,9 @@ export interface Action {
   renderCurrent?: (current: RecordData) => ReactNode;
   conflictHelp?: string;
   minimumVersion?: 0 | 1;
+  expectedStatus?: number;
+  renderResult?: (result: RecordData) => ReactNode;
+  validateResult?: (result: RecordData) => void;
 }
 export function ActionForm({
   action,
@@ -848,7 +862,12 @@ export function ActionForm({
   // Persist only a random key and body fingerprint; no personal/financial form values.
   async function submit(event: React.FormEvent) {
     event.preventDefault();
-    if (lock.current || [...uploads.current.values()].some((v) => v.pending))
+    if (
+      lock.current ||
+      retryAt > Date.now() ||
+      result != null ||
+      [...uploads.current.values()].some((v) => v.pending)
+    )
       return;
     lock.current = true;
     setBusy(true);
@@ -912,11 +931,46 @@ export function ActionForm({
         );
       }
       if (action.preserveRetry) pending.current = { path, body, key };
-      const response = await api(path, {
+      const options: RequestInit = {
         method: action.method || "POST",
         body,
         headers: { "Idempotency-Key": key },
-      });
+      };
+      let response: RecordData;
+      let responseRequestId: string | undefined;
+      if (action.expectedStatus) {
+        const result = await apiResponse(path, options);
+        responseRequestId = result.headers.get("x-request-id") || undefined;
+        const envelope = await result.json().catch(() => {
+          throw new ApiError(
+            502,
+            "invalid_response",
+            "The service returned an unreadable response. Retry with the same details.",
+            responseRequestId,
+          );
+        });
+        responseRequestId ||= envelope?.requestId;
+        if (result.status !== action.expectedStatus)
+          throw new ApiError(
+            502,
+            "unexpected_response",
+            "The service did not confirm acceptance. Retry with the same details.",
+            responseRequestId,
+          );
+        response = envelope?.data ?? envelope;
+      } else response = await api(path, options);
+      try {
+        action.validateResult?.(response);
+      } catch (failure) {
+        throw new ApiError(
+          502,
+          "invalid_response",
+          failure instanceof Error
+            ? failure.message
+            : "The service response could not be confirmed.",
+          responseRequestId,
+        );
+      }
       sessionStorage.removeItem(storageKey);
       pending.current = undefined;
       // Clear before a successful resource reload can unmount this form.
@@ -952,7 +1006,7 @@ export function ActionForm({
           }
         }
       }
-      if (e instanceof ApiError && e.status === 429 && e.retryAfter) {
+      if (e instanceof ApiError && e.retryAfter) {
         const until = /^\d+$/.test(e.retryAfter)
           ? Date.now() + Number(e.retryAfter) * 1000
           : Date.parse(e.retryAfter);
@@ -1063,7 +1117,11 @@ export function ActionForm({
               <p className="text-sm font-medium">
                 {action.success || "Saved successfully."}
               </p>
-              <RecordView data={result} />
+              {action.renderResult ? (
+                action.renderResult(result as RecordData)
+              ) : (
+                <RecordView data={result} />
+              )}
             </div>
           )}
           {uploadState.pending && (
@@ -1190,6 +1248,13 @@ export interface ListSpec {
   pageSizes?: number[];
   defaultPageSize?: number;
   rowClassName?: (row: RecordData) => string;
+  search?: {
+    param: string;
+    label: string;
+    placeholder?: string;
+    help?: string;
+    maxLength?: number;
+  };
   overview?: (data: RecordData) => ReactNode;
   overviewLoading?: ReactNode;
 }
@@ -1225,6 +1290,27 @@ function DataListContent({
   );
   const [cursors, setCursors] = useState<string[]>(saved?.cursors ?? [""]);
   const [page, setPage] = useState(saved?.page ?? 0);
+  const searchTerm = spec.search
+    ? String(draft[spec.search.param] || "").trim()
+    : "";
+  const committedSearch = spec.search
+    ? String(filters[spec.search.param] || "")
+    : "";
+  const searchParam = spec.search?.param;
+  const searching = !!searchParam && searchTerm !== committedSearch;
+  const searchId = useId();
+  useEffect(() => {
+    if (!searchParam || searchTerm === committedSearch) return;
+    const timer = setTimeout(() => {
+      setFilters((current) => ({
+        ...current,
+        [searchParam]: searchTerm || undefined,
+      }));
+      setPage(0);
+      setCursors([""]);
+    }, 300);
+    return () => clearTimeout(timer);
+  }, [searchParam, searchTerm, committedSearch]);
   const viewport = useRef<HTMLDivElement>(null);
   const scroll = useRef({
     scrollTop: saved?.scrollTop ?? 0,
@@ -1255,7 +1341,11 @@ function DataListContent({
         }
       : {}),
   });
-  const { data, error, loading, reload } = useResource(path);
+  const resource = useResource(path);
+  const data = searching ? null : resource.data;
+  const error = searching ? null : resource.error;
+  const loading = searching || resource.loading;
+  const reload = resource.reload;
   useEffect(() => {
     if (!loading && viewport.current) {
       viewport.current.scrollTop = scroll.current.scrollTop;
@@ -1299,6 +1389,39 @@ function DataListContent({
               Refresh
             </RefreshButton>
           </div>
+          {spec.search && (
+            <div className="max-w-xl space-y-2">
+              <Label htmlFor={searchId}>{spec.search.label}</Label>
+              <Input
+                id={searchId}
+                type="search"
+                autoComplete="off"
+                maxLength={spec.search.maxLength ?? 100}
+                placeholder={spec.search.placeholder}
+                value={draft[spec.search.param] || ""}
+                onChange={(event) =>
+                  setDraft({
+                    ...draft,
+                    [spec.search!.param]: event.target.value,
+                  })
+                }
+                aria-describedby={`${searchId}-help`}
+              />
+              <p
+                id={`${searchId}-help`}
+                className="text-xs text-muted-foreground"
+              >
+                {spec.search.help || "Results update as you type."}
+              </p>
+              <span className="sr-only" role="status">
+                {searching
+                  ? "Waiting for name search"
+                  : loading
+                    ? "Loading results"
+                    : "Results updated"}
+              </span>
+            </div>
+          )}
           {spec.filters?.length ? (
             <form
               onSubmit={(e) => {

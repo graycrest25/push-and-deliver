@@ -1,4 +1,5 @@
 import { GameRulesPage } from "@/features/admin/game-rules";
+import { PromoterLinksPage } from "@/features/admin/promoter-links";
 import {
   RiderApplications,
   RiderApplication,
@@ -80,10 +81,7 @@ export default function Router() {
               </PublicRoute>
             }
           />
-          <Route
-            path="/sign-in"
-            element={<Navigate to="/login" replace />}
-          />
+          <Route path="/sign-in" element={<Navigate to="/login" replace />} />
           <Route
             path="/forgot-password"
             element={
@@ -248,7 +246,14 @@ export default function Router() {
                       element={<NativeConversation />}
                     />
                     <Route path="/referrals" element={<NativeReferrals />} />
-                    <Route path="/generated" element={<NativeReferrals />} />
+                    <Route
+                      path="/promoter-links"
+                      element={<PromoterLinksPage />}
+                    />
+                    <Route
+                      path="/generated"
+                      element={<Navigate to="/promoter-links" replace />}
+                    />
                     <Route
                       path="/referrals/:id"
                       element={
