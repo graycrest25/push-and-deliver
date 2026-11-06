@@ -19,6 +19,9 @@ const identity = () =>
   (window as typeof window & { google?: { accounts: { id: GoogleIdentity } } })
     .google?.accounts.id;
 let sdk: Promise<void> | undefined;
+// GIS owns one configuration per page, including the challenge-bound nonce.
+// A fresh challenge must start in a fresh document rather than overwrite it.
+let initializedIdentity: GoogleIdentity | undefined;
 function loadGoogle() {
   if (identity()) return Promise.resolve();
   if (!sdk)
@@ -117,7 +120,11 @@ export function GoogleSignIn({
     }
   }
   async function start() {
-    if (lock.current) return;
+    if (lock.current || disabled) return;
+    if (initializedIdentity && initializedIdentity === identity()) {
+      window.location.reload();
+      return;
+    }
     lock.current = true;
     setBusy(true);
     onBusyChange(true);
@@ -154,7 +161,10 @@ export function GoogleSignIn({
         !Number.isFinite(Date.parse(challenge.expiresAt))
       )
         throw new Error("Google challenge is unavailable. Try again.");
-      identity()!.initialize({
+      const google = identity();
+      if (!google) throw new Error("Google sign-in did not load. Try again.");
+      initializedIdentity = google;
+      google.initialize({
         client_id: audience,
         nonce: challenge.nonce,
         auto_select: false,
@@ -183,11 +193,15 @@ export function GoogleSignIn({
         },
       });
       if (container.current)
-        identity()!.renderButton(container.current, {
+        google.renderButton(container.current, {
           theme: "outline",
           size: "large",
           text: "signin_with",
-          width: Math.min(container.current.clientWidth || 280, 400),
+          // The container is hidden until ready; measure its visible parent.
+          width: Math.min(
+            container.current.parentElement?.clientWidth || 280,
+            400,
+          ),
         });
       setReady(true);
     } catch (failure) {
@@ -240,7 +254,7 @@ export function GoogleSignIn({
           type="button"
           variant="ghost"
           disabled={disabled || busy}
-          onClick={start}
+          onClick={() => window.location.reload()}
         >
           Restart Google sign-in
         </Button>
