@@ -48,4 +48,8 @@ The updated native session contract now supplies administrator membership. The d
 
 Optional Google administrator sign-in uses the native nonce challenge and token exchange. Configure server-only `GOOGLE_CLIENT_ID` (no NEXT_ prefix), authorize the dashboard origin in Google and allow the same audience in backend `GOOGLE_CLIENT_IDS`. Only the public OAuth audience is returned by `/api/auth/options`; BASE_URL and session credentials remain private.
 
+For production, edit the **Web application** OAuth client in Google Cloud → Google Auth Platform → Clients and add `https://admin.pushndeliver.com` under **Authorized JavaScript origins**. For local development, also add `http://localhost` and `http://localhost:3000`. Use origins only, without `/login` or another path. The client must match `GOOGLE_CLIENT_ID`; adding a redirect URI alone does not authorize the JavaScript origin. Google's `The given origin is not allowed for the given client ID` error requires this provider setting. See [Google's setup guide](https://developers.google.com/identity/gsi/web/guides/get-google-api-clientid).
+
+The first Google action loads the official Google button. Restart reloads the page so the SDK initializes once with a fresh nonce challenge; it does not replace an existing Google configuration in the same document.
+
 Native reports, referrals/export, jobs/replay, shipment reads, manual withdrawals and asset uploads remain integrated. The login forgot-password option and signed-in change-password feature remain removed. See [remaining deployment and contract gaps](docs/api-migration.md#remaining-gaps-and-blockers) for shipment actions, historical screen reconciliation, attachment limitations and deployed verification. No private management key is exposed or used.

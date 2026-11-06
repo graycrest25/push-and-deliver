@@ -444,10 +444,13 @@ test("Google challenge login keeps nonce/device binding and opaque credentials b
   await page.route("https://accounts.google.com/gsi/client", (route) =>
     route.fulfill({
       contentType: "text/javascript",
-      body: `window.google = {accounts:{id:{initialize(o){window.googleOptions=o},renderButton(el){el.innerHTML='<button>Google fixture login</button>';el.firstChild.onclick=()=>window.googleOptions.callback({credential:'google-id-token'})},cancel(){}}}};`,
+      body: `window.googleInitializations=0;window.google = {accounts:{id:{initialize(o){window.googleInitializations++;window.googleOptions=o},renderButton(el,options){window.googleButtonWidth=options.width;el.innerHTML='<button>Google fixture login</button>';el.firstChild.onclick=()=>window.googleOptions.callback({credential:'google-id-token'})},cancel(){}}}};`,
     }),
   );
-  await page.goto("/sign-in");
+  const document = await page.goto("/sign-in");
+  expect(document?.headers()["referrer-policy"]).toBe(
+    "strict-origin-when-cross-origin",
+  );
   await page.getByRole("button", { name: "Continue with Google" }).click();
   await expect(
     page.getByRole("button", { name: "Google fixture login" }),
@@ -455,6 +458,29 @@ test("Google challenge login keeps nonce/device binding and opaque credentials b
   expect(await page.evaluate(() => (window as any).googleOptions.nonce)).toBe(
     "google-nonce",
   );
+  expect(await page.evaluate(() => (window as any).googleInitializations)).toBe(
+    1,
+  );
+  const expectedWidth = await page
+    .getByRole("button", { name: "Google fixture login" })
+    .evaluate((button) =>
+      Math.min(button.parentElement!.parentElement!.clientWidth, 400),
+    );
+  expect(await page.evaluate(() => (window as any).googleButtonWidth)).toBe(
+    expectedWidth,
+  );
+  await Promise.all([
+    page.waitForEvent("load"),
+    page.getByRole("button", { name: "Restart Google sign-in" }).click(),
+  ]);
+  await page.getByRole("button", { name: "Continue with Google" }).click();
+  await expect(
+    page.getByRole("button", { name: "Google fixture login" }),
+  ).toBeVisible();
+  expect(await page.evaluate(() => (window as any).googleInitializations)).toBe(
+    1,
+  );
+  expect(await writes("/v2/auth/social/challenges")).toHaveLength(2);
   await page.getByRole("button", { name: "Google fixture login" }).click();
   await expect(page).toHaveURL(/\/dashboard$/);
   const challenge = (await writes("/v2/auth/social/challenges"))[0],
