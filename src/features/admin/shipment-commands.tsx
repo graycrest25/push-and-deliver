@@ -1,3 +1,4 @@
+import { HistoricalStatusCommands } from "./historical-status-commands";
 import { useCurrentUser } from "@/contexts/UserContext";
 import { segment, type RecordData } from "@/lib/api";
 import { toast } from "sonner";
@@ -44,12 +45,17 @@ export function ShipmentCommands({
 }) {
   const { adminType } = useCurrentUser();
   if (adminType !== "super") return null;
+  if (data.historicalStatusEditable === true)
+    return (
+      <HistoricalStatusCommands kind="shipments" data={data} reload={reload} />
+    );
   const path = `/v1/shipments/${segment(data.id)}`,
     root = `/v1/admin/shipments/${segment(data.id)}`;
   const allowed = new Set<string>(data.allowedAdminActions || []);
   const pending =
     data.pendingCommands?.assignment || data.pendingCommands?.assessment;
   if (
+    data.readOnly === true ||
     !data.nativeWriteEligible ||
     !Number.isSafeInteger(data.version) ||
     data.version < 1 ||
@@ -302,7 +308,7 @@ export function ShipmentCommands({
               ? "Clearance completed. No further changes are available."
               : ["deliveredToDestination", "cancelled"].includes(data.status)
                 ? "This shipment is complete. No further status changes are available."
-                : "No administrator action is available for the current shipment state."}
+                : "No status update is available for the current shipment state."}
           </Notice>
         )}
         {allowed.has("record_cash_receipt") && !due.length && (

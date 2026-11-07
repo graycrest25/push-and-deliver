@@ -1,3 +1,4 @@
+import { HistoricalStatusCommands } from "./historical-status-commands";
 import { useCurrentUser } from "@/contexts/UserContext";
 import { segment, type RecordData } from "@/lib/api";
 import { toast } from "sonner";
@@ -5,6 +6,12 @@ import { ActionForm, RecordView } from "./shared";
 import { reason, reasonField } from "./workflow-fields";
 
 function canCancel(data: RecordData) {
+  if (
+    data.historicalStatusEditable === true ||
+    data.readOnly === true ||
+    data.nativeWriteEligible === false
+  )
+    return false;
   // Support both native status names and retained numeric ride statuses.
   // Unknown statuses fail closed; completed (3) and cancelled (4) are excluded.
   return [
@@ -29,7 +36,12 @@ export function RideCommands({
   reload: () => void;
 }) {
   const { adminType } = useCurrentUser();
-  if (adminType !== "super" || !canCancel(data)) return null;
+  if (adminType !== "super") return null;
+  if (data.historicalStatusEditable === true)
+    return (
+      <HistoricalStatusCommands kind="rides" data={data} reload={reload} />
+    );
+  if (!canCancel(data)) return null;
   const path = `/v1/admin/rides/${segment(data.id)}`;
   return (
     <ActionForm

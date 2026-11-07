@@ -137,6 +137,11 @@ export function RideDetails({ data }: { data: RecordData }) {
           {data.tip && <RecordView data={{ tip: data.tip }} />}
         </div>
       </InformationCard>
+      {(data.timeline || data.statusHistory) && (
+        <InformationCard title="Status history">
+          <RecordView data={{ history: data.timeline || data.statusHistory }} />
+        </InformationCard>
+      )}
       <InformationCard title="Dates">
         <RecordView
           data={{

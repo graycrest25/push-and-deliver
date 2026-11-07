@@ -790,6 +790,7 @@ export interface Action {
   fields?: Field[];
   initial?: RecordData;
   body?: (data: RecordData) => unknown;
+  bodyWithCurrent?: (values: RecordData, current: RecordData) => unknown;
   success?: string;
   preserveRetry?: boolean;
   operationScope?: string;
@@ -880,7 +881,7 @@ export function ActionForm({
       const path =
         pending.current?.path ??
         (typeof action.path === "function" ? action.path(values) : action.path);
-      const payload = pending.current
+      let payload = pending.current
         ? undefined
         : action.body
           ? action.body(values)
@@ -898,6 +899,8 @@ export function ActionForm({
           throw new Error("A current version is required.");
         action.validateCurrent?.(current);
         currentVersion = current.version;
+        if (action.bodyWithCurrent)
+          payload = action.bodyWithCurrent(values, current);
       }
       const body =
         pending.current?.body ??
