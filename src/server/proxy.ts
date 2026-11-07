@@ -392,7 +392,8 @@ async function proxyRequest(request: NextRequest, segments: string[]) {
     }
     // Ride cancellation and shipment commands are restricted to super admins.
     const rideCancellation =
-      method === "POST" && /^\/v1\/admin\/rides\/[^/]+\/cancel$/.test(path);
+      method === "POST" &&
+      /^\/v1\/admin\/rides\/[^/]+\/(cancel|historical-status)$/.test(path);
     if (
       rideCancellation ||
       (method === "POST" &&
@@ -417,7 +418,7 @@ async function proxyRequest(request: NextRequest, segments: string[]) {
           authorityResponse.status === 401 ? 401 : 403,
           rideCancellation ? "ride_access_denied" : "shipment_access_denied",
           rideCancellation
-            ? "Unable to verify ride cancellation access."
+            ? "Unable to verify ride update access."
             : "Unable to verify shipment update access.",
         );
       const authority = (await authorityResponse.json()).data;
@@ -431,7 +432,7 @@ async function proxyRequest(request: NextRequest, segments: string[]) {
           403,
           rideCancellation ? "ride_access_denied" : "shipment_access_denied",
           rideCancellation
-            ? "Only a super administrator can cancel rides."
+            ? "Only a super administrator can update rides."
             : "Only a super administrator can change shipment status from this dashboard.",
         );
     }

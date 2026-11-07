@@ -6,6 +6,23 @@ export function controlReads(body) {
   Object.assign(options, body);
 }
 export function reads(path, req, res, body, success, error, adminType) {
+  if (
+    path.endsWith("/historical-status") &&
+    path.startsWith("/v1/admin/rides/") &&
+    req.method === "POST"
+  ) {
+    if (
+      body.expectedSourceVersion !== options.sourceVersion ||
+      body.expectedVersion !== (options.rideVersion ?? 4)
+    )
+      error(res, 409, "version_conflict", "Ride changed.");
+    else {
+      options.rideStatus = body.targetStatus;
+      options.rideVersion = body.expectedVersion + 1;
+      success(res, { status: options.rideStatus });
+    }
+    return true;
+  }
   if (path === "/v1/admin/rides/ride-1/cancel" && req.method === "POST") {
     if (adminType !== "super")
       error(res, 403, "forbidden", "Super admin required.");
@@ -193,7 +210,11 @@ export function reads(path, req, res, body, success, error, adminType) {
     );
   else if (path.startsWith("/v1/admin/rides")) {
     const row = {
-      id: "ride-1",
+      id: options.rideId ?? "ride-1",
+      readOnly: options.readOnly,
+      historicalStatusEditable: options.historicalStatusEditable,
+      allowedHistoricalStatuses: options.allowedHistoricalStatuses,
+      sourceVersion: options.sourceVersion,
       service: "ridehailing",
       originCity: q.get("city") || "lagos",
       rideType: "standard",

@@ -7,13 +7,17 @@ export default defineConfig({
   use: {
     baseURL: "http://localhost:4320",
     trace: "retain-on-failure",
-    channel:
-      process.env.PLAYWRIGHT_CHANNEL === "chromium" ? "chromium" : undefined,
+    channel: ["chromium", "chrome"].includes(
+      process.env.PLAYWRIGHT_CHANNEL || "",
+    )
+      ? process.env.PLAYWRIGHT_CHANNEL
+      : undefined,
   },
   webServer: [
     {
       command: "node tests/harness/build.cjs && node tests/native-auth-api.mjs",
       url: "http://127.0.0.1:4319/health",
+      timeout: 180000,
       reuseExistingServer: false,
     },
     {

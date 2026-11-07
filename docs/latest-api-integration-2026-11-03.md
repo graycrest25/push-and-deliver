@@ -76,3 +76,13 @@ A failed approval preserves its reason and request reference. The conflict revie
 Long identifiers and references retain readable shared table-column widths; wide records scroll inside their table rather than forcing one-character ID columns or page overflow. Tariff rate lists use the same table primitives as the rest of the app. Loading tables retain those column widths.
 
 Enum labels are presented through field-specific mappings, including verification/vehicle/ride/fee ordinals and readable string statuses, roles, services, payment methods, tariff states and local zones. Original values remain in requests. Identifiers, versions, amounts and free text are not treated as enum ordinals; unknown enum values are shown as unknown instead of being guessed.
+
+## 7 November: historical status and shipment price reviews
+
+Historical ride/courier and shipment controls use `historicalStatusEditable` and `allowedHistoricalStatuses`, including records marked `readOnly`. Super administrators submit a required reason to `POST /v1/admin/rides/{id}/historical-status` or `POST /v1/admin/shipments/{id}/historical-status`. Both `expectedVersion` and the opaque string `expectedSourceVersion` come from a fresh detail read. Success reloads detail and shipment history. These commands do not pay riders, charge customers, issue refunds, or enable historical financial repricing. Ride `ZpmeaZPTkc66e6B9MKOI` uses the historical ride route with `targetStatus: "cancelled"`.
+
+Native ride cancellation continues to use `POST /v1/admin/rides/{id}/cancel` with a fresh `expectedVersion` and reason. The confirmation explains normal rider earnings and no automatic customer refund for assigned wallet rides, customer refunds for unassigned wallet rides, and payment review for cash rides.
+
+The shipment price-review form is available for `review_price` in `allowedAdminActions` on financially writable records. It submits `expectedVersion`, `newWeightKg`, the **full** `revisedGrossAmountMinor`, `currency: "NGN"`, and `reason` to `POST /v1/admin/shipments/{id}/price-reviews`. The returned outcome remains visible while detail and history refresh.
+
+Customer wallet payment belongs to the customer application, not an administrator impersonation flow. Its contract is `POST /v1/shipments/{id}/payments` with `{ "assessmentId": "FROM_DETAIL", "assessmentVersion": 6, "method": "wallet" }`; both assessment fields must come from current detail. This admin repository displays the review outcome and directs payment to the customer app.

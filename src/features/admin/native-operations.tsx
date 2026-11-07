@@ -1,3 +1,4 @@
+import { ShipmentPriceReview } from "./shipment-price-review";
 import { AccountSummary } from "./account-summary";
 import { OrderSummary } from "./order-summary";
 import { ShipmentTimeline } from "./shipment-commands";
@@ -15,10 +16,17 @@ import { useState } from "react";
 import { Link, useParams } from "react-router-dom";
 import { useCurrentUser } from "@/contexts/UserContext";
 import { canOperate } from "@/lib/admin-access";
-import { apiResponse, ApiError, queryPath, segment } from "@/lib/api";
+import {
+  apiResponse,
+  ApiError,
+  queryPath,
+  segment,
+  type RecordData,
+} from "@/lib/api";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import {
+  InformationCard,
   Heading,
   Notice,
   ErrorNotice,
@@ -221,6 +229,10 @@ function saveBlob(blob: Blob, name: string) {
 export function NativeShipment() {
   const { id = "" } = useParams();
   const record = useResource(`/v1/shipments/${segment(id)}`);
+  const [priceResult, setPriceResult] = useState<{
+    id: string;
+    result: RecordData;
+  } | null>(null);
   return (
     <div className="space-y-6">
       <Link className="text-sm text-primary underline" to="/shipment-orders">
@@ -231,6 +243,11 @@ export function NativeShipment() {
           Refresh
         </RefreshButton>
       </Heading>
+      {priceResult?.id === id && (
+        <InformationCard title="Price review outcome">
+          <RecordView data={priceResult.result} />
+        </InformationCard>
+      )}
       {record.error ? (
         <ErrorNotice error={record.error} retry={record.reload} />
       ) : record.loading ? (
@@ -238,6 +255,13 @@ export function NativeShipment() {
       ) : (
         record.data && (
           <>
+            <ShipmentPriceReview
+              data={record.data}
+              onSuccess={(result) => {
+                setPriceResult({ id, result });
+                record.reload();
+              }}
+            />
             <ShipmentDetails data={record.data} reload={record.reload} />
             <ShipmentTimeline id={id} />
             <ShipmentTracking id={id} status={record.data.status} />

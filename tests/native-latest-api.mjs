@@ -612,7 +612,18 @@ export function latest(path, req, res, body, success, error, role) {
       data.assessments[0].status = "paid";
       data.allowedAdminActions = [];
     }
-    if (action === "status-corrections") data.status = body.targetStatus;
+    if (action === "status-corrections" || action === "historical-status")
+      data.status = body.targetStatus;
+    if (action === "price-reviews") {
+      data.allowedAdminActions = [];
+      return reply({
+        outcome: "payment_due",
+        amountDueMinor: 300000,
+        currency: "NGN",
+        assessmentId: "assessment-review",
+        assessmentVersion: data.version,
+      });
+    }
     return reply(data);
   }
   return false;
