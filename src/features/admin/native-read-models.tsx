@@ -1,4 +1,6 @@
+import { LocalShippingTypes } from "./local-shipping-types";
 import { RideDetails, RideDetailsSkeleton } from "./ride-details";
+import { RideCommands } from "./ride-commands";
 import { enumLabel } from "@/lib/enum-labels";
 import {
   CountryPolicy,
@@ -75,9 +77,9 @@ export function NativeAccounts({ riders = false }: { riders?: boolean }) {
           params: { type },
           search: {
             param: "q",
-            label: riders ? "Search riders by name" : "Search users by name",
-            placeholder: "Enter a saved name",
-            help: "Matches saved names. Results are newest first; clear the search to show the full directory.",
+            label: "Search name, email or phone",
+            placeholder: "Enter a name, email or phone number",
+            help: "Search any part of a name, email or phone number. Names and emails ignore case; phone searches ignore spaces and punctuation.",
           },
           idKey: "uid",
           link: (row) => `/${type}/${segment(row.uid)}`,
@@ -248,6 +250,12 @@ export function NativeRides() {
             "dataQuality",
             "unavailableFields",
           ]),
+          search: {
+            param: "orderId",
+            label: "Search ride order ID",
+            placeholder: "Paste the full ride ID",
+            help: "Exact, case-sensitive match. City and status filters still apply.",
+          },
           filters: [
             select("city", ["lagos", "ibadan", "unknown"], "Origin city"),
             select("status", [
@@ -279,12 +287,13 @@ export function NativeRide() {
         path={`/v1/admin/rides/${segment(id)}`}
         skeleton={<RideDetailsSkeleton />}
       >
-        {(data) => <RideDetails data={data} />}
+        {(data, reload) => (
+          <>
+            <RideCommands key={id} data={data} reload={reload} />
+            <RideDetails data={data} />
+          </>
+        )}
       </CurrentRecord>
-      <Notice>
-        Ride administration is currently available for inspection. Cancellation
-        and assignment changes are unavailable here.
-      </Notice>
     </div>
   );
 }
@@ -417,19 +426,7 @@ export function NativeTariffs({ domestic = false }: { domestic?: boolean }) {
           Show drafts and retired tariffs
         </label>
       )}
-      {domestic && (
-        <DataList
-          spec={{
-            ...page("/v1/shipping/local-types", [
-              "id",
-              "name",
-              "details",
-              "active",
-            ]),
-            title: "Local shipping types",
-          }}
-        />
-      )}
+      {domestic && <LocalShippingTypes />}
       <DataList
         key={root}
         spec={{

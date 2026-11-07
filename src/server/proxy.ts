@@ -332,6 +332,8 @@ async function proxyRequest(request: NextRequest, segments: string[]) {
     headers.set("Content-Type", "application/json");
   }
   try {
+    const localTypeRequest =
+      /^\/v1\/admin\/shipping\/local-types(?:\/[^/]+)?$/.test(path);
     const gameRequest = path === "/v1/admin/game/rules";
     const reportReadinessRequest =
       path === "/v1/admin/analytics/coverage" ||
@@ -340,7 +342,12 @@ async function proxyRequest(request: NextRequest, segments: string[]) {
       method !== "GET" &&
       (path === "/v1/admin/coupons/campaigns" ||
         /^\/v1\/admin\/coupons\/campaigns\/[^/]+\/status$/.test(path));
-    if (gameRequest || reportReadinessRequest || campaignMutation) {
+    if (
+      gameRequest ||
+      reportReadinessRequest ||
+      campaignMutation ||
+      localTypeRequest
+    ) {
       const authorityResponse = await fetch(
         new URL(base.href.replace(/\/$/, "") + "/v2/auth/session"),
         {
@@ -378,11 +385,16 @@ async function proxyRequest(request: NextRequest, segments: string[]) {
             ? "Only super administrators can manage game rules."
             : reportReadinessRequest
               ? "Only super administrators can inspect report coverage or request rebuilds."
-              : "Only super and regular administrators can manage reward campaigns.",
+              : localTypeRequest
+                ? "Only super and regular administrators can manage local shipping types."
+                : "Only super and regular administrators can manage reward campaigns.",
         );
     }
-    // Shipment status commands in this dashboard are restricted to super admins.
+    // Ride cancellation and shipment commands are restricted to super admins.
+    const rideCancellation =
+      method === "POST" && /^\/v1\/admin\/rides\/[^/]+\/cancel$/.test(path);
     if (
+      rideCancellation ||
       (method === "POST" &&
         /^\/v1\/shipments\/[^/]+\/(accept|transitions|cancel)$/.test(path)) ||
       (method !== "GET" && /^\/v1\/admin\/shipments\//.test(path))
@@ -403,8 +415,10 @@ async function proxyRequest(request: NextRequest, segments: string[]) {
       if (!authorityResponse.ok)
         return fail(
           authorityResponse.status === 401 ? 401 : 403,
-          "shipment_access_denied",
-          "Unable to verify shipment update access.",
+          rideCancellation ? "ride_access_denied" : "shipment_access_denied",
+          rideCancellation
+            ? "Unable to verify ride cancellation access."
+            : "Unable to verify shipment update access.",
         );
       const authority = (await authorityResponse.json()).data;
       if (
@@ -415,8 +429,10 @@ async function proxyRequest(request: NextRequest, segments: string[]) {
       )
         return fail(
           403,
-          "shipment_access_denied",
-          "Only a super administrator can change shipment status from this dashboard.",
+          rideCancellation ? "ride_access_denied" : "shipment_access_denied",
+          rideCancellation
+            ? "Only a super administrator can cancel rides."
+            : "Only a super administrator can change shipment status from this dashboard.",
         );
     }
     // Check current authority server-side; never trust a browser-supplied subtype.

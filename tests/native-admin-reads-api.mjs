@@ -6,6 +6,70 @@ export function controlReads(body) {
   Object.assign(options, body);
 }
 export function reads(path, req, res, body, success, error, adminType) {
+  if (path === "/v1/admin/rides/ride-1/cancel" && req.method === "POST") {
+    if (adminType !== "super")
+      error(res, 403, "forbidden", "Super admin required.");
+    else if (options.rideCancelFailure) {
+      options.rideCancelFailure = false;
+      error(res, 503, "unavailable", "Retry cancellation.");
+    } else if (body.expectedVersion !== (options.rideVersion ?? 4))
+      error(res, 409, "version_conflict", "Ride changed.");
+    else {
+      options.rideStatus = "cancelled";
+      options.rideVersion = body.expectedVersion + 1;
+      success(res, {
+        id: "ride-1",
+        status: "cancelled",
+        version: options.rideVersion,
+      });
+    }
+    return true;
+  }
+  if (/^\/v1\/admin\/shipping\/local-types(?:\/[^/]+)?$/.test(path)) {
+    if (!["super", "regular"].includes(adminType)) {
+      error(res, 403, "forbidden", "Administrator required.");
+      return true;
+    }
+    options.localTypes ||= {
+      premium: {
+        id: "premium",
+        name: "Premium",
+        details: "Old estimate",
+        active: true,
+        version: 7,
+      },
+    };
+    const id = path.split("/")[5];
+    if (req.method === "GET") {
+      success(
+        res,
+        id
+          ? options.localTypes[id]
+          : { items: Object.values(options.localTypes), nextCursor: null },
+      );
+    } else if (
+      !req.headers["idempotency-key"] ||
+      req.headers["x-account-type"] !== "user"
+    ) {
+      error(res, 400, "headers", "Missing write headers.");
+    } else if (req.method === "POST") {
+      options.localTypes[body.id] = { ...body, version: 1 };
+      success(res, options.localTypes[body.id], 201);
+    } else if (options.localTypeFailure) {
+      options.localTypeFailure = false;
+      error(res, 503, "unavailable", "Retry save.");
+    } else if (body.expectedVersion !== options.localTypes[id]?.version) {
+      error(res, 409, "version_conflict", "Type changed.");
+    } else {
+      options.localTypes[id] = {
+        ...options.localTypes[id],
+        ...body,
+        version: body.expectedVersion + 1,
+      };
+      success(res, options.localTypes[id]);
+    }
+    return true;
+  }
   const isRead =
     /^\/v1\/admin\/(users(?:\/[^/]+)?|reports\/(accounts|riders)|rides(?:\/[^/]+)?|shipping\/(settings|offices|countries|tariffs)(?:\/[^/]+)?(?:\/(rates|countries|snapshot))?|geography\/(states|tariffs)(?:\/[^/]+)?(?:\/(rates|snapshot))?|audit|analytics\/(coverage|backfills))$/.test(
       path,
@@ -36,7 +100,7 @@ export function reads(path, req, res, body, success, error, adminType) {
                     !path.endsWith("/fares"))
                 ? []
                 : path === "/v1/admin/rides"
-                  ? ["status", "city", "limit", "cursor"]
+                  ? ["status", "city", "orderId", "limit", "cursor"]
                   : ["includeInactive", "limit", "cursor"];
   if ([...q.keys()].some((k) => !allowed.includes(k))) {
     error(res, 400, "invalid_query", "Unsupported native read query");
@@ -133,7 +197,8 @@ export function reads(path, req, res, body, success, error, adminType) {
       service: "ridehailing",
       originCity: q.get("city") || "lagos",
       rideType: "standard",
-      status: "accepted",
+      status: options.rideStatus ?? "accepted",
+      version: options.rideVersion ?? 4,
       customerId: "customer-1",
       canCancel: false,
       assignedRider: null,
@@ -141,7 +206,15 @@ export function reads(path, req, res, body, success, error, adminType) {
       payment: { status: "paid", method: "wallet" },
       createdAt: "2026-11-03T07:00:00Z",
     };
-    success(res, path === "/v1/admin/rides" ? paged([row]) : row);
+    const matches =
+      (!q.has("orderId") || q.get("orderId") === row.id) &&
+      (!q.has("status") || q.get("status") === row.status);
+    const result = paged(matches ? [row] : []);
+    if (options.ridePages && !q.has("orderId") && !q.has("cursor")) {
+      result.nextCursor = "ride-next";
+      result.hasMore = true;
+    }
+    success(res, path === "/v1/admin/rides" ? result : row);
   } else if (path === "/v1/admin/audit")
     success(
       res,
