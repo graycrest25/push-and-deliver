@@ -199,19 +199,25 @@ export function features(path, req, res, body, success, error) {
     return true;
   }
   if (path === "/v1/shipments") {
+    const row = {
+      id: "shipment-1",
+      originCity: q.get("city") || "lagos",
+      shipmentType: "express",
+      status: "placed",
+      totalAmountMinor: 35000,
+      currency: "NGN",
+      createdAt: "2026-01-01T00:00:00Z",
+    };
+    const matches =
+      (!q.has("orderId") || q.get("orderId") === row.id) &&
+      (!q.has("status") || q.get("status") === row.status) &&
+      (!q.has("shipmentType") || q.get("shipmentType") === row.shipmentType);
+    const nextCursor =
+      q.has("orderId") || q.has("cursor") ? null : "shipment-next";
     success(res, {
-      items: [
-        {
-          id: "shipment-1",
-          originCity: q.get("city") || "lagos",
-          shipmentType: "express",
-          status: "placed",
-          totalAmountMinor: 35000,
-          currency: "NGN",
-          createdAt: "2026-01-01T00:00:00Z",
-        },
-      ],
-      nextCursor: q.has("cursor") ? null : "shipment-next",
+      items: matches ? [row] : [],
+      nextCursor,
+      hasMore: !!nextCursor,
     });
     return true;
   }

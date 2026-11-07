@@ -152,6 +152,12 @@ export function NativeShipments() {
       <DataList
         spec={{
           path: "/v1/shipments",
+          search: {
+            param: "orderId",
+            label: "Search shipment order ID",
+            placeholder: "Paste the full shipment ID",
+            help: "Use the full ID, not the shortened shipment number. Matching is exact and case-sensitive; other filters still apply.",
+          },
           key: "items",
           paging: "cursor",
           columns: [

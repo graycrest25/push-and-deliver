@@ -77,9 +77,9 @@ export function NativeAccounts({ riders = false }: { riders?: boolean }) {
           params: { type },
           search: {
             param: "q",
-            label: riders ? "Search riders by name" : "Search users by name",
-            placeholder: "Enter a saved name",
-            help: "Matches saved names. Results are newest first; clear the search to show the full directory.",
+            label: "Search name, email or phone",
+            placeholder: "Enter a name, email or phone number",
+            help: "Search any part of a name, email or phone number. Names and emails ignore case; phone searches ignore spaces and punctuation.",
           },
           idKey: "uid",
           link: (row) => `/${type}/${segment(row.uid)}`,
@@ -250,6 +250,12 @@ export function NativeRides() {
             "dataQuality",
             "unavailableFields",
           ]),
+          search: {
+            param: "orderId",
+            label: "Search ride order ID",
+            placeholder: "Paste the full ride ID",
+            help: "Exact, case-sensitive match. City and status filters still apply.",
+          },
           filters: [
             select("city", ["lagos", "ibadan", "unknown"], "Origin city"),
             select("status", [

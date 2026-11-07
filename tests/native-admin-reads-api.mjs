@@ -100,7 +100,7 @@ export function reads(path, req, res, body, success, error, adminType) {
                     !path.endsWith("/fares"))
                 ? []
                 : path === "/v1/admin/rides"
-                  ? ["status", "city", "limit", "cursor"]
+                  ? ["status", "city", "orderId", "limit", "cursor"]
                   : ["includeInactive", "limit", "cursor"];
   if ([...q.keys()].some((k) => !allowed.includes(k))) {
     error(res, 400, "invalid_query", "Unsupported native read query");
@@ -206,7 +206,15 @@ export function reads(path, req, res, body, success, error, adminType) {
       payment: { status: "paid", method: "wallet" },
       createdAt: "2026-11-03T07:00:00Z",
     };
-    success(res, path === "/v1/admin/rides" ? paged([row]) : row);
+    const matches =
+      (!q.has("orderId") || q.get("orderId") === row.id) &&
+      (!q.has("status") || q.get("status") === row.status);
+    const result = paged(matches ? [row] : []);
+    if (options.ridePages && !q.has("orderId") && !q.has("cursor")) {
+      result.nextCursor = "ride-next";
+      result.hasMore = true;
+    }
+    success(res, path === "/v1/admin/rides" ? result : row);
   } else if (path === "/v1/admin/audit")
     success(
       res,

@@ -1396,7 +1396,7 @@ function DataListContent({
                 id={searchId}
                 type="search"
                 autoComplete="off"
-                maxLength={spec.search.maxLength ?? 100}
+                maxLength={spec.search.maxLength}
                 placeholder={spec.search.placeholder}
                 value={draft[spec.search.param] || ""}
                 onChange={(event) =>
@@ -1415,7 +1415,7 @@ function DataListContent({
               </p>
               <span className="sr-only" role="status">
                 {searching
-                  ? "Waiting for name search"
+                  ? "Waiting for search"
                   : loading
                     ? "Loading results"
                     : "Results updated"}
@@ -1426,7 +1426,12 @@ function DataListContent({
             <form
               onSubmit={(e) => {
                 e.preventDefault();
-                setFilters(draft);
+                setFilters({
+                  ...draft,
+                  ...(searchParam
+                    ? { [searchParam]: searchTerm || undefined }
+                    : {}),
+                });
                 setPage(0);
                 setCursors([""]);
               }}

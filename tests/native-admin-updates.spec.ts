@@ -45,7 +45,7 @@ test("directory name search debounces, encodes names, resets cursors and clears 
   await page.goto("/users");
   await page.getByRole("button", { name: "Next", exact: true }).click();
   await expect(page.getByText("Page 2 · 1 records on this page")).toBeVisible();
-  const search = page.getByLabel("Search users by name");
+  const search = page.getByLabel("Search name, email or phone");
   const response = directoryResponse(page, "David & Ana");
   await search.fill("D");
   await search.fill("Da");
@@ -73,12 +73,12 @@ test("directory name search debounces, encodes names, resets cursors and clears 
   await cleared;
   await expect(page.getByText("Page 1 · 1 records on this page")).toBeVisible();
   await page.getByRole("link", { name: "Riders", exact: true }).click();
-  await expect(page.getByLabel("Search riders by name")).toHaveValue("");
+  await expect(page.getByLabel("Search name, email or phone")).toHaveValue("");
   await expect(
     page.getByRole("cell", { name: "Native Rider", exact: true }),
   ).toBeVisible();
   const rider = directoryResponse(page, "David", "riders");
-  await page.getByLabel("Search riders by name").fill("David");
+  await page.getByLabel("Search name, email or phone").fill("David");
   await rider;
   await expect(
     page.getByRole("cell", { name: "David Newest", exact: true }),
@@ -92,7 +92,7 @@ test("directory name search debounces, encodes names, resets cursors and clears 
     query: { type: "riders", limit: "100" },
   });
 });
-test("late directory responses never replace a newer name search", async ({
+test("late directory responses never replace a newer search", async ({
   page,
 }) => {
   await login(page);
@@ -122,9 +122,9 @@ test("late directory responses never replace a newer name search", async ({
       })
       .catch(() => {});
   });
-  await page.getByLabel("Search users by name").fill("Old");
+  await page.getByLabel("Search name, email or phone").fill("Old");
   await expect.poll(() => queries.includes("Old")).toBe(true);
-  await page.getByLabel("Search users by name").fill("New");
+  await page.getByLabel("Search name, email or phone").fill("New");
   await expect(
     page.getByRole("cell", { name: "New", exact: true }),
   ).toBeVisible();
