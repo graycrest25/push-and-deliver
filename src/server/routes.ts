@@ -48,6 +48,10 @@ export const routes: readonly [string, string][] = [
   ["GET", "/v1/assets/{assetId}/download"],
   ["GET", "/v1/media/{assetId}/content"],
   ["GET", "/v1/shipping/local-types"],
+  ["GET", "/v1/admin/shipping/local-types"],
+  ["GET", "/v1/admin/shipping/local-types/{id}"],
+  ["POST", "/v1/admin/shipping/local-types"],
+  ["PATCH", "/v1/admin/shipping/local-types/{id}"],
 
   ["POST", "/v1/shipments/{id}/transitions"],
   ["GET", "/v1/admin/config/mobile/{app}/{platform}"],

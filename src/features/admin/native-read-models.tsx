@@ -1,3 +1,4 @@
+import { LocalShippingTypes } from "./local-shipping-types";
 import { RideDetails, RideDetailsSkeleton } from "./ride-details";
 import { RideCommands } from "./ride-commands";
 import { enumLabel } from "@/lib/enum-labels";
@@ -419,19 +420,7 @@ export function NativeTariffs({ domestic = false }: { domestic?: boolean }) {
           Show drafts and retired tariffs
         </label>
       )}
-      {domestic && (
-        <DataList
-          spec={{
-            ...page("/v1/shipping/local-types", [
-              "id",
-              "name",
-              "details",
-              "active",
-            ]),
-            title: "Local shipping types",
-          }}
-        />
-      )}
+      {domestic && <LocalShippingTypes />}
       <DataList
         key={root}
         spec={{

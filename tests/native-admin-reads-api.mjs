@@ -25,6 +25,51 @@ export function reads(path, req, res, body, success, error, adminType) {
     }
     return true;
   }
+  if (/^\/v1\/admin\/shipping\/local-types(?:\/[^/]+)?$/.test(path)) {
+    if (!["super", "regular"].includes(adminType)) {
+      error(res, 403, "forbidden", "Administrator required.");
+      return true;
+    }
+    options.localTypes ||= {
+      premium: {
+        id: "premium",
+        name: "Premium",
+        details: "Old estimate",
+        active: true,
+        version: 7,
+      },
+    };
+    const id = path.split("/")[5];
+    if (req.method === "GET") {
+      success(
+        res,
+        id
+          ? options.localTypes[id]
+          : { items: Object.values(options.localTypes), nextCursor: null },
+      );
+    } else if (
+      !req.headers["idempotency-key"] ||
+      req.headers["x-account-type"] !== "user"
+    ) {
+      error(res, 400, "headers", "Missing write headers.");
+    } else if (req.method === "POST") {
+      options.localTypes[body.id] = { ...body, version: 1 };
+      success(res, options.localTypes[body.id], 201);
+    } else if (options.localTypeFailure) {
+      options.localTypeFailure = false;
+      error(res, 503, "unavailable", "Retry save.");
+    } else if (body.expectedVersion !== options.localTypes[id]?.version) {
+      error(res, 409, "version_conflict", "Type changed.");
+    } else {
+      options.localTypes[id] = {
+        ...options.localTypes[id],
+        ...body,
+        version: body.expectedVersion + 1,
+      };
+      success(res, options.localTypes[id]);
+    }
+    return true;
+  }
   const isRead =
     /^\/v1\/admin\/(users(?:\/[^/]+)?|reports\/(accounts|riders)|rides(?:\/[^/]+)?|shipping\/(settings|offices|countries|tariffs)(?:\/[^/]+)?(?:\/(rates|countries|snapshot))?|geography\/(states|tariffs)(?:\/[^/]+)?(?:\/(rates|snapshot))?|audit|analytics\/(coverage|backfills))$/.test(
       path,

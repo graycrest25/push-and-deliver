@@ -1,3 +1,4 @@
+import { LocalShippingType } from "@/features/admin/local-shipping-types";
 import { GameRulesPage } from "@/features/admin/game-rules";
 import { PromoterLinksPage } from "@/features/admin/promoter-links";
 import {
@@ -278,6 +279,10 @@ export default function Router() {
                     <Route
                       path="/delivery-zones"
                       element={<NativeTariffs domestic />}
+                    />
+                    <Route
+                      path="/delivery-zones/local-types/:id"
+                      element={<LocalShippingType />}
                     />
                     <Route
                       path="/delivery-zones/tariffs/:id"
