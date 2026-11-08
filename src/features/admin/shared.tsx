@@ -841,6 +841,7 @@ export interface Action {
   minimumVersion?: 0 | 1;
   expectedStatus?: number;
   renderResult?: (result: RecordData) => ReactNode;
+  restartLabel?: string;
   validateResult?: (result: RecordData) => void;
 }
 export function ActionForm({
@@ -1189,7 +1190,7 @@ export function ActionForm({
               className="ml-2"
               onClick={() => setResult(null)}
             >
-              Start another action
+              {action.restartLabel || "Start another action"}
             </Button>
           )}
         </form>

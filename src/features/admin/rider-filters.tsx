@@ -30,7 +30,9 @@ export function onlineLabel(data: RecordData) {
 export function RiderExportFilters({
   value,
   change,
+  riders = true,
 }: {
+  riders?: boolean;
   value: RecordData;
   change: (next: RecordData) => void;
 }) {
@@ -38,7 +40,11 @@ export function RiderExportFilters({
     <>
       {[
         field("q", "Name, email or phone", { required: false }),
-        ...riderFilters,
+        ...riderFilters.filter(
+          (filter) =>
+            riders ||
+            !["vehicleType", "verificationStatus"].includes(filter.name),
+        ),
       ].map((f) => (
         <label key={f.name} className="space-y-2 text-sm">
           {f.label}

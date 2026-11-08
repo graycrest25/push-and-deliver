@@ -1,3 +1,4 @@
+import { canOperate } from "@/lib/admin-access";
 import { HistoricalStatusCommands } from "./historical-status-commands";
 import { useCurrentUser } from "@/contexts/UserContext";
 import { segment, type RecordData } from "@/lib/api";
@@ -44,14 +45,26 @@ export function ShipmentCommands({
   reload: () => void;
 }) {
   const { adminType } = useCurrentUser();
-  if (adminType !== "super") return null;
-  if (data.historicalStatusEditable === true)
+  if (!canOperate(adminType)) return null;
+  if (adminType === "super" && data.historicalStatusEditable === true)
     return (
       <HistoricalStatusCommands kind="shipments" data={data} reload={reload} />
     );
   const path = `/v1/shipments/${segment(data.id)}`,
     root = `/v1/admin/shipments/${segment(data.id)}`;
-  const allowed = new Set<string>(data.allowedAdminActions || []);
+  const allowed = new Set<string>(
+    (data.allowedAdminActions || []).filter(
+      (action: string) =>
+        adminType === "super" ||
+        ["confirm_arrival", "dispatch", "complete_delivery"].includes(action),
+    ),
+  );
+  if (
+    adminType !== "super" &&
+    allowed.size === 0 &&
+    !data.onwardDeliveryBlockers?.length
+  )
+    return null;
   const pending =
     data.pendingCommands?.assignment || data.pendingCommands?.assessment;
   if (
@@ -86,17 +99,17 @@ export function ShipmentCommands({
     body: () => ({ expectedVersion: version(data) }),
   });
   for (const [code, title, targetStatus] of [
-    ["confirm_arrival", "Confirm receipt at HQ", "sentToHq"],
-    ["dispatch", "Dispatch to destination", "onrouteToDestination"],
+    ["confirm_arrival", "Confirm office arrival", "sentToHq"],
+    ["dispatch", "Out for final delivery", "onrouteToDestination"],
     [
       "complete_delivery",
-      "Mark delivered to destination",
+      "Delivered to final destination",
       "deliveredToDestination",
     ],
   ])
     add(code, {
       title,
-      path: `${path}/transitions`,
+      path: `${root}/transitions`,
       body: () => ({ expectedVersion: version(data), targetStatus }),
     });
   add("cancel", {
@@ -277,13 +290,26 @@ export function ShipmentCommands({
   return (
     <InformationCard title="Update shipment status">
       <div className="space-y-4">
-        {["sentToHq", "onrouteToDestination"].includes(data.status) &&
-          data.payment?.status !== "paid" && (
-            <Notice>
-              Payment must be confirmed and outstanding assessments settled
-              before dispatch or delivery.
-            </Notice>
-          )}
+        {(data.onwardDeliveryBlockers || []).map((blocker: string) => (
+          <Notice key={blocker}>
+            {(
+              {
+                customer_payment_required:
+                  "Customer payment must be completed before onward delivery.",
+                assessment_payment_required:
+                  "An outstanding shipment assessment must be paid.",
+              } as Record<string, string>
+            )[blocker] ||
+              "Onward delivery is currently blocked. Refresh the shipment for updated requirements."}
+          </Notice>
+        ))}
+        {!!data.onwardDeliveryBlockers?.length && (
+          <p className="text-sm text-muted-foreground">
+            Confirming the rider’s HQ cash receipt does not pay the customer’s
+            bill. Use the shipment assessment and customer payment controls to
+            settle outstanding charges.
+          </p>
+        )}
         {allowed.has("assign_rider") && (
           <Link to="/riders" className="text-sm text-primary underline">
             Open rider directory

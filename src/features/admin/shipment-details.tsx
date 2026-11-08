@@ -1,9 +1,18 @@
+import {
+  riderEarnings,
+  riderPaymentMethod,
+  riderPaymentStatus,
+  riderTaskStatus,
+  riderConfirmation,
+} from "./shipment-rider-payment";
+import { OfficeHandoffCode } from "./office-handoff-code";
 import { ShipmentCommands } from "./shipment-commands";
 import { useState, type ReactNode } from "react";
 import { Link } from "react-router-dom";
 import { useCurrentUser } from "@/contexts/UserContext";
 import { canAccessAdminScreen } from "@/lib/admin-access";
 import { apiResponse, segment, type RecordData } from "@/lib/api";
+import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
 import { shipmentStatuses, shipmentStatusLabel } from "@/lib/shipment-status";
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -58,6 +67,9 @@ function AccountLink({ id, rider = false }: { id: unknown; rider?: boolean }) {
     <>{id}</>
   );
 }
+const riderText = (value: unknown) =>
+  typeof value === "string" && value.trim() ? value.trim() : "Unavailable";
+
 export const ShipmentStatusActions = ShipmentCommands;
 export function ShipmentDetails({
   data,
@@ -134,12 +146,17 @@ export function ShipmentDetails({
           </Card>
         ))}
       </div>
+      <OfficeHandoffCode data={data} />
       <ShipmentStatusActions data={data} reload={reload} />
       <Section title="Order information">
         <Fields
           values={[
             ["Shipment ID", data.id],
             ["Shipment type", type],
+            [
+              "Pickup OTP",
+              data.pickupOtp == null ? "Unavailable" : String(data.pickupOtp),
+            ],
             ...(customs
               ? ([
                   ["Clearance type", friendly(data.clearanceType)],
@@ -254,15 +271,73 @@ export function ShipmentDetails({
           )}
         </div>
       </Section>
+      <Section title="Rider pickup earnings and payment">
+        <Fields
+          values={[
+            ["Rider pickup earnings", riderEarnings(data)],
+            [
+              "Rider payment method",
+              riderPaymentMethod(data.riderPayment?.method),
+            ],
+            [
+              "Rider payment status",
+              riderPaymentStatus(data.riderPayment?.status),
+            ],
+            ["Rider task status", riderTaskStatus(data.riderTaskStatus)],
+            ...(data.riderPayment?.confirmedAt
+              ? ([
+                  [
+                    "Confirmation time",
+                    riderConfirmation(data.riderPayment.confirmedAt),
+                  ],
+                ] as [string, ReactNode][])
+              : []),
+          ]}
+        />
+        <p className="mt-4 text-sm text-muted-foreground">
+          Rider earnings and receipt information are separate from the
+          customer’s shipment payment and the parcel’s delivery stage.
+        </p>
+      </Section>
       <Section title="Rider and vehicle">
         {data.assignedRider ? (
-          <Fields
-            values={[
-              ["Rider ID", <AccountLink id={data.assignedRider.id} rider />],
-              ["Rider name", data.assignedRider.name],
-              ["Rider phone", data.assignedRider.phone],
-            ]}
-          />
+          <div className="space-y-4">
+            <Avatar className="size-20">
+              <AvatarImage
+                src={data.assignedRider.imageUrl || undefined}
+                alt={`${riderText(data.assignedRider.name)} rider photo`}
+                className="object-cover"
+              />
+              <AvatarFallback className="text-xs">No photo</AvatarFallback>
+            </Avatar>
+            <Fields
+              values={[
+                [
+                  "Rider ID",
+                  data.assignedRider.id ? (
+                    <AccountLink id={data.assignedRider.id} rider />
+                  ) : (
+                    "Unavailable"
+                  ),
+                ],
+                ["Rider name", riderText(data.assignedRider.name)],
+                ["Rider phone", riderText(data.assignedRider.phone)],
+                [
+                  "Vehicle type",
+                  data.assignedRider.vehicle?.type === "bike"
+                    ? "Motorbike"
+                    : riderText(data.assignedRider.vehicle?.type),
+                ],
+                ["Vehicle color", riderText(data.assignedRider.vehicle?.color)],
+                ["Vehicle make", riderText(data.assignedRider.vehicle?.make)],
+                ["Vehicle model", riderText(data.assignedRider.vehicle?.model)],
+                [
+                  "Plate number",
+                  riderText(data.assignedRider.vehicle?.plateNumber),
+                ],
+              ]}
+            />
+          </div>
         ) : (
           <Notice>No rider is assigned to this shipment.</Notice>
         )}

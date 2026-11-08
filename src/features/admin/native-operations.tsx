@@ -1,3 +1,10 @@
+import {
+  riderEarnings,
+  riderPaymentMethod,
+  riderPaymentStatus,
+  riderTaskStatus,
+  riderConfirmation,
+} from "./shipment-rider-payment";
 import { ShipmentPriceReview } from "./shipment-price-review";
 import { AccountSummary } from "./account-summary";
 import { OrderSummary } from "./order-summary";
@@ -193,6 +200,31 @@ export function NativeShipments() {
               ),
             },
             { key: "totalAmountMinor", label: "Total amount" },
+            {
+              key: "riderAmountMinor",
+              label: "Rider pickup earnings",
+              render: riderEarnings,
+            },
+            {
+              key: "riderPaymentMethod",
+              label: "Rider payment method",
+              render: (row) => riderPaymentMethod(row.riderPayment?.method),
+            },
+            {
+              key: "riderPaymentStatus",
+              label: "Rider payment status",
+              render: (row) => riderPaymentStatus(row.riderPayment?.status),
+            },
+            {
+              key: "riderTaskStatus",
+              label: "Rider task status",
+              render: (row) => riderTaskStatus(row.riderTaskStatus),
+            },
+            {
+              key: "riderConfirmedAt",
+              label: "Confirmation time",
+              render: (row) => riderConfirmation(row.riderPayment?.confirmedAt),
+            },
             { key: "createdAt", label: "Created at" },
           ],
           filters: [
@@ -598,6 +630,28 @@ function JobDetails({ id }: { id: string }) {
   );
 }
 export function NativeReferrals() {
+  function referralEmail(row: RecordData, party: "referred" | "referrer") {
+    const generated = row.referrerAccountType === null;
+    if (party === "referrer" && generated)
+      return row.promoterName ? (
+        <span>{row.promoterName} (Promoter)</span>
+      ) : (
+        <span className="text-muted-foreground">Unavailable</span>
+      );
+    const email = row[`${party}Email`];
+    const uid = row[`${party}Uid`];
+    if (!email)
+      return <span className="text-muted-foreground">Unavailable</span>;
+    if (!uid || generated) return <span>{email}</span>;
+    return (
+      <Link
+        to={`/users/${segment(uid)}`}
+        className="font-medium text-primary underline underline-offset-4 hover:text-primary/80 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+      >
+        {email}
+      </Link>
+    );
+  }
   const [tab, setTab] = useState("user");
   const [draft, setDraft] = useState({ startDate: "", endDate: "" });
   const [dates, setDates] = useState(draft);
@@ -719,20 +773,26 @@ export function NativeReferrals() {
           key: "items",
           paging: "cursor",
           params,
-          pageSizes: [10, 20, 30, 50, 100],
+          pageSizes: [10, 20, 30, 50],
           defaultPageSize: 20,
           filters: [
             field("referredUid", "Referred user ID"),
             field("referralCodeUsed", "Referral code"),
           ],
-          columns: cols(
-            "id",
-            "referredUid",
-            "referrerUid",
-            "referreduserType",
-            "referralCodeUsed",
-            "createdAt",
-          ),
+          columns: [
+            { key: "id" },
+            {
+              key: "referredEmail",
+              label: "Referred Email",
+              render: (row) => referralEmail(row, "referred"),
+            },
+            {
+              key: "referrerEmail",
+              label: "Referrer Email",
+              render: (row) => referralEmail(row, "referrer"),
+            },
+            ...cols("referreduserType", "referralCodeUsed", "createdAt"),
+          ],
           note: "CSV uses the selected referrer tab and applied dates. Global totals above do not change with these filters.",
         }}
       />

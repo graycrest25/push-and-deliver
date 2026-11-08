@@ -695,7 +695,7 @@ test("native activation report renders users and embedded summary without the ob
   ).toBe(false);
 });
 
-test("native directories show returned profiles with correct type, UID details and cursor exports", async ({
+test("native directories show returned profiles with correct type, UID details and complete exports", async ({
   page,
 }) => {
   await login(page, "regular");
@@ -746,23 +746,14 @@ test("native directories show returned profiles with correct type, UID details a
   await page
     .getByRole("button", { name: "Download export", exact: true })
     .click();
-  expect((await download).suggestedFilename()).toBe("riders-1.csv");
-  await expect(
-    page.getByText("More records are available.", { exact: false }),
-  ).toBeVisible();
-  const second = page.waitForEvent("download");
-  await page.getByRole("button", { name: "Download next page" }).click();
-  await second;
-  await expect(
-    page.getByText("Export complete.", { exact: false }),
-  ).toBeVisible();
-  await page.getByRole("button", { name: "Start new export" }).click();
+  expect((await download).suggestedFilename()).toBe("riders.csv");
+  await expect(page.getByText("Export downloaded.")).toBeVisible();
   await page.getByLabel("Export format").selectOption("json");
   const jsonDownload = page.waitForEvent("download");
   await page
     .getByRole("button", { name: "Download export", exact: true })
     .click();
-  expect((await jsonDownload).suggestedFilename()).toBe("riders-1.json");
+  expect((await jsonDownload).suggestedFilename()).toBe("riders.json");
   const calls = (await control()).records;
   expect(
     calls.some(
@@ -779,7 +770,8 @@ test("native directories show returned profiles with correct type, UID details a
     calls.some(
       (r: any) =>
         r.path === "/v1/admin/reports/riders" &&
-        r.query.cursor === "export-riders",
+        !("cursor" in r.query) &&
+        !("limit" in r.query),
     ),
   ).toBe(true);
   expect(
@@ -1487,21 +1479,21 @@ test("super shipment commands follow native versions and lifecycle across shipme
       .getByRole("button", { name: "Accept at office", exact: true })
       .click();
     await expect(
-      page.locator("summary").filter({ hasText: "Dispatch to destination" }),
+      page.locator("summary").filter({ hasText: "Out for final delivery" }),
     ).toBeVisible();
-    await openForm(page, "Dispatch to destination");
+    await openForm(page, "Out for final delivery");
     await page
-      .getByRole("button", { name: "Dispatch to destination", exact: true })
+      .getByRole("button", { name: "Out for final delivery", exact: true })
       .click();
     await expect(
       page
         .locator("summary")
-        .filter({ hasText: "Mark delivered to destination" }),
+        .filter({ hasText: "Delivered to final destination" }),
     ).toBeVisible();
-    await openForm(page, "Mark delivered to destination");
+    await openForm(page, "Delivered to final destination");
     await page
       .getByRole("button", {
-        name: "Mark delivered to destination",
+        name: "Delivered to final destination",
         exact: true,
       })
       .click();
@@ -1521,7 +1513,9 @@ test("super shipment commands follow native versions and lifecycle across shipme
         Object.keys(call.body).length === 1,
     ),
   ).toBeTruthy();
-  const transitions = await writes("/v1/shipments/shipment-1/transitions");
+  const transitions = await writes(
+    "/v1/admin/shipments/shipment-1/transitions",
+  );
   expect(transitions).toHaveLength(6);
   expect(transitions[0].body).toEqual({
     expectedVersion: 4,
@@ -1546,11 +1540,11 @@ test("shipment actions block unpaid dispatch, stale updates and non-super access
   await page.goto("/shipment-orders/shipment-1");
   await expect(
     page.getByText(
-      "Payment must be confirmed and outstanding assessments settled before dispatch or delivery.",
+      "Customer payment must be completed before onward delivery.",
     ),
   ).toBeVisible();
   await expect(
-    page.locator("summary").filter({ hasText: "Dispatch to destination" }),
+    page.locator("summary").filter({ hasText: "Out for final delivery" }),
   ).toHaveCount(0);
   await control({
     shipment: { status: "acceptedByRider" },

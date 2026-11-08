@@ -10,9 +10,9 @@ async function login(page: Page) {
   await page.getByLabel("Email", { exact: true }).fill("admin@example.test");
   await page.getByLabel("Password", { exact: true }).fill("example-password");
   await page.getByRole("button", { name: "Sign In", exact: true }).click();
-  await expect(page.locator("#workspace-content")).toBeVisible();
+  await expect(page.locator("#workspace-content")).toBeVisible({ timeout: 30_000 });
 }
-test("rider filters and online labels apply to the directory and paginated JSON exports", async ({
+test("rider filters and online labels apply to the directory and single-download exports", async ({
   page,
 }) => {
   await login(page);
@@ -123,23 +123,23 @@ test("rider filters and online labels apply to the directory and paginated JSON 
     .click();
   const saved = await download;
   const exported = JSON.parse(await readFile((await saved.path())!, "utf8"));
-  expect(exported.items[0]).toMatchObject({
+  expect(exported.data.items[0]).toMatchObject({
     phoneNumber: "+2348000000000",
     walletBalanceMinor: null,
     completedRides: 2,
     cancelledRides: 1,
     ongoingOrders: 0,
   });
-  await expect(
-    panel.getByText("More records are available.", { exact: false }),
-  ).toBeVisible();
+  await expect(panel.getByText("Export downloaded.")).toBeVisible();
   await expect(
     panel.getByRole("combobox", { name: "Vehicle type", exact: true }),
-  ).toBeDisabled();
-  await panel.getByRole("button", { name: "Download next page" }).click();
-  await expect.poll(() => exports.length).toBe(2);
-  const first = Object.fromEntries(exports[0].searchParams),
-    second = Object.fromEntries(exports[1].searchParams);
+  ).toBeEnabled();
+  await expect(panel.getByText("Records per export page")).toHaveCount(0);
+  await expect(
+    panel.getByRole("button", { name: "Download next page" }),
+  ).toHaveCount(0);
+  expect(exports).toHaveLength(1);
+  const first = Object.fromEntries(exports[0].searchParams);
   expect(first).toMatchObject({
     vehicleType: "bike",
     verificationStatus: "verified",
@@ -147,13 +147,9 @@ test("rider filters and online labels apply to the directory and paginated JSON 
     startDate: "2026-11-01",
     endDate: "2026-11-08",
     format: "json",
-    limit: "2000",
   });
-  expect(second).toEqual({ ...first, cursor: "export-next" });
-  await expect(
-    panel.getByText("Export complete.", { exact: false }),
-  ).toBeVisible();
-  await panel.getByRole("button", { name: "Start new export" }).click();
+  expect(first).not.toHaveProperty("limit");
+  expect(first).not.toHaveProperty("cursor");
   await panel
     .getByRole("combobox", { name: "Export format", exact: true })
     .selectOption("csv");
@@ -165,12 +161,10 @@ test("rider filters and online labels apply to the directory and paginated JSON 
   expect(await readFile((await csv.path())!, "utf8")).toContain(
     '"+2348000000000",Unavailable',
   );
-  await panel.getByRole("button", { name: "Download next page" }).click();
-  await expect.poll(() => exports.length).toBe(4);
-  expect(Object.fromEntries(exports[3].searchParams)).toEqual({
+  expect(exports).toHaveLength(2);
+  expect(Object.fromEntries(exports[1].searchParams)).toEqual({
     ...first,
     format: "csv",
-    cursor: "csv-next",
   });
 });
 
@@ -229,4 +223,56 @@ test("application vehicle filters use bike and unassigned with saved online stat
   });
   await expect(applicant.getByText("Offline", { exact: true })).toBeVisible();
   await expect(applicant.getByText("No photo", { exact: true })).toBeVisible();
+});
+
+test("users export preserves all rows and sends date and contact filters without pagination", async ({
+  page,
+}) => {
+  await login(page);
+  const exports: URL[] = [];
+  const header =
+    "Full name,Email,Phone number,Registration date,Vehicle type,Online status,Verification status,Completed orders,Cancelled orders,Ongoing orders,Wallet balance";
+  const rows = Array.from(
+    { length: 2001 },
+    (_, i) =>
+      `Customer ${i},customer@example.test,+2348000000000,2026-01-08,Not applicable,Unknown,Verified,2,1,0,100.00`,
+  );
+  const csv = [header, ...rows].join("\n");
+  await page.route("**/api/proxy/v1/admin/reports/users?*", (route) => {
+    exports.push(new URL(route.request().url()));
+    return route.fulfill({ contentType: "text/csv", body: csv });
+  });
+  await page.goto("/users");
+  const panel = page
+    .locator("details")
+    .filter({
+      has: page.locator("summary").filter({ hasText: "Export users" }),
+    });
+  await panel.locator("summary").click();
+  await panel.getByLabel("Start date", { exact: true }).fill("2025-01-08");
+  await panel.getByLabel("End date", { exact: true }).fill("2026-11-08");
+  await panel
+    .getByLabel("Name, email or phone", { exact: true })
+    .fill("customer");
+  await expect(panel.getByLabel("Vehicle type", { exact: true })).toHaveCount(
+    0,
+  );
+  const download = page.waitForEvent("download");
+  await panel
+    .getByRole("button", { name: "Download export", exact: true })
+    .click();
+  const saved = await download;
+  expect(saved.suggestedFilename()).toBe("users.csv");
+  expect(await readFile((await saved.path())!, "utf8")).toBe(csv);
+  expect(exports).toHaveLength(1);
+  expect(Object.fromEntries(exports[0].searchParams)).toEqual({
+    startDate: "2025-01-08",
+    endDate: "2026-11-08",
+    q: "customer",
+    format: "csv",
+  });
+  await expect(panel.getByLabel("Start date", { exact: true })).toBeEnabled();
+  await expect(
+    panel.getByRole("button", { name: "Download export", exact: true }),
+  ).toBeEnabled();
 });

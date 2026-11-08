@@ -1,14 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { Link, useNavigate, useParams } from "react-router-dom";
-import { IconArrowLeft, IconPaperclip, IconSend } from "@tabler/icons-react";
-import {
-  api,
-  apiURL,
-  ApiError,
-  queryPath,
-  segment,
-  type RecordData,
-} from "@/lib/api";
+import { IconArrowLeft, IconSend } from "@tabler/icons-react";
+import { api, ApiError, queryPath, segment, type RecordData } from "@/lib/api";
 import { useCurrentUser } from "@/contexts/UserContext";
 import { DEFAULT_PAGE_SIZE } from "@/lib/pagination";
 import { Button } from "@/components/ui/button";
@@ -26,6 +19,8 @@ import { toast } from "sonner";
 import { RecordSkeleton } from "@/components/ui/loading-skeletons";
 import { RefreshButton } from "@/components/ui/refresh-button";
 import { ErrorNotice, Notice, RecordView, display } from "./shared";
+
+import { SupportAttachment } from "./support-attachment";
 
 const tickets = "/v1/admin/support/tickets";
 const closingMessage =
@@ -552,27 +547,22 @@ function Conversation({ id }: { id: string }) {
                               {item.message}
                             </p>
                           )}
-                          {item.attachment?.assetId &&
-                            (claimed ? (
-                              <a
-                                className="inline-flex items-center gap-2 text-sm underline underline-offset-4"
-                                href={apiURL(
-                                  `/v1/media/${segment(item.attachment.assetId)}/content`,
-                                )}
-                                target="_blank"
-                                rel="noreferrer"
-                              >
-                                <IconPaperclip size={15} aria-hidden="true" />
-                                Download attachment
-                              </a>
+                          {item.attachmentUnavailable ? (
+                            <p className="text-xs">Attachment unavailable</p>
+                          ) : item.attachment?.assetId ? (
+                            adminType === "super" ||
+                            (claimed && data.status === "open") ? (
+                              <SupportAttachment
+                                key={item.attachment.assetId}
+                                assetId={item.attachment.assetId}
+                                contentType={item.attachment.contentType || ""}
+                              />
                             ) : (
                               <p className="text-xs">
-                                Claim ticket to download
+                                Claim ticket to view attachment
                               </p>
-                            ))}
-                          {item.attachmentUnavailable && (
-                            <p className="text-xs">Attachment unavailable</p>
-                          )}
+                            )
+                          ) : null}
                         </div>
                         <time
                           dateTime={item.createdAt}

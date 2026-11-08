@@ -241,6 +241,7 @@ export function features(path, req, res, body, success, error) {
       nativeWriteEligible: true,
       pendingCommands: { assignment: false, assessment: false },
       allowedAdminActions,
+      onwardDeliveryBlockers: paid ? [] : ["customer_payment_required"],
     });
     return true;
   }
@@ -248,7 +249,10 @@ export function features(path, req, res, body, success, error) {
     success(res, { items: [], nextCursor: null, hasMore: false });
     return true;
   }
-  if (/^\/v1\/shipments\/shipment-1\/(accept|transitions|cancel)$/.test(path)) {
+  if (
+    /^\/v1\/shipments\/shipment-1\/(accept|transitions|cancel)$/.test(path) ||
+    path === "/v1/admin/shipments/shipment-1/transitions"
+  ) {
     const action = path.split("/").at(-1);
     const allowed =
       action === "accept"
