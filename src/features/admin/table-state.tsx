@@ -6,14 +6,12 @@ export type SavedTable = {
   filters: RecordData;
   draft: RecordData;
   size: number;
-  cursors: string[];
-  page: number;
-  scrollTop: number;
   scrollLeft: number;
 };
 const Context = createContext<Map<string, SavedTable> | null>(null);
-// Keep navigation state only, never account records. Leaving a section or changing
-// identity discards it. Detail routes and their Back links share the same store.
+// Keep filter and display preferences only, never records or server cursors.
+// Every list mount starts a fresh pagination sequence, including after deployment.
+// Leaving a section or changing identity discards the preferences.
 export function TableStateProvider({ children }: { children: ReactNode }) {
   const { pathname } = useLocation();
   const { user } = useCurrentUser();
@@ -23,7 +21,9 @@ export function TableStateProvider({ children }: { children: ReactNode }) {
           pathname.split("/")[1],
         )
       ? "users"
-      : ["riders", "rider-weekly-deliveries", "rider-applications"].includes(pathname.split("/")[1])
+      : ["riders", "rider-weekly-deliveries", "rider-applications"].includes(
+            pathname.split("/")[1],
+          )
         ? "riders"
         : pathname.split("/")[1];
   const store = useMemo(

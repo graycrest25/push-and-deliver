@@ -1,3 +1,11 @@
+import { ShipmentCheckoutPanels } from "./shipment-checkout";
+import {
+  riderEarnings,
+  riderPaymentMethod,
+  riderPaymentStatus,
+  riderTaskStatus,
+  riderConfirmation,
+} from "./shipment-rider-payment";
 import { ShipmentPriceReview } from "./shipment-price-review";
 import { AccountSummary } from "./account-summary";
 import { OrderSummary } from "./order-summary";
@@ -12,7 +20,7 @@ import {
   ShipmentSkeleton,
 } from "@/components/ui/loading-skeletons";
 import { RefreshButton } from "@/components/ui/refresh-button";
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { Link, useParams } from "react-router-dom";
 import { useCurrentUser } from "@/contexts/UserContext";
 import { canOperate } from "@/lib/admin-access";
@@ -193,6 +201,31 @@ export function NativeShipments() {
               ),
             },
             { key: "totalAmountMinor", label: "Total amount" },
+            {
+              key: "riderAmountMinor",
+              label: "Rider pickup earnings",
+              render: riderEarnings,
+            },
+            {
+              key: "riderPaymentMethod",
+              label: "Rider payment method",
+              render: (row) => riderPaymentMethod(row.riderPayment?.method),
+            },
+            {
+              key: "riderPaymentStatus",
+              label: "Rider payment status",
+              render: (row) => riderPaymentStatus(row.riderPayment?.status),
+            },
+            {
+              key: "riderTaskStatus",
+              label: "Rider task status",
+              render: (row) => riderTaskStatus(row.riderTaskStatus),
+            },
+            {
+              key: "riderConfirmedAt",
+              label: "Confirmation time",
+              render: (row) => riderConfirmation(row.riderPayment?.confirmedAt),
+            },
             { key: "createdAt", label: "Created at" },
           ],
           filters: [
@@ -233,6 +266,67 @@ export function NativeShipment() {
     id: string;
     result: RecordData;
   } | null>(null);
+  const [checkout, setCheckout] = useState<{
+    id: string;
+    result: RecordData;
+    pending: boolean;
+    version: number;
+  } | null>(null);
+  const checkoutResult = checkout?.id === id ? checkout : null;
+  const paymentRefresh = useRef({ record, checkoutResult });
+  paymentRefresh.current = { record, checkoutResult };
+  useEffect(() => {
+    let attempts = 0;
+    const timer = setInterval(() => {
+      const { record: latest, checkoutResult: saved } = paymentRefresh.current;
+      if (latest.loading) return;
+      const bills: RecordData[] = latest.data?.assessments || [];
+      const bill = bills.find((item) => item.id === saved?.result.assessmentId);
+      const needsRefresh =
+        bills.some((item) => item.checkoutStatus === "pending") ||
+        (!!saved &&
+          ((!bill &&
+            (saved.pending || saved.result.checkoutStatus === "pending")) ||
+            (!!saved.result.paymentId &&
+              bill?.status === "due" &&
+              bill.paymentId !== saved.result.paymentId)));
+      if (!needsRefresh || attempts >= 12) {
+        clearInterval(timer);
+        return;
+      }
+      attempts++;
+      latest.reload();
+    }, 7000);
+    return () => clearInterval(timer);
+  }, [
+    id,
+    checkoutResult?.result.operationId,
+    checkoutResult?.result.paymentId,
+    checkoutResult?.result.checkoutStatus,
+  ]);
+  const currentAssessment = record.data?.assessments?.find(
+    (item: RecordData) => item.id === checkoutResult?.result.assessmentId,
+  );
+  useEffect(() => {
+    if (
+      checkoutResult?.result.paymentId &&
+      currentAssessment?.paymentId === checkoutResult.result.paymentId &&
+      currentAssessment.checkoutStatus &&
+      currentAssessment.checkoutStatus !== "pending"
+    )
+      setCheckout(null);
+  }, [checkoutResult, currentAssessment]);
+  const assessmentPending =
+    !!checkoutResult?.pending &&
+    !(
+      currentAssessment?.checkoutStatus &&
+      currentAssessment.checkoutStatus !== "pending"
+    ) &&
+    !(
+      record.data &&
+      record.data.version > checkoutResult.version &&
+      record.data.pendingCommands?.assessment === false
+    );
   return (
     <div className="space-y-6">
       <Link className="text-sm text-primary underline" to="/shipment-orders">
@@ -248,6 +342,13 @@ export function NativeShipment() {
           <RecordView data={priceResult.result} />
         </InformationCard>
       )}
+      <ShipmentCheckoutPanels
+        data={record.data}
+        result={checkoutResult?.result}
+        pending={assessmentPending}
+        reload={record.reload}
+        loading={record.loading}
+      />
       {record.error ? (
         <ErrorNotice error={record.error} retry={record.reload} />
       ) : record.loading ? (
@@ -262,7 +363,19 @@ export function NativeShipment() {
                 record.reload();
               }}
             />
-            <ShipmentDetails data={record.data} reload={record.reload} />
+            <ShipmentDetails
+              data={record.data}
+              reload={record.reload}
+              assessmentPending={assessmentPending}
+              onCheckoutResult={(result, pending) =>
+                setCheckout({
+                  id,
+                  result,
+                  pending,
+                  version: record.data!.version,
+                })
+              }
+            />
             <ShipmentTimeline id={id} />
             <ShipmentTracking id={id} status={record.data.status} />
           </>
@@ -518,6 +631,9 @@ export function NativeJobs() {
 }
 export function NativeJob() {
   const { id = "" } = useParams();
+  return <JobDetails key={id} id={id} />;
+}
+function JobDetails({ id }: { id: string }) {
   const { adminType } = useCurrentUser();
   const [cursors, setCursors] = useState([""]);
   const cursor = cursors[cursors.length - 1];
@@ -595,90 +711,172 @@ export function NativeJob() {
   );
 }
 export function NativeReferrals() {
+  function referralEmail(row: RecordData, party: "referred" | "referrer") {
+    const generated = row.referrerAccountType === null;
+    if (party === "referrer" && generated)
+      return row.promoterName ? (
+        <span>{row.promoterName} (Promoter)</span>
+      ) : (
+        <span className="text-muted-foreground">Unavailable</span>
+      );
+    const email = row[`${party}Email`];
+    const uid = row[`${party}Uid`];
+    if (!email)
+      return <span className="text-muted-foreground">Unavailable</span>;
+    if (!uid || generated) return <span>{email}</span>;
+    return (
+      <Link
+        to={`/users/${segment(uid)}`}
+        className="font-medium text-primary underline underline-offset-4 hover:text-primary/80 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+      >
+        {email}
+      </Link>
+    );
+  }
+  const [tab, setTab] = useState("user");
+  const [draft, setDraft] = useState({ startDate: "", endDate: "" });
+  const [dates, setDates] = useState(draft);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<unknown>(null);
+  const params = { ...dates, referrerAccountType: tab || undefined };
   return (
     <div className="space-y-6">
       <Heading
         title="Referrals"
-        description="Referral attribution and totals. Export dates include both selected days in Africa/Lagos."
+        description="Filter by who made the referral, not who registered. Dates include both selected days in Africa/Lagos."
       >
         <Button asChild variant="outline">
           <Link to="/promoter-links">Manage promoter links</Link>
         </Button>
       </Heading>
       <ResourcePanel
-        title="Referral totals"
+        title="Global referral totals · all dates and referrers"
         path="/v1/admin/referrals/summary"
       />
+      <div
+        className="flex flex-wrap gap-2"
+        role="group"
+        aria-label="Referral lists"
+      >
+        {[
+          ["user", "User Referrals"],
+          ["rider", "Rider Referrals"],
+          ["", "All"],
+        ].map(([value, label]) => (
+          <Button
+            key={value}
+            variant={tab === value ? "default" : "outline"}
+            aria-pressed={tab === value}
+            onClick={() => setTab(value)}
+          >
+            {label}
+          </Button>
+        ))}
+      </div>
+      <form
+        className="flex flex-wrap items-end gap-3"
+        onSubmit={(event) => {
+          event.preventDefault();
+          if (
+            !!draft.startDate !== !!draft.endDate ||
+            (draft.startDate && draft.startDate > draft.endDate)
+          ) {
+            setError(
+              new Error(
+                "Select both dates, with the end date on or after the start date, or clear both.",
+              ),
+            );
+            return;
+          }
+          setError(null);
+          setDates({ ...draft });
+        }}
+      >
+        {[
+          ["startDate", "Start date"],
+          ["endDate", "End date"],
+        ].map(([name, label]) => (
+          <label className="space-y-2 text-sm" key={name}>
+            {label}
+            <Input
+              type="date"
+              name={name}
+              value={draft[name as keyof typeof draft]}
+              onChange={(event) =>
+                setDraft({ ...draft, [name]: event.target.value })
+              }
+            />
+          </label>
+        ))}
+        <Button>Apply dates</Button>
+        <Button
+          type="button"
+          variant="outline"
+          onClick={() => {
+            setDraft({ startDate: "", endDate: "" });
+            setDates({ startDate: "", endDate: "" });
+            setError(null);
+          }}
+        >
+          Clear dates
+        </Button>
+        <Button
+          type="button"
+          variant="outline"
+          disabled={busy}
+          onClick={async () => {
+            setBusy(true);
+            setError(null);
+            try {
+              const response = await apiResponse(
+                queryPath("/v1/admin/referrals/export.csv", params),
+              );
+              saveBlob(
+                await response.blob(),
+                dates.startDate
+                  ? `referrals-${dates.startDate}-${dates.endDate}.csv`
+                  : "referrals.csv",
+              );
+            } catch (failure) {
+              setError(failure);
+            } finally {
+              setBusy(false);
+            }
+          }}
+        >
+          {busy ? "Exporting…" : "Download filtered CSV"}
+        </Button>
+      </form>
+      {error != null && <ErrorNotice error={error} />}
       <DataList
         spec={{
           path: "/v1/admin/referrals",
           key: "items",
           paging: "cursor",
+          params,
           pageSizes: [10, 20, 30, 50],
-          defaultPageSize: 50,
-          columns: cols(
-            "id",
-            "referredUid",
-            "referrerUid",
-            "referreduserType",
-            "referralCodeUsed",
-            "createdAt",
-          ),
+          defaultPageSize: 20,
           filters: [
             field("referredUid", "Referred user ID"),
-            field("referreduserType", "Referred user type"),
             field("referralCodeUsed", "Referral code"),
           ],
+          columns: [
+            { key: "id" },
+            {
+              key: "referredEmail",
+              label: "Referred Email",
+              render: (row) => referralEmail(row, "referred"),
+            },
+            {
+              key: "referrerEmail",
+              label: "Referrer Email",
+              render: (row) => referralEmail(row, "referrer"),
+            },
+            ...cols("referreduserType", "referralCodeUsed", "createdAt"),
+          ],
+          note: "CSV uses the selected referrer tab and applied dates. Global totals above do not change with these filters.",
         }}
       />
-      <form
-        className="space-y-4 rounded-xl border bg-card p-5"
-        onSubmit={async (e) => {
-          e.preventDefault();
-          if (busy) return;
-          const data = Object.fromEntries(new FormData(e.currentTarget));
-          setBusy(true);
-          setError(null);
-          try {
-            if (String(data.startDate) > String(data.endDate))
-              throw new Error("End date must be on or after the start date.");
-            const response = await apiResponse(
-              queryPath("/v1/admin/referrals/export.csv", data),
-            );
-            saveBlob(
-              await response.blob(),
-              `referrals-${data.startDate}-${data.endDate}.csv`,
-            );
-          } catch (failure) {
-            setError(failure);
-          } finally {
-            setBusy(false);
-          }
-        }}
-      >
-        <h2 className="text-lg font-semibold">Export referrals</h2>
-        <div className="flex flex-wrap gap-4">
-          {[
-            ["startDate", "Start date"],
-            ["endDate", "End date"],
-          ].map(([name, label]) => (
-            <label className="space-y-2 text-sm" key={name}>
-              {label}
-              <Input name={name} type="date" required />
-            </label>
-          ))}
-          <label className="space-y-2 text-sm">
-            Referred user type (optional)
-            <Input name="referreduserType" maxLength={100} />
-          </label>
-        </div>
-        {error != null && <ErrorNotice error={error} />}
-        <Button disabled={busy}>
-          {busy ? "Exporting…" : "Download referral CSV"}
-        </Button>
-      </form>
     </div>
   );
 }

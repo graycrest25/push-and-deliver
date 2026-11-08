@@ -12,7 +12,10 @@ import {
 import { CurrentRecord } from "./native-dashboard";
 import { RecordSkeleton } from "@/components/ui/loading-skeletons";
 import { RefreshButton } from "@/components/ui/refresh-button";
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
+import { useCurrentUser } from "@/contexts/UserContext";
+import { canOperate } from "@/lib/admin-access";
+import { onlineLabel, riderFilters, RiderExportFilters } from "./rider-filters";
 import { Link, useParams } from "react-router-dom";
 import { apiResponse, queryPath, segment, type RecordData } from "@/lib/api";
 import { Button } from "@/components/ui/button";
@@ -53,6 +56,7 @@ function saveFile(blob: Blob, name: string) {
 }
 export function NativeAccounts({ riders = false }: { riders?: boolean }) {
   const type = riders ? "riders" : "users";
+  const [exportFilters, setExportFilters] = useState<RecordData>({});
   return (
     <div className="space-y-6">
       <Heading
@@ -75,6 +79,14 @@ export function NativeAccounts({ riders = false }: { riders?: boolean }) {
             "createdAt",
           ]),
           params: { type },
+          onFiltersChange: setExportFilters,
+          ...(riders
+            ? {
+                filters: riderFilters,
+                pairedDates: true,
+                note: "Dates include both selected days in Africa/Lagos and filter registration/profile creation. Online status is the saved flag, not a live connectivity check. Browsing includes motorbike and unassigned riders.",
+              }
+            : {}),
           search: {
             param: "q",
             label: "Search name, email or phone",
@@ -82,84 +94,104 @@ export function NativeAccounts({ riders = false }: { riders?: boolean }) {
             help: "Search any part of a name, email or phone number. Names and emails ignore case; phone searches ignore spaces and punctuation.",
           },
           idKey: "uid",
+          clickableRows: true,
           link: (row) => `/${type}/${segment(row.uid)}`,
+          ...(riders
+            ? {
+                columns: [
+                  ...columns(
+                    "username",
+                    "email",
+                    "phoneNumber",
+                    "accountType",
+                    "identityExists",
+                    "emailVerified",
+                    "disabled",
+                    "deleted",
+                    "verificationStatus",
+                  ),
+                  {
+                    key: "onlineStatus",
+                    label: "Online status",
+                    render: onlineLabel,
+                  },
+                  ...columns("createdAt"),
+                ],
+              }
+            : {}),
         }}
       />
-      <DirectoryExport key={`export-${type}`} riders={riders} />
+      <DirectoryExport
+        key={`export-${type}-${JSON.stringify(exportFilters)}`}
+        riders={riders}
+        initialFilters={exportFilters}
+      />
     </div>
   );
 }
 export { AccountProfile as NativeAccount } from "./account-profile";
-function DirectoryExport({ riders }: { riders: boolean }) {
-  const [format, setFormat] = useState("csv"),
-    [limit, setLimit] = useState("2000");
-  const [cursor, setCursor] = useState(""),
-    [downloaded, setDownloaded] = useState(0),
-    [finished, setFinished] = useState(false);
+function DirectoryExport({
+  riders,
+  initialFilters,
+}: {
+  riders: boolean;
+  initialFilters: RecordData;
+}) {
+  const { adminType } = useCurrentUser();
+  const [filters, setFilters] = useState(initialFilters);
+  const controller = useRef<AbortController>();
+  useEffect(() => () => controller.current?.abort(), []);
+  const [format, setFormat] = useState("csv");
+  const [downloaded, setDownloaded] = useState(false);
   const [busy, setBusy] = useState(false),
     [error, setError] = useState<unknown>(null);
   const reset = () => {
-    setCursor("");
-    setDownloaded(0);
-    setFinished(false);
+    setDownloaded(false);
     setError(null);
   };
   async function download() {
     if (busy) return;
     setBusy(true);
     setError(null);
+    setDownloaded(false);
+    const abort = new AbortController();
+    controller.current = abort;
     try {
+      if (
+        !!filters.startDate !== !!filters.endDate ||
+        (filters.startDate && filters.startDate > filters.endDate)
+      )
+        throw new Error(
+          "Select both dates, with the end date on or after the start date, or clear both.",
+        );
+      if (
+        filters.email &&
+        !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(filters.email.trim())
+      )
+        throw new Error("Enter a valid exact email address or clear it.");
       const response = await apiResponse(
-        queryPath(`/v1/admin/reports/${riders ? "riders" : "accounts"}`, {
-          ...(riders ? {} : { type: "users" }),
+        queryPath(`/v1/admin/reports/${riders ? "riders" : "users"}`, {
+          ...filters,
           format,
-          limit,
-          cursor,
         }),
         {
+          signal: abort.signal,
           headers: {
             Accept: format === "csv" ? "text/csv" : "application/json",
           },
         },
       );
-      let blob: Blob,
-        next = "";
-      if (format === "json") {
-        const envelope = await response.json(),
-          data = envelope.data;
-        if (
-          !Array.isArray(data?.items) ||
-          typeof data.hasMore !== "boolean" ||
-          (data.hasMore && !data.nextCursor)
-        )
-          throw new Error(
-            "The export response is incomplete. Retry this page.",
-          );
-        next = data.hasMore ? data.nextCursor : "";
-        blob = new Blob([JSON.stringify(data, null, 2)], {
-          type: "application/json",
-        });
-      } else {
-        next = response.headers.get("x-next-cursor") || "";
-        blob = await response.blob();
-      }
-      if (next && next === cursor)
-        throw new Error(
-          "The export repeated its page cursor. Start a fresh export.",
-        );
-      saveFile(
-        blob,
-        `${riders ? "riders" : "users"}-${downloaded + 1}.${format}`,
-      );
-      setDownloaded((n) => n + 1);
-      setCursor(next);
-      setFinished(!next);
+      const blob = await response.blob();
+      if (abort.signal.aborted) return;
+      saveFile(blob, `${riders ? "riders" : "users"}.${format}`);
+      setDownloaded(true);
     } catch (failure) {
-      setError(failure);
+      if (!abort.signal.aborted) setError(failure);
     } finally {
-      setBusy(false);
+      if (!abort.signal.aborted) setBusy(false);
     }
   }
+  if (!canOperate(adminType)) return null;
   return (
     <details className="rounded-xl border bg-card p-5">
       <summary className="cursor-pointer text-sm font-semibold">
@@ -167,13 +199,18 @@ function DirectoryExport({ riders }: { riders: boolean }) {
       </summary>
       <div className="mt-4 space-y-4">
         <p className="text-sm text-muted-foreground">
-          Directory exports include all {riders ? "riders" : "users"} and use
-          separate pagination. Continue until all pages have been downloaded.
+          Download all matching {riders ? "riders" : "users"} in one file. Dates
+          use Africa/Lagos. CSV wallet amounts are formatted in NGN.
         </p>
-        <fieldset
-          disabled={busy || downloaded > 0}
-          className="flex flex-wrap gap-4"
-        >
+        <fieldset disabled={busy} className="flex flex-wrap gap-4">
+          <RiderExportFilters
+            riders={riders}
+            value={filters}
+            change={(next) => {
+              reset();
+              setFilters(next);
+            }}
+          />
           <label className="space-y-2 text-sm">
             Export format
             <select
@@ -188,43 +225,12 @@ function DirectoryExport({ riders }: { riders: boolean }) {
               <option value="json">JSON</option>
             </select>
           </label>
-          <label className="space-y-2 text-sm">
-            Records per export page
-            <select
-              className="block h-10 rounded-md border bg-card px-3"
-              value={limit}
-              onChange={(e) => {
-                reset();
-                setLimit(e.target.value);
-              }}
-            >
-              {[25, 100, 500, 2000].map((n) => (
-                <option key={n}>{n}</option>
-              ))}
-            </select>
-          </label>
         </fieldset>
         {error != null && <ErrorNotice error={error} />}
-        {downloaded > 0 && (
-          <p role="status">
-            {downloaded} page{downloaded === 1 ? "" : "s"} downloaded.{" "}
-            {finished ? "Export complete." : "More records are available."}
-          </p>
-        )}
-        <div className="flex flex-wrap gap-2">
-          <Button disabled={busy || finished} onClick={download}>
-            {busy
-              ? "Downloading…"
-              : downloaded
-                ? "Download next page"
-                : "Download export"}
-          </Button>
-          {downloaded > 0 && (
-            <Button variant="outline" disabled={busy} onClick={reset}>
-              Start new export
-            </Button>
-          )}
-        </div>
+        {downloaded && <p role="status">Export downloaded.</p>}
+        <Button disabled={busy} onClick={download}>
+          {busy ? "Downloading…" : "Download export"}
+        </Button>
       </div>
     </details>
   );

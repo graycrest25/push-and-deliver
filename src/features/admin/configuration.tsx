@@ -1,6 +1,7 @@
 import { RecordSkeleton } from "@/components/ui/loading-skeletons";
 import { SignupCouponSettings, SignupWalletBonus } from "./signup-rewards";
 import { Link } from "react-router-dom";
+import { BroadcastHistory } from "./broadcasts";
 import { MobileReleaseSettings } from "./release-settings";
 import { useState } from "react";
 import { useParams } from "react-router-dom";
@@ -621,6 +622,7 @@ export function CouponsPage() {
   );
 }
 export function NotificationsPage() {
+  const [revision, setRevision] = useState(0);
   return (
     <div className="space-y-6">
       <Heading
@@ -628,6 +630,7 @@ export function NotificationsPage() {
         description="Send an announcement to active accounts in the selected audience."
       />
       <ActionForm
+        onSuccess={() => setRevision((value) => value + 1)}
         action={{
           title: "Queue broadcast",
           path: "/v1/admin/notifications/broadcasts",
@@ -661,6 +664,14 @@ export function NotificationsPage() {
               );
           },
           success: "Notification queued",
+          renderResult: (result) => (
+            <Link
+              className="text-primary underline"
+              to={`/general-notifications/${segment(result.id)}`}
+            >
+              View broadcast progress
+            </Link>
+          ),
         }}
       />
       <Notice>
@@ -668,6 +679,7 @@ export function NotificationsPage() {
         devices. Queuing does not confirm delivery to every account. Customer
         inbox entries use the existing notification inbox.
       </Notice>
+      <BroadcastHistory revision={revision} />
     </div>
   );
 }

@@ -39,6 +39,12 @@ export function resetDashboard() {
     ticket: {
       id: "ticket-1",
       customerUid: "customer-1",
+      customer: {
+        uid: "customer-1",
+        name: "Customer Name",
+        email: "customer@example.test",
+        phoneNumber: "+2348000000000",
+      },
       status: "open",
       version: 2,
       assignedSupportUid: null,
@@ -46,6 +52,7 @@ export function resetDashboard() {
       lastMessage: "Help with delivery",
       updatedAt: "2026-11-02T10:00:00Z",
     },
+    closures: [],
     messages: [
       {
         id: "legacy-message",
@@ -314,7 +321,29 @@ export function dashboard(path, req, res, body, success, error) {
       });
       save(state.funding);
     }
-  } else if (path === "/v1/admin/support/tickets") send(page([state.ticket]));
+  } else if (path === "/v1/admin/support/closures") {
+    if (state.adminType !== "super")
+      fail(403, "forbidden", "Only super administrators can read closures");
+    else
+      send(
+        page(
+          state.closures.filter(
+            (item) =>
+              (!params.get("ticketId") ||
+                item.ticketId === params.get("ticketId")) &&
+              (!params.get("closedByUid") ||
+                item.closedBy.uid === params.get("closedByUid")),
+          ),
+        ),
+      );
+  } else if (path === "/v1/admin/support/tickets")
+    send(
+      page(
+        params.get("status") && params.get("status") !== state.ticket.status
+          ? []
+          : [state.ticket],
+      ),
+    );
   else if (path.endsWith("/messages")) {
     if (!write) send(page(state.messages));
     else if (exact(["message", "clientMessageId"])) {
@@ -336,9 +365,41 @@ export function dashboard(path, req, res, body, success, error) {
     }
   } else if (path.endsWith("/status")) {
     if (req.method !== "PUT") fail(405, "method", "Use PUT");
-    else if (exact(["status", "expectedVersion"]) && versioned(state.ticket)) {
+    else if (
+      body.status === "closed" &&
+      (typeof body.summary !== "string" ||
+        !body.summary.trim() ||
+        [...body.summary.trim()].length > 1000)
+    )
+      fail(400, "summary", "Closure summary required");
+    else if (
+      exact(
+        body.status === "closed"
+          ? ["status", "expectedVersion", "summary"]
+          : ["status", "expectedVersion"],
+      ) &&
+      versioned(state.ticket)
+    ) {
       state.ticket.status = body.status;
-      save(state.ticket);
+      let closure;
+      if (body.status === "closed") {
+        closure = {
+          id: `closure-${state.closures.length + 1}`,
+          ticketId: state.ticket.id,
+          customerUid: state.ticket.customerUid,
+          summary: body.summary.trim(),
+          closedAt: new Date().toISOString(),
+          closedBy: {
+            uid: "admin-1",
+            name: "Support Person",
+            email: "admin@example.test",
+          },
+          assignedSupportUid: state.ticket.assignedSupportUid,
+          ticketVersion: state.ticket.version,
+        };
+        state.closures.unshift(closure);
+      }
+      save({ ...state.ticket, ...(closure ? { closure } : {}) });
     }
   } else send(state.ticket);
   return true;

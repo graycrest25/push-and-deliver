@@ -35,12 +35,23 @@ export function AccountSummary({ type }: { type: "users" | "riders" }) {
   );
   const data = resource.data;
   const riders = type === "riders";
+  const statusTotals = [
+    data?.verified?.total,
+    data?.pending?.total,
+    data?.blocked?.total,
+    data?.unknownStatus?.total ?? 0,
+  ];
+  const riderTotal = statusTotals.every(
+    (value) => Number.isSafeInteger(value) && value >= 0,
+  )
+    ? statusTotals.reduce((total, value) => total + value, 0)
+    : undefined;
   const statistics = riders
     ? [
         {
           label: "Total riders",
           key: "total",
-          value: data?.total,
+          value: riderTotal,
           Icon: IconUsers,
         },
         {
@@ -60,6 +71,12 @@ export function AccountSummary({ type }: { type: "users" | "riders" }) {
           key: "blocked",
           value: data?.blocked?.total,
           Icon: IconLock,
+        },
+        {
+          label: "Unknown status",
+          key: "unknownStatus",
+          value: data?.unknownStatus?.total ?? 0,
+          Icon: IconMinus,
         },
       ]
     : [
@@ -101,10 +118,12 @@ export function AccountSummary({ type }: { type: "users" | "riders" }) {
       "0",
       "1",
       "2",
+      "unknown",
       ...Object.keys(data?.byVehicle || {}),
       ...Object.keys(data?.verified?.byVehicle || {}),
       ...Object.keys(data?.pending?.byVehicle || {}),
       ...Object.keys(data?.blocked?.byVehicle || {}),
+      ...Object.keys(data?.unknownStatus?.byVehicle || {}),
     ]),
   ];
   return (
@@ -124,7 +143,9 @@ export function AccountSummary({ type }: { type: "users" | "riders" }) {
       )}
       {data && (
         <div className="space-y-5">
-          <dl className="analytics-stats grid grid-cols-2 lg:grid-cols-4">
+          <dl
+            className={`analytics-stats grid grid-cols-2 ${riders ? "lg:grid-cols-5" : "lg:grid-cols-4"}`}
+          >
             {statistics.map(({ label, key, value, Icon }) => (
               <div
                 key={label}
@@ -178,13 +199,17 @@ export function AccountSummary({ type }: { type: "users" | "riders" }) {
                     >
                       Blocked
                     </TableHead>
+                    <TableHead className="text-right">Unknown status</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
                   {vehicles.map((vehicle) => (
                     <TableRow key={vehicle}>
                       <TableCell className="font-medium whitespace-nowrap">
-                        {enumLabel("vehicleType", vehicle) || "Unknown vehicle"}
+                        {vehicle === "unknown"
+                          ? "Not assigned"
+                          : enumLabel("vehicleType", vehicle) ||
+                            "Unknown vehicle"}
                       </TableCell>
                       <TableCell
                         className="data-tone-text text-right tabular-nums"
@@ -193,7 +218,10 @@ export function AccountSummary({ type }: { type: "users" | "riders" }) {
                           data.byVehicle?.[vehicle],
                         )}
                       >
-                        {count(data.byVehicle?.[vehicle])}
+                        {count(
+                          data.byVehicle?.[vehicle] ??
+                            (vehicle === "unknown" ? 0 : undefined),
+                        )}
                       </TableCell>
                       <TableCell
                         className="data-tone-text text-right tabular-nums"
@@ -221,6 +249,9 @@ export function AccountSummary({ type }: { type: "users" | "riders" }) {
                         )}
                       >
                         {count(data.blocked?.byVehicle?.[vehicle])}
+                      </TableCell>
+                      <TableCell className="text-right tabular-nums">
+                        {count(data.unknownStatus?.byVehicle?.[vehicle] ?? 0)}
                       </TableCell>
                     </TableRow>
                   ))}

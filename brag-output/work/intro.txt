@@ -1,0 +1,1 @@
+Welcome to the Push and Deliver web admin. This quick tour explains where to find each part of the workspace, how to handle common tasks, and how to read payment and delivery status correctly. Example details are used to protect customer information.

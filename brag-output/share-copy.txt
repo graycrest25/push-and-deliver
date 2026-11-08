@@ -1,0 +1,1 @@
+A silent, cursor-guided tour of the PushNDeliver admin workspace: shipments, customer payments, support, accounts, finance, growth tools, and administration. Demo personal details are used throughout.

@@ -67,7 +67,7 @@ test("overview account totals use readable vehicle rows, compact counts and resp
       .getByRole("row", { name: /^Car/ })
       .locator("td")
       .allTextContents(),
-  ).toEqual(["Car", "10", "3", "7", "0"]);
+  ).toEqual(["Car", "10", "3", "7", "0", "0"]);
   await expect(card.getByRole("row", { name: /^Bicycle/ })).toBeVisible();
   await expect(card.getByRole("row", { name: /^Motorbike/ })).toBeVisible();
   await expect(
@@ -80,7 +80,7 @@ test("overview account totals use readable vehicle rows, compact counts and resp
     card.locator("dl").getByText("8", { exact: true }),
   ).toBeVisible();
   await expect(
-    card.locator("dl").getByText("0", { exact: true }),
+    card.locator("dl").getByText("0", { exact: true }).first(),
   ).toBeVisible();
   await page.setViewportSize({ width: 1440, height: 1000 });
   expect((await card.boundingBox())!.height).toBeLessThan(650);

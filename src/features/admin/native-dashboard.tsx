@@ -90,6 +90,8 @@ export function AccountRoleEditor({ uid }: { uid: string }) {
               description:
                 "Changing access signs this account out of existing sessions. Only existing verified, enabled accounts can be promoted.",
               path: `/v1/admin/users/${segment(uid)}/role`,
+              versionPath: `/v1/admin/users/${segment(uid)}/role`,
+              refreshBeforeSubmit: true,
               preserveRetry: true,
               initial: { adminType: data.adminType || "none" },
               fields: [
@@ -125,14 +127,12 @@ export function AccountRoleEditor({ uid }: { uid: string }) {
   );
 }
 export function AdminRoles() {
-  const [search, setSearch] = useSearchParams();
+  const [search] = useSearchParams();
   const selected = search.get("uid") || "";
-  const [draft, setDraft] = useState(selected);
   const [uid, setUid] = useState(selected);
   const [tab, setTab] = useState("accounts");
   useEffect(() => {
     setUid(selected);
-    setDraft(selected);
   }, [selected]);
   return (
     <div className="space-y-6">
@@ -140,24 +140,6 @@ export function AdminRoles() {
         title="Administrator access"
         description="Select an account to review access, promote an administrator or change their role."
       />
-      <form
-        className="flex flex-wrap items-end gap-3"
-        onSubmit={(e) => {
-          e.preventDefault();
-          setSearch({ uid: draft.trim() });
-        }}
-      >
-        <div className="space-y-2">
-          <Label htmlFor="role-uid">User ID</Label>
-          <Input
-            id="role-uid"
-            required
-            value={draft}
-            onChange={(e) => setDraft(e.target.value)}
-          />
-        </div>
-        <Button>Find account</Button>
-      </form>
       {uid && <AccountRoleEditor uid={uid} />}
       <div className="flex flex-wrap gap-2" aria-label="Account lists">
         <Button
@@ -185,7 +167,16 @@ export function AdminRoles() {
       <DataList
         spec={{
           title: tab === "admins" ? "Administrators" : "Select an account",
-          path: "/v1/admin/users",
+          path:
+            tab === "accounts" ? "/v1/admin/users/search" : "/v1/admin/users",
+          defaultPageSize: 25,
+          pageSizes: [10, 25, 50],
+          search: {
+            param: "q",
+            label: "Search by name or partial email",
+            placeholder: "Enter a name or part of an email",
+            help: "Clear the exact email filter before using partial search.",
+          },
           key: "items",
           paging: "cursor",
           params: {
@@ -195,10 +186,11 @@ export function AdminRoles() {
                 ? "admins"
                 : tab === "non_admins"
                   ? "non_admins"
-                  : "all",
+                  : undefined,
           },
-          filters:
-            tab === "admins"
+          filters: [
+            field("email", "Email address", { type: "email", required: false }),
+            ...(tab === "admins"
               ? [
                   select(
                     "adminType",
@@ -206,7 +198,8 @@ export function AdminRoles() {
                     "Administrator subtype",
                   ),
                 ]
-              : undefined,
+              : []),
+          ],
           idKey: "uid",
           columns: [
             { key: "username", label: "Name" },
@@ -453,7 +446,13 @@ export function NativeSupport() {
       <Heading
         title="Support tickets"
         description="Review customer conversations, claim tickets and manage their status."
-      />
+      >
+        {superAdmin && (
+          <Button asChild variant="outline">
+            <Link to="/support-closures">Closure history</Link>
+          </Button>
+        )}
+      </Heading>
       <div
         className={`grid items-start gap-5 ${selected ? "xl:grid-cols-[minmax(0,1fr)_320px]" : ""}`}
       >
@@ -482,7 +481,12 @@ export function NativeSupport() {
               link: (row) => `/support-tickets?ticket=${segment(row.id)}`,
               columns: [
                 { key: "id", label: "Ticket" },
-                { key: "customerUid", label: "Customer" },
+                {
+                  key: "customerUid",
+                  label: "Customer",
+                  render: (row) =>
+                    row.customer?.name || "Customer details unavailable",
+                },
                 { key: "status" },
                 { key: "lastMessage", label: "Latest message" },
                 { key: "unreadCount", label: "Unread" },
@@ -551,6 +555,15 @@ function SupportTicketPanel({
               data={{
                 ticket: resource.data.id,
                 customer: resource.data.customerUid,
+                customerName:
+                  resource.data.customer?.name ||
+                  "Customer details unavailable",
+                customerEmail:
+                  resource.data.customer?.email ||
+                  "Customer details unavailable",
+                customerPhone:
+                  resource.data.customer?.phoneNumber ||
+                  "Customer details unavailable",
                 status: resource.data.status === "open" ? "Open" : "Closed",
                 assignedTo: resource.data.assignedSupportUid || "Unassigned",
                 latestMessage: resource.data.lastMessage,

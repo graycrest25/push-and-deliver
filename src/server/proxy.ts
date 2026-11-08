@@ -2,6 +2,7 @@ import { createHash, randomUUID } from "node:crypto";
 import "server-only";
 import { NextRequest, NextResponse } from "next/server";
 import { allowedRoute } from "./routes";
+import { resolveImageUrl } from "./image-url";
 
 const production = process.env.NODE_ENV === "production";
 const SESSION = production ? "__Host-pnd-session-v2" : "pnd-session-v2";
@@ -84,7 +85,12 @@ function redact(value: unknown, base: URL): unknown {
               "refreshToken",
             ].includes(k),
         )
-        .map(([k, v]) => [k, redact(v, base)]),
+        .map(([k, v]) => [
+          k,
+          k.toLowerCase() === "imageurl" && typeof v === "string"
+            ? resolveImageUrl(v, base)
+            : redact(v, base),
+        ]),
     );
   return value;
 }
@@ -438,8 +444,11 @@ async function proxyRequest(request: NextRequest, segments: string[]) {
     }
     // Check current authority server-side; never trust a browser-supplied subtype.
     const supportPath = "/v1/admin/support/tickets";
+    const closureHistory = path === "/v1/admin/support/closures";
     const supportRequest =
-      path === supportPath || path.startsWith(supportPath + "/");
+      closureHistory ||
+      path === supportPath ||
+      path.startsWith(supportPath + "/");
     let openTicketsOnly = false;
     if (supportRequest) {
       const read = async (target: string) =>
@@ -473,6 +482,41 @@ async function proxyRequest(request: NextRequest, segments: string[]) {
           "This account cannot access support tickets.",
         );
       openTicketsOnly = authority.adminType !== "super";
+      if (closureHistory && openTicketsOnly)
+        return fail(
+          403,
+          "closure_history_restricted",
+          "Only super administrators can view closure history.",
+        );
+      const statusUpdate =
+        method === "PUT" &&
+        /^\/v1\/admin\/support\/tickets\/[^/]+\/status$/.test(path);
+      const statusBody = statusUpdate ? JSON.parse(body || "{}") : null;
+      if (
+        statusUpdate &&
+        (!statusBody ||
+          typeof statusBody !== "object" ||
+          Array.isArray(statusBody))
+      )
+        return fail(400, "invalid_status", "Provide a ticket status update.");
+      if (statusUpdate && statusBody.status === "closed") {
+        if (
+          typeof statusBody.summary !== "string" ||
+          !statusBody.summary.trim() ||
+          [...statusBody.summary.trim()].length > 1000
+        )
+          return fail(
+            400,
+            "invalid_summary",
+            "Enter a closure summary of 1–1,000 characters after trimming.",
+          );
+      }
+      if (statusUpdate && statusBody.status === "open" && openTicketsOnly)
+        return fail(
+          403,
+          "reopen_restricted",
+          "Only super administrators can reopen tickets.",
+        );
       if (openTicketsOnly) {
         if (path === supportPath) {
           if (url.searchParams.get("status") === "closed")
@@ -482,7 +526,9 @@ async function proxyRequest(request: NextRequest, segments: string[]) {
               "Only a super administrator can view closed tickets.",
             );
           url.searchParams.set("status", "open");
-        } else {
+        } else if (!(statusUpdate && statusBody.status === "closed" && key)) {
+          // Closing and replaying a close are authorized by the backend. Do not
+          // prefetch restricted closed details before replaying an uncertain write.
           const ticketPath =
             supportPath + "/" + encodeURIComponent(segments[4]);
           const ticketResponse = await read(ticketPath);
@@ -524,7 +570,7 @@ async function proxyRequest(request: NextRequest, segments: string[]) {
     if (upstream.status >= 300 && upstream.status < 400) {
       if (
         method === "GET" &&
-        /^\/v1\/media\/[^/]+\/content$/.test(path) &&
+        /^\/v1\/media\/[^/]+\/(content|avatar)$/.test(path) &&
         upstream.status === 307
       ) {
         const location = upstream.headers.get("location");

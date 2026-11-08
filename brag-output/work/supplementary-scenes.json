@@ -1,0 +1,27 @@
+[
+  {
+    "route": "/shipment-orders",
+    "detail": "/shipment-orders/",
+    "title": "Shipment detail: read the parcel first",
+    "text": "Check the delivery stage, customer payment status, addresses and weight. Pickup OTP appears only when returned. Rider identity, vehicle and earnings are shown separately.",
+    "target": "h1",
+    "filterStatus": "sentToHq",
+    "section": "Order information"
+  },
+  {
+    "route": null,
+    "summary": "Record cash receipt",
+    "title": "Record customer cash against the right bill",
+    "text": "Open the due bill’s cash receipt form. Check the amount and collect the required reference and evidence before submitting. This records customer payment; it is separate from rider earnings.",
+    "target": "summary"
+  },
+  {
+    "route": "/shipment-orders",
+    "title": "Customer checkout and payment links",
+    "text": "When enabled, Get payment link retrieves checkout for a due bill. Generate new payment link checks whether the previous checkout was abandoned. Copy the ready link, then refresh payment status. Never assume that opening a link settles the bill.",
+    "target": "main",
+    "filterStatus": "sentToHq",
+    "detail": "/shipment-orders/",
+    "section": "Update shipment status"
+  }
+]

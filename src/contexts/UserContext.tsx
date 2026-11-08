@@ -62,6 +62,7 @@ export function UserProvider({ children }: { children: React.ReactNode }) {
         id: session.uid,
         email: profile.email || "",
         username: profile.username || profile.email || session.uid,
+        imageURL: profile.imageUrl || profile.imageURL || undefined,
         isAdmin: membershipKnown && session.isAdmin === true,
         membershipKnown,
         adminType:

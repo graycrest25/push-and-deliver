@@ -86,7 +86,8 @@ test("referrals use supported page sizes, scoped cursors and native CSV dates", 
 }) => {
   await open(page, "/referrals");
   await expect(page.getByText("CODE123", { exact: true })).toBeVisible();
-  await expect(page.getByLabel("Rows per page")).toHaveValue("50");
+  await expect(page.getByLabel("Rows per page")).toHaveValue("20");
+  await expect(page.getByLabel("Rows per page").locator("option")).toHaveText(["10", "20", "30", "50"]);
   await page.getByRole("button", { name: "Next", exact: true }).click();
   await expect(page.getByText("ref-2", { exact: true })).toBeVisible();
   await page.getByLabel("Referred user ID", { exact: true }).fill("user-1");
@@ -94,13 +95,18 @@ test("referrals use supported page sizes, scoped cursors and native CSV dates", 
   await expect(page.getByText("ref-1", { exact: true })).toBeVisible();
   await page.getByLabel("Start date", { exact: true }).fill("2026-10-01");
   await page.getByLabel("End date", { exact: true }).fill("2026-10-31");
+  await page.getByRole("button", { name: "Apply dates" }).click();
   const download = page.waitForEvent("download");
-  await page.getByRole("button", { name: "Download referral CSV" }).click();
+  await page.getByRole("button", { name: "Download filtered CSV" }).click();
   const saved = await download;
   expect(saved.suggestedFilename()).toBe("referrals-2026-10-01-2026-10-31.csv");
   const records = (await control()).records;
   expect(records.find((r: any) => r.path.endsWith("export.csv")).query).toEqual(
-    { startDate: "2026-10-01", endDate: "2026-10-31" },
+    {
+      startDate: "2026-10-01",
+      endDate: "2026-10-31",
+      referrerAccountType: "user",
+    },
   );
   expect(
     records.some(
@@ -372,4 +378,77 @@ test("proxy rejects confirmed unmounted APIs and keeps native calls authenticate
   );
   expect(record.authorization).toBe("Bearer pnd_a2_private");
   expect(record.account).toBe("user");
+});
+
+test("referral emails link to user documents and generated referrals display promoter names", async ({
+  page,
+}) => {
+  test.setTimeout(90_000);
+  await open(page, "/referrals");
+  await page.route("**/api/proxy/v1/admin/referrals?*", (route) =>
+    route.fulfill({
+      json: {
+        data: {
+          items: [
+            {
+              id: "account-referral",
+              referrerAccountType: "user",
+              referredUid: "customer/one",
+              referrerUid: "referrer-two",
+              referredEmail: "customer@example.com",
+              referrerEmail: "referrer@example.com",
+              promoterName: null,
+            },
+            {
+              id: "generated-referral",
+              referrerAccountType: null,
+              referredUid: "customer-three",
+              referrerUid: null,
+              referredEmail: "generated@example.com",
+              referrerEmail: null,
+              promoterName: "Promoter Example",
+            },
+            {
+              id: "missing-details",
+              referrerAccountType: "user",
+              referredUid: "customer-four",
+              referrerUid: "referrer-four",
+              referredEmail: null,
+              referrerEmail: null,
+              promoterName: null,
+            },
+          ],
+          nextCursor: null,
+          hasMore: false,
+        },
+      },
+    }),
+  );
+  await page.reload();
+  await expect(
+    page.getByRole("columnheader", { name: "Referred Email", exact: true }),
+  ).toBeVisible();
+  await expect(
+    page.getByRole("columnheader", { name: "Referrer Email", exact: true }),
+  ).toBeVisible();
+  await expect(
+    page.getByRole("link", { name: "customer@example.com", exact: true }),
+  ).toHaveAttribute("href", "/users/customer%2Fone");
+  await expect(
+    page.getByRole("link", { name: "referrer@example.com", exact: true }),
+  ).toHaveAttribute("href", "/users/referrer-two");
+  const generated = page
+    .getByRole("row")
+    .filter({ hasText: "generated-referral" });
+  await expect(generated).toContainText("Promoter Example (Promoter)");
+  await expect(
+    generated.getByRole("cell", { name: "Promoter", exact: true }),
+  ).toHaveCount(0);
+  await expect(generated).toContainText("generated@example.com");
+  await expect(generated.getByRole("link")).toHaveCount(0);
+  const missing = page.getByRole("row").filter({ hasText: "missing-details" });
+  await expect(missing.getByText("Unavailable", { exact: true })).toHaveCount(
+    2,
+  );
+  await expect(missing.getByRole("link")).toHaveCount(0);
 });

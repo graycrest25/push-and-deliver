@@ -1,9 +1,11 @@
 import { useState } from "react";
+import { onlineLabel } from "./rider-filters";
 import { Link, useParams } from "react-router-dom";
 import { toast } from "sonner";
 import { ProfileSkeleton } from "@/components/ui/loading-skeletons";
 import { RefreshButton } from "@/components/ui/refresh-button";
 import { Badge } from "@/components/ui/badge";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
@@ -137,11 +139,9 @@ function EditProfile({
               : "Save personal information",
             method: "PUT",
             path,
-            versionPath: vehicle
-              ? `/v1/admin/riders/${segment(data.uid)}/application`
-              : queryPath(`/v1/admin/users/${segment(data.uid)}`, {
-                  type: riders ? "riders" : "users",
-                }),
+            versionPath: queryPath(`/v1/admin/users/${segment(data.uid)}`, {
+              type: riders ? "riders" : "users",
+            }),
             refreshBeforeSubmit: vehicle,
             preserveRetry: true,
             initial: {
@@ -274,22 +274,41 @@ export function AccountProfile({ riders = false }: { riders?: boolean }) {
         data && (
           <>
             <div className="flex flex-wrap justify-between items-center gap-4 border-b pb-5">
-              <div className="min-w-0">
-                <h2 className="text-xl font-semibold break-words">
-                  {data.username || "Name unavailable"}
-                </h2>
-                <p className="mt-1 break-all text-sm text-muted-foreground">
-                  {data.uid}
-                </p>
-                <div className="mt-3 flex gap-2 flex-wrap">
-                  <Badge variant="secondary">{riders ? "Rider" : "User"}</Badge>
-                  <Badge variant="secondary">
-                    {verificationLabel(data.verificationStatus)}
-                  </Badge>
-                  {data.disabled && (
-                    <Badge variant="destructive">Disabled</Badge>
-                  )}
-                  {data.deleted && <Badge variant="destructive">Deleted</Badge>}
+              <div className="flex min-w-0 items-center gap-4">
+                <Avatar className="size-20">
+                  <AvatarImage
+                    src={data.imageUrl || undefined}
+                    alt={`${data.username || (riders ? "Rider" : "User")} profile photo`}
+                    className="object-cover"
+                  />
+                  <AvatarFallback>
+                    {String(data.username || (riders ? "Rider" : "User"))
+                      .trim()
+                      .slice(0, 2)
+                      .toUpperCase()}
+                  </AvatarFallback>
+                </Avatar>
+                <div className="min-w-0">
+                  <h2 className="text-xl font-semibold break-words">
+                    {data.username || "Name unavailable"}
+                  </h2>
+                  <p className="mt-1 break-all text-sm text-muted-foreground">
+                    {data.uid}
+                  </p>
+                  <div className="mt-3 flex gap-2 flex-wrap">
+                    <Badge variant="secondary">
+                      {riders ? "Rider" : "User"}
+                    </Badge>
+                    <Badge variant="secondary">
+                      {verificationLabel(data.verificationStatus)}
+                    </Badge>
+                    {data.disabled && (
+                      <Badge variant="destructive">Disabled</Badge>
+                    )}
+                    {data.deleted && (
+                      <Badge variant="destructive">Deleted</Badge>
+                    )}
+                  </div>
                 </div>
               </div>
               <EditProfile
@@ -317,6 +336,7 @@ export function AccountProfile({ riders = false }: { riders?: boolean }) {
                 <RecordView
                   data={{
                     fullName: data.username,
+                    ...(riders ? { onlineStatusLabel: onlineLabel(data) } : {}),
                     email: data.email,
                     phoneNumber: data.phoneNumber,
                     emailVerified: data.emailVerified,
@@ -381,6 +401,50 @@ export function AccountProfile({ riders = false }: { riders?: boolean }) {
                       riders
                       reload={resource.reload}
                     />
+                    {data.vehicle?.type == null && (
+                      <ActionForm
+                        onSuccess={() => {
+                          toast.success(
+                            "Vehicle type assigned. The rider requires review before approval.",
+                          );
+                          resource.reload();
+                        }}
+                        action={{
+                          title: "Assign vehicle type",
+                          description:
+                            "Saving returns the rider to pending review; it does not approve them. Blocked-account restrictions still apply.",
+                          method: "PUT",
+                          path: `/v1/admin/riders/${segment(id)}/vehicle`,
+                          versionPath: queryPath(
+                            `/v1/admin/users/${segment(id)}`,
+                            { type: "riders" },
+                          ),
+                          refreshBeforeSubmit: true,
+                          preserveRetry: true,
+                          fields: [
+                            {
+                              ...select(
+                                "type",
+                                ["", "0", "1", "2"],
+                                "Vehicle type",
+                              ),
+                              optionLabels: {
+                                "": "Select a vehicle type",
+                                "0": "Car",
+                                "1": "Bicycle",
+                                "2": "Motorbike",
+                              },
+                            },
+                            reasonField,
+                          ],
+                          body: (values) => ({
+                            expectedVersion: version(data),
+                            reason: reason(values.reason),
+                            changes: { type: Number(values.type) },
+                          }),
+                        }}
+                      />
+                    )}
                   </div>
                 </InformationCard>
               </div>

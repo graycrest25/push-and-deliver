@@ -1,5 +1,7 @@
+import { BroadcastDetails } from "@/features/admin/broadcasts";
 import { LocalShippingType } from "@/features/admin/local-shipping-types";
 import { GameRulesPage } from "@/features/admin/game-rules";
+import { SupportClosures } from "@/features/admin/support-closures";
 import { PromoterLinksPage } from "@/features/admin/promoter-links";
 import {
   RiderApplications,
@@ -248,6 +250,10 @@ export default function Router() {
                     />
                     <Route path="/referrals" element={<NativeReferrals />} />
                     <Route
+                      path="/support-closures"
+                      element={<SupportClosures />}
+                    />
+                    <Route
                       path="/promoter-links"
                       element={<PromoterLinksPage />}
                     />
@@ -298,6 +304,10 @@ export default function Router() {
                     />
                     <Route path="/game-rules" element={<GameRulesPage />} />
                     <Route path="/coupons" element={<NativeCoupons />} />
+                    <Route
+                      path="/general-notifications/:id"
+                      element={<BroadcastDetails />}
+                    />
                     <Route
                       path="/general-notifications"
                       element={<NotificationsPage />}

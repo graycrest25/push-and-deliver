@@ -35,6 +35,7 @@ export const adminScreens: Record<AdminType, readonly string[]> = {
   super: [
     ...operations,
     "/admin/users",
+    "/support-closures",
     "/audit",
     "/analytics-coverage",
     "/app-config",
