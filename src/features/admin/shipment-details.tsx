@@ -74,9 +74,13 @@ export const ShipmentStatusActions = ShipmentCommands;
 export function ShipmentDetails({
   data,
   reload,
+  onCheckoutResult,
+  assessmentPending,
 }: {
   data: RecordData;
   reload: () => void;
+  onCheckoutResult?: (result: RecordData, pending: boolean) => void;
+  assessmentPending?: boolean;
 }) {
   const [busy, setBusy] = useState<string | null>(null);
   const [error, setError] = useState<unknown>(null);
@@ -147,16 +151,23 @@ export function ShipmentDetails({
         ))}
       </div>
       <OfficeHandoffCode data={data} />
-      <ShipmentStatusActions data={data} reload={reload} />
+      <ShipmentStatusActions
+        data={data}
+        reload={reload}
+        onCheckoutResult={onCheckoutResult}
+        assessmentPending={assessmentPending}
+      />
       <Section title="Order information">
         <Fields
           values={[
             ["Shipment ID", data.id],
             ["Shipment type", type],
-            [
-              "Pickup OTP",
-              data.pickupOtp == null ? "Unavailable" : String(data.pickupOtp),
-            ],
+            ...(data.pickupOtp != null && String(data.pickupOtp).trim() !== ""
+              ? ([["Pickup OTP", String(data.pickupOtp)]] as [
+                  string,
+                  ReactNode,
+                ][])
+              : []),
             ...(customs
               ? ([
                   ["Clearance type", friendly(data.clearanceType)],
@@ -184,7 +195,6 @@ export function ShipmentDetails({
               ? ([
                   ["Receiver name", data.receiver?.name],
                   ["Receiver phone", data.receiver?.phone],
-                  ["Receiver email", data.receiver?.email],
                 ] as [string, ReactNode][])
               : []),
           ]}
@@ -266,9 +276,6 @@ export function ShipmentDetails({
             ]}
           />
           {data.refund && <RecordView data={{ refund: data.refund }} />}
-          {Array.isArray(data.assessments) && data.assessments.length > 0 && (
-            <RecordView data={{ assessments: data.assessments }} />
-          )}
         </div>
       </Section>
       <Section title="Rider pickup earnings and payment">

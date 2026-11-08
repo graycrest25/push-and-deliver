@@ -40,6 +40,7 @@ export const routes: readonly [string, string][] = [
   ["POST", "/v1/admin/shipments/{id}/historical-status"],
   ["POST", "/v1/admin/shipments/{id}/price-reviews"],
   ["POST", "/v1/admin/shipments/{id}/assessment"],
+  ["POST", "/v1/admin/shipments/{id}/assessment/checkout"],
   ["POST", "/v1/admin/shipments/{id}/status-corrections"],
   ["POST", "/v1/admin/shipments/{id}/assignment"],
   ["POST", "/v1/admin/shipments/{id}/office-handoff-code"],

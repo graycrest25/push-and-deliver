@@ -1,3 +1,4 @@
+import { ShipmentCheckoutPanels } from "./shipment-checkout";
 import {
   riderEarnings,
   riderPaymentMethod,
@@ -19,7 +20,7 @@ import {
   ShipmentSkeleton,
 } from "@/components/ui/loading-skeletons";
 import { RefreshButton } from "@/components/ui/refresh-button";
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { Link, useParams } from "react-router-dom";
 import { useCurrentUser } from "@/contexts/UserContext";
 import { canOperate } from "@/lib/admin-access";
@@ -265,6 +266,67 @@ export function NativeShipment() {
     id: string;
     result: RecordData;
   } | null>(null);
+  const [checkout, setCheckout] = useState<{
+    id: string;
+    result: RecordData;
+    pending: boolean;
+    version: number;
+  } | null>(null);
+  const checkoutResult = checkout?.id === id ? checkout : null;
+  const paymentRefresh = useRef({ record, checkoutResult });
+  paymentRefresh.current = { record, checkoutResult };
+  useEffect(() => {
+    let attempts = 0;
+    const timer = setInterval(() => {
+      const { record: latest, checkoutResult: saved } = paymentRefresh.current;
+      if (latest.loading) return;
+      const bills: RecordData[] = latest.data?.assessments || [];
+      const bill = bills.find((item) => item.id === saved?.result.assessmentId);
+      const needsRefresh =
+        bills.some((item) => item.checkoutStatus === "pending") ||
+        (!!saved &&
+          ((!bill &&
+            (saved.pending || saved.result.checkoutStatus === "pending")) ||
+            (!!saved.result.paymentId &&
+              bill?.status === "due" &&
+              bill.paymentId !== saved.result.paymentId)));
+      if (!needsRefresh || attempts >= 12) {
+        clearInterval(timer);
+        return;
+      }
+      attempts++;
+      latest.reload();
+    }, 7000);
+    return () => clearInterval(timer);
+  }, [
+    id,
+    checkoutResult?.result.operationId,
+    checkoutResult?.result.paymentId,
+    checkoutResult?.result.checkoutStatus,
+  ]);
+  const currentAssessment = record.data?.assessments?.find(
+    (item: RecordData) => item.id === checkoutResult?.result.assessmentId,
+  );
+  useEffect(() => {
+    if (
+      checkoutResult?.result.paymentId &&
+      currentAssessment?.paymentId === checkoutResult.result.paymentId &&
+      currentAssessment.checkoutStatus &&
+      currentAssessment.checkoutStatus !== "pending"
+    )
+      setCheckout(null);
+  }, [checkoutResult, currentAssessment]);
+  const assessmentPending =
+    !!checkoutResult?.pending &&
+    !(
+      currentAssessment?.checkoutStatus &&
+      currentAssessment.checkoutStatus !== "pending"
+    ) &&
+    !(
+      record.data &&
+      record.data.version > checkoutResult.version &&
+      record.data.pendingCommands?.assessment === false
+    );
   return (
     <div className="space-y-6">
       <Link className="text-sm text-primary underline" to="/shipment-orders">
@@ -280,6 +342,13 @@ export function NativeShipment() {
           <RecordView data={priceResult.result} />
         </InformationCard>
       )}
+      <ShipmentCheckoutPanels
+        data={record.data}
+        result={checkoutResult?.result}
+        pending={assessmentPending}
+        reload={record.reload}
+        loading={record.loading}
+      />
       {record.error ? (
         <ErrorNotice error={record.error} retry={record.reload} />
       ) : record.loading ? (
@@ -294,7 +363,19 @@ export function NativeShipment() {
                 record.reload();
               }}
             />
-            <ShipmentDetails data={record.data} reload={record.reload} />
+            <ShipmentDetails
+              data={record.data}
+              reload={record.reload}
+              assessmentPending={assessmentPending}
+              onCheckoutResult={(result, pending) =>
+                setCheckout({
+                  id,
+                  result,
+                  pending,
+                  version: record.data!.version,
+                })
+              }
+            />
             <ShipmentTimeline id={id} />
             <ShipmentTracking id={id} status={record.data.status} />
           </>

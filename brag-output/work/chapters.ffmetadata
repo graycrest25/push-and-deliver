@@ -1,0 +1,163 @@
+;FFMETADATA1
+title=PushNDeliver Web Admin — Silent Tutorial
+comment=Read-only tutorial with demo personal details. No audio.
+[CHAPTER]
+TIMEBASE=1/1000
+START=0
+END=11533
+title=Welcome to the admin workspace
+[CHAPTER]
+TIMEBASE=1/1000
+START=11533
+END=22267
+title=Navigation and role access
+[CHAPTER]
+TIMEBASE=1/1000
+START=22267
+END=32867
+title=Reports: choose scope before reading totals
+[CHAPTER]
+TIMEBASE=1/1000
+START=32867
+END=43533
+title=Users: search, inspect and export
+[CHAPTER]
+TIMEBASE=1/1000
+START=43533
+END=55499
+title=Riders: check eligibility and activity
+[CHAPTER]
+TIMEBASE=1/1000
+START=55499
+END=68066
+title=Rider applications: review before deciding
+[CHAPTER]
+TIMEBASE=1/1000
+START=68066
+END=78466
+title=Vendor applications and partners
+[CHAPTER]
+TIMEBASE=1/1000
+START=78466
+END=89133
+title=Shipments: locate the right order
+[CHAPTER]
+TIMEBASE=1/1000
+START=89133
+END=99766
+title=Shipment detail: read the parcel first
+[CHAPTER]
+TIMEBASE=1/1000
+START=99766
+END=110533
+title=Assess a shipment charge
+[CHAPTER]
+TIMEBASE=1/1000
+START=110533
+END=120566
+title=Customer checkout and payment links
+[CHAPTER]
+TIMEBASE=1/1000
+START=120566
+END=131366
+title=Payment rules that prevent mistakes
+[CHAPTER]
+TIMEBASE=1/1000
+START=131366
+END=141899
+title=HQ handoff and onward delivery
+[CHAPTER]
+TIMEBASE=1/1000
+START=141899
+END=152699
+title=Ride hailing and courier operations
+[CHAPTER]
+TIMEBASE=1/1000
+START=152699
+END=162833
+title=Support: claim, read and respond
+[CHAPTER]
+TIMEBASE=1/1000
+START=162833
+END=172933
+title=Support closure and attachment access
+[CHAPTER]
+TIMEBASE=1/1000
+START=172933
+END=183033
+title=Payment review
+[CHAPTER]
+TIMEBASE=1/1000
+START=183033
+END=192999
+title=Withdrawals: review before transfer
+[CHAPTER]
+TIMEBASE=1/1000
+START=192999
+END=202999
+title=Fees and pricing
+[CHAPTER]
+TIMEBASE=1/1000
+START=202999
+END=212966
+title=Shipping tariffs and delivery zones
+[CHAPTER]
+TIMEBASE=1/1000
+START=212966
+END=222966
+title=Referrals and promoter attribution
+[CHAPTER]
+TIMEBASE=1/1000
+START=222966
+END=233166
+title=Promoter links
+[CHAPTER]
+TIMEBASE=1/1000
+START=233166
+END=243166
+title=Coupons, rewards and game rules
+[CHAPTER]
+TIMEBASE=1/1000
+START=243166
+END=253166
+title=Broadcasts: prepare an announcement
+[CHAPTER]
+TIMEBASE=1/1000
+START=253166
+END=263133
+title=Broadcast history and delivery progress
+[CHAPTER]
+TIMEBASE=1/1000
+START=263133
+END=273099
+title=Resend broadcasts carefully
+[CHAPTER]
+TIMEBASE=1/1000
+START=273099
+END=283899
+title=Files, uploads and evidence
+[CHAPTER]
+TIMEBASE=1/1000
+START=283899
+END=293899
+title=Background jobs and audit history
+[CHAPTER]
+TIMEBASE=1/1000
+START=293899
+END=303899
+title=Offices and service configuration
+[CHAPTER]
+TIMEBASE=1/1000
+START=303899
+END=313899
+title=Admin accounts and permissions
+[CHAPTER]
+TIMEBASE=1/1000
+START=313899
+END=323899
+title=Account security and safe retries
+[CHAPTER]
+TIMEBASE=1/1000
+START=323899
+END=333899
+title=Your daily workflow

@@ -1,0 +1,99 @@
+PUSHNDELIVER WEB ADMIN — SILENT GUIDED TOUR
+
+Personal details are demo values. No live changes were submitted.
+
+00:00  Welcome to the admin workspace
+This silent guide shows where to work and what to check. Customer details are replaced with demo values. No live changes are submitted.
+
+00:11  Navigation and role access
+Use the sidebar to move between sections. Find a page searches the workspace. Your admin role controls access; a missing action may reflect permissions or record status.
+
+00:22  Reports: choose scope before reading totals
+Select the account or order category and review the period shown. Use Refresh for current data. Coverage warnings explain when a report is not ready.
+
+00:32  Users: search, inspect and export
+Search by name, email or phone. Apply filters, then open a user to review their profile and finances. Exports download all matching records in one file.
+
+00:43  Riders: check eligibility and activity
+Filter riders by vehicle, verification and registration dates. Open a rider for profile and financial details. Online status is a saved flag, not guaranteed live connectivity.
+
+00:55  Rider applications: review before deciding
+Open an application to inspect identity, vehicle information, documents and approval blockers. Only use the review actions returned for that application. Verify evidence before submitting.
+
+01:08  Vendor applications and partners
+Find the relevant partner record and inspect its application details. Review documents and current status before using any available approval or management action.
+
+01:18  Shipments: locate the right order
+Search with the full shipment ID, or filter by city, shipment type and status. Open a matching row to work on that shipment.
+
+01:29  Shipment detail: read the parcel first
+Check the delivery stage, customer payment status, addresses and weight. Pickup OTP appears only when returned. Rider identity, vehicle and earnings are shown separately.
+
+01:39  Assess a shipment charge
+Where available, review the prefilled charge and weight, choose the charge type and enter a reason. Enter naira; the system submits kobo. Submit only after checking the parcel.
+
+01:50  Customer checkout and payment links
+A ready checkout offers Copy payment link and Open payment link. Get payment link retrieves an existing bill. Generate new payment link asks the backend to verify abandonment.
+
+02:00  Payment rules that prevent mistakes
+An open link or closed checkout does not prove payment. Refresh authoritative status. Customer cash requires the exact due bill and evidence. Rider HQ earnings do not pay the customer bill.
+
+02:11  HQ handoff and onward delivery
+Give the HQ handoff code only after receiving the parcel. It lasts ten minutes. Available actions then guide office arrival, final dispatch and delivery; payment blockers must be resolved first.
+
+02:21  Ride hailing and courier operations
+Filter and open a ride to inspect status, customer, rider and fare details. Use only available actions. Historical records retain their separate correction flow.
+
+02:32  Support: claim, read and respond
+Open a ticket and claim it when required. Read the conversation, load older messages and inspect customer images. Admin replies are text only.
+
+02:42  Support closure and attachment access
+Close a resolved ticket with a clear summary. Super admins can inspect closed tickets and history. Assigned staff access attachments on open tickets; unavailable files are labelled.
+
+02:52  Payment review
+Use payment records to investigate status and references. Verify the backend result before treating a payment as complete. A redirected checkout is not proof of settlement.
+
+03:03  Withdrawals: review before transfer
+Open a request and verify the amount and destination. Claim it before processing where required. Record the outcome only after the real transfer is confirmed.
+
+03:12  Fees and pricing
+Inspect the relevant fee or pricing record before editing. Check units, applicable service and scope. Review the saved result; do not assume every field is a naira amount.
+
+03:22  Shipping tariffs and delivery zones
+Choose the country or tariff, review zones and weight bands, then edit the permitted draft. Inspect saved prices before publishing. Domestic delivery tariffs have their own section.
+
+03:32  Referrals and promoter attribution
+Use referral tabs and dates to narrow results. Email links open account profiles. Generated referrals show a promoter name. Use the filtered CSV for an export.
+
+03:42  Promoter links
+Review existing promoter links before creating or changing one. Check the intended promoter, code and active status. Referral reporting remains separate from link management.
+
+03:53  Coupons, rewards and game rules
+Review campaigns, codes and eligibility before changing incentives. Check issuance and redemption status. Game rules are managed separately and are restricted by admin role.
+
+04:03  Broadcasts: prepare an announcement
+Choose customers, riders or all accounts. Enter a title and message, then review before queuing. This tutorial does not send a notification.
+
+04:13  Broadcast history and delivery progress
+Open a history row for content, progress and failures. Processed includes skipped accounts. Provider acceptance does not mean a phone received or opened the message.
+
+04:23  Resend broadcasts carefully
+Confirm resend only when you intend to contact the audience again, including previous recipients. It creates a new broadcast. Retry a timeout without changing the request details.
+
+04:33  Files, uploads and evidence
+Upload files for the correct purpose and wait until they are ready. Use prepared evidence in the related workflow. Do not assume an upload is usable while it is still processing.
+
+04:43  Background jobs and audit history
+Use jobs to investigate queued, retrying or failed work. Review the error before an available retry action. Audit history records administrative activity for investigation.
+
+04:53  Offices and service configuration
+Review office details and geography carefully. Delivery tariffs, international tariffs and mobile app configuration are separate areas. Confirm the intended service and location before saving.
+
+05:03  Admin accounts and permissions
+Super admins manage membership using the existing user record. Choose the intended role and provide the required reason. Access changes can invalidate the affected account’s sessions.
+
+05:13  Account security and safe retries
+Sign out when you finish. If an operation times out, check the latest record and retry unchanged details. Refresh after a conflict before starting a new operation.
+
+05:23  Your daily workflow
+Review the overview, handle operations, resolve support, and check payment outcomes. Open the right record, verify the facts, use available actions, then refresh to confirm the result.

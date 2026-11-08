@@ -835,11 +835,13 @@ export interface Action {
   versionPath?: string;
   versionRead?: () => Promise<RecordData>;
   refreshBeforeSubmit?: boolean;
+  reconcileBeforeRetry?: boolean;
+  errorMessages?: Record<string, string>;
   validateCurrent?: (current: RecordData) => void;
   renderCurrent?: (current: RecordData) => ReactNode;
   conflictHelp?: string;
   minimumVersion?: 0 | 1;
-  expectedStatus?: number;
+  expectedStatus?: number | number[];
   renderResult?: (result: RecordData) => ReactNode;
   restartLabel?: string;
   validateResult?: (result: RecordData) => void;
@@ -849,7 +851,7 @@ export function ActionForm({
   onSuccess,
 }: {
   action: Action;
-  onSuccess?: (result: RecordData) => void;
+  onSuccess?: (result: RecordData, responseStatus?: number) => void;
 }) {
   const formId = useId();
   const { user } = useCurrentUser();
@@ -914,6 +916,15 @@ export function ActionForm({
     setError(null);
     setResult(null);
     try {
+      if (
+        pending.current &&
+        action.reconcileBeforeRetry &&
+        action.versionPath
+      ) {
+        // Re-read authoritative payment state, then replay the original operation
+        // unchanged so an uncertain response can never become a second charge.
+        setLatest(await api(action.versionPath));
+      }
       const values = pending.current
         ? {}
         : serialize(action.fields || [], value);
@@ -980,8 +991,10 @@ export function ActionForm({
       };
       let response: RecordData;
       let responseRequestId: string | undefined;
+      let responseStatus: number | undefined;
       if (action.expectedStatus) {
         const result = await apiResponse(path, options);
+        responseStatus = result.status;
         responseRequestId = result.headers.get("x-request-id") || undefined;
         const envelope = await result.json().catch(() => {
           throw new ApiError(
@@ -992,7 +1005,13 @@ export function ActionForm({
           );
         });
         responseRequestId ||= envelope?.requestId;
-        if (result.status !== action.expectedStatus)
+        if (
+          !(
+            Array.isArray(action.expectedStatus)
+              ? action.expectedStatus
+              : [action.expectedStatus]
+          ).includes(result.status)
+        )
           throw new ApiError(
             502,
             "unexpected_response",
@@ -1021,7 +1040,7 @@ export function ActionForm({
         if (key.startsWith(uploadPrefix)) sessionStorage.removeItem(key);
       setResult(response);
       setCommitted((n) => n + 1);
-      onSuccess?.(response);
+      onSuccess?.(response, responseStatus);
     } catch (e) {
       if (
         e instanceof ApiError &&
@@ -1054,7 +1073,18 @@ export function ActionForm({
           : Date.parse(e.retryAfter);
         if (Number.isFinite(until) && until > Date.now()) setRetryAt(until);
       }
-      setError(e);
+      setError(
+        e instanceof ApiError && action.errorMessages?.[e.code]
+          ? new ApiError(
+              e.status,
+              e.code,
+              action.errorMessages[e.code],
+              e.requestId,
+              e.retryAfter,
+              e.details,
+            )
+          : e,
+      );
     } finally {
       lock.current = false;
       setBusy(false);

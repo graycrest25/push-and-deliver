@@ -1,0 +1,230 @@
+{
+  "videoPath": "/Users/macbook/Development/projects/push-and-deliver/brag-output/work/raw/page@75e28de2cf22d66329e4676b130a4d44.webm",
+  "elapsed": 457.539,
+  "clips": [
+    {
+      "index": 0,
+      "title": "Welcome to the admin workspace",
+      "start": 6.114,
+      "end": 19.055,
+      "route": "/dashboard"
+    },
+    {
+      "index": 1,
+      "title": "Navigation and role access",
+      "start": 19.281,
+      "end": 30.024,
+      "route": "detail"
+    },
+    {
+      "index": 2,
+      "title": "Reports: choose scope before reading totals",
+      "start": 35.038,
+      "end": 45.635,
+      "route": "/reports"
+    },
+    {
+      "index": 3,
+      "title": "Users: search, inspect and export",
+      "start": 49.789,
+      "end": 60.453,
+      "route": "/users"
+    },
+    {
+      "index": 4,
+      "title": "Riders: check eligibility and activity",
+      "start": 65.699,
+      "end": 77.677,
+      "route": "/riders"
+    },
+    {
+      "index": 5,
+      "title": "Rider applications: review before deciding",
+      "start": 84.128,
+      "end": 96.719,
+      "route": "/rider-applications"
+    },
+    {
+      "index": 6,
+      "title": "Vendor applications and partners",
+      "start": 104.279,
+      "end": 114.694,
+      "route": "/vendors"
+    },
+    {
+      "index": 7,
+      "title": "Shipments: locate the right order",
+      "start": 119.771,
+      "end": 130.456,
+      "route": "/shipment-orders"
+    },
+    {
+      "index": 8,
+      "title": "Shipment detail: read the parcel first",
+      "start": 133.336,
+      "end": 143.989,
+      "route": "detail"
+    },
+    {
+      "index": 9,
+      "title": "Assess a shipment charge",
+      "start": 144.152,
+      "end": 154.913,
+      "route": "detail"
+    },
+    {
+      "index": 10,
+      "title": "Customer checkout and payment links",
+      "start": 154.945,
+      "end": 165.026,
+      "route": "detail"
+    },
+    {
+      "index": 11,
+      "title": "Payment rules that prevent mistakes",
+      "start": 165.067,
+      "end": 175.904,
+      "route": "detail"
+    },
+    {
+      "index": 12,
+      "title": "HQ handoff and onward delivery",
+      "start": 175.931,
+      "end": 186.441,
+      "route": "detail"
+    },
+    {
+      "index": 13,
+      "title": "Ride hailing and courier operations",
+      "start": 191.217,
+      "end": 202.022,
+      "route": "/ride-hailing"
+    },
+    {
+      "index": 14,
+      "title": "Support: claim, read and respond",
+      "start": 207.784,
+      "end": 217.922,
+      "route": "/support-tickets"
+    },
+    {
+      "index": 15,
+      "title": "Support closure and attachment access",
+      "start": 217.959,
+      "end": 228.054,
+      "route": "detail"
+    },
+    {
+      "index": 16,
+      "title": "Payment review",
+      "start": 232.622,
+      "end": 242.749,
+      "route": "/payments"
+    },
+    {
+      "index": 17,
+      "title": "Withdrawals: review before transfer",
+      "start": 246.288,
+      "end": 256.287,
+      "route": "/withdrawals"
+    },
+    {
+      "index": 18,
+      "title": "Fees and pricing",
+      "start": 260.755,
+      "end": 270.751,
+      "route": "/fees"
+    },
+    {
+      "index": 19,
+      "title": "Shipping tariffs and delivery zones",
+      "start": 274.963,
+      "end": 284.96,
+      "route": "/export-rates"
+    },
+    {
+      "index": 20,
+      "title": "Referrals and promoter attribution",
+      "start": 302.45,
+      "end": 312.467,
+      "route": "/referrals"
+    },
+    {
+      "index": 21,
+      "title": "Promoter links",
+      "start": 316.321,
+      "end": 326.523,
+      "route": "/promoter-links"
+    },
+    {
+      "index": 22,
+      "title": "Coupons, rewards and game rules",
+      "start": 330.425,
+      "end": 340.428,
+      "route": "/coupons"
+    },
+    {
+      "index": 23,
+      "title": "Broadcasts: prepare an announcement",
+      "start": 344.842,
+      "end": 354.875,
+      "route": "/general-notifications"
+    },
+    {
+      "index": 24,
+      "title": "Broadcast history and delivery progress",
+      "start": 354.891,
+      "end": 364.882,
+      "route": "detail"
+    },
+    {
+      "index": 25,
+      "title": "Resend broadcasts carefully",
+      "start": 364.897,
+      "end": 374.891,
+      "route": "detail"
+    },
+    {
+      "index": 26,
+      "title": "Files, uploads and evidence",
+      "start": 378.796,
+      "end": 389.587,
+      "route": "/files"
+    },
+    {
+      "index": 27,
+      "title": "Background jobs and audit history",
+      "start": 393.184,
+      "end": 403.174,
+      "route": "/jobs"
+    },
+    {
+      "index": 28,
+      "title": "Offices and service configuration",
+      "start": 406.575,
+      "end": 416.588,
+      "route": "/head-offices"
+    },
+    {
+      "index": 29,
+      "title": "Admin accounts and permissions",
+      "start": 420.474,
+      "end": 430.476,
+      "route": "/admin/users"
+    },
+    {
+      "index": 30,
+      "title": "Account security and safe retries",
+      "start": 434.158,
+      "end": 444.147,
+      "route": "/settings"
+    },
+    {
+      "index": 31,
+      "title": "Your daily workflow",
+      "start": 447.551,
+      "end": 457.538,
+      "route": "/dashboard"
+    }
+  ]
+}

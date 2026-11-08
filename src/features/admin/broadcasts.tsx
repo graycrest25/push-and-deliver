@@ -62,6 +62,18 @@ export function BroadcastHistory({ revision }: { revision: number }) {
                 </Link>
               ),
             },
+            {
+              key: "body",
+              label: "Body",
+              render: (row) => (
+                <span
+                  className="block max-w-64 truncate"
+                  title={row.body || undefined}
+                >
+                  {row.body || "Not available"}
+                </span>
+              ),
+            },
             { key: "audience" },
             { key: "status", render: (row) => <Status value={row.status} /> },
             {

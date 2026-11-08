@@ -1,0 +1,41 @@
+{
+  "videoPath": "/Users/macbook/Development/projects/push-and-deliver/brag-output/work/raw/page@8ce021567d62d16934d677f8ab90b827.webm",
+  "elapsed": 80.572,
+  "clips": [
+    {
+      "index": 8,
+      "title": "Shipment detail: read the parcel first",
+      "start": 19.96,
+      "end": 30.265,
+      "route": "/shipment-orders"
+    },
+    {
+      "index": 9,
+      "title": "Assess a shipment charge",
+      "start": 30.284,
+      "end": 40.297,
+      "route": "detail"
+    },
+    {
+      "index": 10,
+      "title": "Customer checkout and payment links",
+      "start": 49.095,
+      "end": 59.15,
+      "route": "/shipment-orders"
+    },
+    {
+      "index": 11,
+      "title": "Payment rules that prevent mistakes",
+      "start": 59.199,
+      "end": 70.006,
+      "route": "detail"
+    },
+    {
+      "index": 12,
+      "title": "HQ handoff and onward delivery",
+      "start": 70.031,
+      "end": 80.572,
+      "route": "detail"
+    }
+  ]
+}
