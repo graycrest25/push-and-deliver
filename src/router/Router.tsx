@@ -1,5 +1,6 @@
 import { LocalShippingType } from "@/features/admin/local-shipping-types";
 import { GameRulesPage } from "@/features/admin/game-rules";
+import { SupportClosures } from "@/features/admin/support-closures";
 import { PromoterLinksPage } from "@/features/admin/promoter-links";
 import {
   RiderApplications,
@@ -247,6 +248,10 @@ export default function Router() {
                       element={<NativeConversation />}
                     />
                     <Route path="/referrals" element={<NativeReferrals />} />
+                    <Route
+                      path="/support-closures"
+                      element={<SupportClosures />}
+                    />
                     <Route
                       path="/promoter-links"
                       element={<PromoterLinksPage />}

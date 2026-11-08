@@ -86,7 +86,7 @@ test("referrals use supported page sizes, scoped cursors and native CSV dates", 
 }) => {
   await open(page, "/referrals");
   await expect(page.getByText("CODE123", { exact: true })).toBeVisible();
-  await expect(page.getByLabel("Rows per page")).toHaveValue("50");
+  await expect(page.getByLabel("Rows per page")).toHaveValue("20");
   await page.getByRole("button", { name: "Next", exact: true }).click();
   await expect(page.getByText("ref-2", { exact: true })).toBeVisible();
   await page.getByLabel("Referred user ID", { exact: true }).fill("user-1");
@@ -94,13 +94,18 @@ test("referrals use supported page sizes, scoped cursors and native CSV dates", 
   await expect(page.getByText("ref-1", { exact: true })).toBeVisible();
   await page.getByLabel("Start date", { exact: true }).fill("2026-10-01");
   await page.getByLabel("End date", { exact: true }).fill("2026-10-31");
+  await page.getByRole("button", { name: "Apply dates" }).click();
   const download = page.waitForEvent("download");
-  await page.getByRole("button", { name: "Download referral CSV" }).click();
+  await page.getByRole("button", { name: "Download filtered CSV" }).click();
   const saved = await download;
   expect(saved.suggestedFilename()).toBe("referrals-2026-10-01-2026-10-31.csv");
   const records = (await control()).records;
   expect(records.find((r: any) => r.path.endsWith("export.csv")).query).toEqual(
-    { startDate: "2026-10-01", endDate: "2026-10-31" },
+    {
+      startDate: "2026-10-01",
+      endDate: "2026-10-31",
+      referrerAccountType: "user",
+    },
   );
   expect(
     records.some(

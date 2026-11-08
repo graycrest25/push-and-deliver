@@ -346,12 +346,23 @@ test("support claims scope attachments; replies retry unchanged and status uses 
     ),
   ).toBeTruthy();
   await page.getByRole("button", { name: "Close ticket", exact: true }).click();
+  await page
+    .getByLabel("Briefly describe the issue and how you handled it.")
+    .fill("Contacted the rider and resolved the delivery issue.");
+  await page
+    .getByRole("button", { name: "Confirm closure", exact: true })
+    .click();
+  await expect(page).toHaveURL(/\/support-tickets$/);
   await expect(
-    page.locator("#workspace-content").getByRole("alert"),
-  ).toContainText("Only a super administrator");
+    page.getByText("No records found.", { exact: true }),
+  ).toBeVisible();
   const call = (await writes("/v1/admin/support/tickets/ticket-1/status"))[0];
   expect(call.method).toBe("PUT");
-  expect(call.body).toEqual({ status: "closed", expectedVersion: 6 });
+  expect(call.body).toEqual({
+    status: "closed",
+    expectedVersion: 6,
+    summary: "Contacted the rider and resolved the delivery issue.",
+  });
   const records = (await control()).records;
   const notice = records.find(
     (row: any) =>
@@ -400,7 +411,13 @@ test("closing waits for its message and retries both steps without duplicate not
     },
   );
   await control({ failWrite: true });
-  const close = page.getByRole("button", { name: "Close ticket", exact: true });
+  await page.getByRole("button", { name: "Close ticket", exact: true }).click();
+  await page
+    .getByLabel("Briefly describe the issue and how you handled it.")
+    .fill("Resolved the reported delivery problem.");
+  const close = page
+    .getByRole("dialog")
+    .getByRole("button", { name: /^(Confirm closure|Retry closing ticket)$/ });
   await close.click();
   await expect(
     page.getByRole("alert").filter({ hasText: "Response lost" }),
@@ -424,6 +441,7 @@ test("closing waits for its message and retries both steps without duplicate not
   expect(statusRequests[0].body).toEqual({
     status: "closed",
     expectedVersion: 4,
+    summary: "Resolved the reported delivery problem.",
   });
   expect(
     await writes("/v1/admin/support/tickets/ticket-1/messages"),

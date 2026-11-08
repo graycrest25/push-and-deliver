@@ -22,7 +22,7 @@ import {
   useState,
   type ReactNode,
 } from "react";
-import { Link, useLocation } from "react-router-dom";
+import { Link, useLocation, useNavigate } from "react-router-dom";
 import { IconArrowRight, IconPlus, IconTrash } from "@tabler/icons-react";
 import {
   api,
@@ -96,6 +96,29 @@ export function display(
   if (typeof value === "number") return value.toLocaleString();
   return String(value);
 }
+function RecordImage({ src }: { src: string }) {
+  const [failed, setFailed] = useState(false);
+  if (failed)
+    return <span className="text-muted-foreground">Image unavailable</span>;
+  return (
+    <a
+      href={src}
+      target="_blank"
+      rel="noopener noreferrer"
+      aria-label="Open full-size image"
+      className="inline-block max-w-full rounded-lg focus-visible:outline focus-visible:outline-2 focus-visible:outline-ring"
+    >
+      <img
+        src={src}
+        alt="Profile photo"
+        loading="lazy"
+        className="h-32 w-32 rounded-lg border bg-muted object-contain"
+        onError={() => setFailed(true)}
+      />
+    </a>
+  );
+}
+
 // Keep dates and their Lagos-local time together in narrow table columns.
 function TableValue({
   value,
@@ -108,6 +131,8 @@ function TableValue({
   currency: string;
   scope?: string;
 }) {
+  if (name.toLowerCase() === "imageurl" && typeof value === "string" && value)
+    return <RecordImage key={value} src={value} />;
   if (
     typeof value === "string" &&
     /^\d{4}-\d{2}-\d{2}T/.test(value) &&
@@ -324,6 +349,7 @@ export function RecordView({
     return <span>{display(data, scope, "NGN", scope)}</span>;
   const entries = Object.entries(data).filter(
     ([key]) =>
+      !(key === "onlineStatus" && Object.hasOwn(data, "onlineStatusLabel")) &&
       ![
         "quote_id",
         "quoteId",
@@ -350,10 +376,22 @@ export function RecordView({
           }
         >
           <dt className="text-xs font-semibold text-muted-foreground">
-            {human(key.replace(/(_minor|Minor)$/, ""))}
+            {key.toLowerCase() === "imageurl"
+              ? "Photo"
+              : key === "onlineStatusLabel"
+                ? "Online status"
+                : human(key.replace(/(_minor|Minor)$/, ""))}
           </dt>
           <dd className="mt-1 break-words text-sm [overflow-wrap:anywhere]">
-            {value && typeof value === "object" ? (
+            {key.toLowerCase() === "imageurl" && !value ? (
+              <span className="flex h-32 w-32 items-center justify-center rounded-lg border bg-muted text-muted-foreground">
+                No photo
+              </span>
+            ) : key.toLowerCase() === "imageurl" &&
+              typeof value === "string" &&
+              value ? (
+              <RecordImage key={value} src={value} />
+            ) : value && typeof value === "object" ? (
               <RecordView data={value} scope={key} analytics={analytics} />
             ) : recordDestination(
                 key,
@@ -1243,8 +1281,12 @@ export interface ListSpec {
   columns: Column[];
   idKey?: string;
   link?: (row: RecordData) => string;
+  clickableRows?: boolean;
   title?: string;
   filters?: Field[];
+  pairedDates?: boolean;
+  updateFilterDraft?: (draft: RecordData, name: string) => RecordData;
+  onFiltersChange?: (filters: RecordData) => void;
   initialFilters?: RecordData;
   params?: RecordData;
   note?: string;
@@ -1265,7 +1307,7 @@ export function DataList(props: { spec: ListSpec; revision?: number }) {
   const location = useLocation();
   return (
     <DataListContent
-      key={`${location.pathname}:${props.spec.path}:${JSON.stringify(props.spec.params || {})}`}
+      key={`${location.pathname}:${props.spec.path}:${JSON.stringify(props.spec.params || {})}:${JSON.stringify(props.spec.initialFilters || {})}`}
       {...props}
     />
   );
@@ -1278,21 +1320,30 @@ function DataListContent({
   revision?: number;
 }) {
   const store = useTableStateStore();
+  const navigate = useNavigate();
   const { pathname } = useLocation();
   const { adminType } = useCurrentUser();
-  const storageKey = `${pathname}:${spec.path}:${JSON.stringify(spec.params || {})}`;
+  const storageKey = `${pathname}:${spec.path}:${JSON.stringify(spec.params || {})}:${JSON.stringify(spec.initialFilters || {})}`;
   const saved = store?.get(storageKey);
   const [filters, setFilters] = useState<RecordData>(
     saved?.filters ?? spec.initialFilters ?? {},
   );
+  const [filterError, setFilterError] = useState<string | null>(null);
+  useEffect(() => {
+    spec.onFiltersChange?.(filters);
+  }, [filters, spec.onFiltersChange]);
   const [draft, setDraft] = useState<RecordData>(
     saved?.draft ?? spec.initialFilters ?? {},
   );
+  const pageSizes = spec.pageSizes ?? [10, 25, 50, 100];
   const [size, setSize] = useState(
-    saved?.size ?? spec.defaultPageSize ?? DEFAULT_PAGE_SIZE,
+    saved && pageSizes.includes(saved.size)
+      ? saved.size
+      : (spec.defaultPageSize ?? DEFAULT_PAGE_SIZE),
   );
-  const [cursors, setCursors] = useState<string[]>(saved?.cursors ?? [""]);
-  const [page, setPage] = useState(saved?.page ?? 0);
+  // Cursors belong to this mounted query, never to saved table preferences.
+  const [cursors, setCursors] = useState<string[]>([""]);
+  const [page, setPage] = useState(0);
   const searchTerm = spec.search
     ? String(draft[spec.search.param] || "").trim()
     : "";
@@ -1316,7 +1367,7 @@ function DataListContent({
   }, [searchParam, searchTerm, committedSearch]);
   const viewport = useRef<HTMLDivElement>(null);
   const scroll = useRef({
-    scrollTop: saved?.scrollTop ?? 0,
+    scrollTop: 0,
     scrollLeft: saved?.scrollLeft ?? 0,
   });
   useEffect(() => {
@@ -1324,11 +1375,9 @@ function DataListContent({
       filters,
       draft,
       size,
-      cursors,
-      page,
-      ...scroll.current,
+      scrollLeft: scroll.current.scrollLeft,
     });
-  }, [store, storageKey, filters, draft, size, cursors, page]);
+  }, [store, storageKey, filters, draft, size]);
   const current = cursors[page] || "";
   const path = queryPath(spec.path, {
     ...spec.params,
@@ -1429,6 +1478,17 @@ function DataListContent({
             <form
               onSubmit={(e) => {
                 e.preventDefault();
+                if (
+                  spec.pairedDates &&
+                  (!!draft.startDate !== !!draft.endDate ||
+                    (draft.startDate && draft.startDate > draft.endDate))
+                ) {
+                  setFilterError(
+                    "Select both dates, with the end date on or after the start date, or clear both.",
+                  );
+                  return;
+                }
+                setFilterError(null);
                 setFilters({
                   ...draft,
                   ...(searchParam
@@ -1448,9 +1508,12 @@ function DataListContent({
                       id={`filter-${f.name}`}
                       className="h-10 w-full rounded-md border bg-card px-3 text-sm"
                       value={draft[f.name] || ""}
-                      onChange={(e) =>
-                        setDraft({ ...draft, [f.name]: e.target.value })
-                      }
+                      onChange={(e) => {
+                        const next = { ...draft, [f.name]: e.target.value };
+                        setDraft(
+                          spec.updateFilterDraft?.(next, f.name) ?? next,
+                        );
+                      }}
                     >
                       <option value="">All</option>
                       {f.options.filter(Boolean).map((o) => (
@@ -1481,6 +1544,7 @@ function DataListContent({
                 type="button"
                 variant="outline"
                 onClick={() => {
+                  setFilterError(null);
                   setDraft({});
                   setFilters({});
                   setPage(0);
@@ -1491,6 +1555,11 @@ function DataListContent({
               </Button>
             </form>
           ) : null}
+          {filterError && (
+            <p role="alert" className="text-sm text-destructive">
+              {filterError}
+            </p>
+          )}
           {spec.note && (
             <p className="text-sm text-muted-foreground">{spec.note}</p>
           )}
@@ -1518,7 +1587,7 @@ function DataListContent({
                   scrollLeft: e.currentTarget.scrollLeft,
                 };
                 const state = store?.get(storageKey);
-                if (state) Object.assign(state, scroll.current);
+                if (state) state.scrollLeft = scroll.current.scrollLeft;
               }}
               className="max-h-[65vh] overflow-auto rounded-lg border"
             >
@@ -1544,7 +1613,29 @@ function DataListContent({
                   {rows.map((row, i) => (
                     <TableRow
                       key={row[spec.idKey || "id"] ?? i}
-                      className={spec.rowClassName?.(row)}
+                      className={[
+                        spec.rowClassName?.(row),
+                        spec.clickableRows && spec.link
+                          ? "cursor-pointer focus-visible:outline focus-visible:outline-2 focus-visible:outline-ring"
+                          : "",
+                      ]
+                        .filter(Boolean)
+                        .join(" ")}
+                      onClick={
+                        spec.clickableRows && spec.link
+                          ? (event) => {
+                              if (
+                                event.defaultPrevented ||
+                                (event.target as HTMLElement).closest(
+                                  "a, button, input, select, textarea, [role='button'], [role='link'], [contenteditable='true']",
+                                ) ||
+                                window.getSelection()?.toString()
+                              )
+                                return;
+                              navigate(spec.link!(row));
+                            }
+                          : undefined
+                      }
                       tone={
                         spec.rowClassName
                           ? undefined
@@ -1649,7 +1740,7 @@ function DataListContent({
                     setCursors([""]);
                   }}
                 >
-                  {(spec.pageSizes ?? [10, 25, 50, 100]).map((n) => (
+                  {pageSizes.map((n) => (
                     <option key={n}>{n}</option>
                   ))}
                 </select>

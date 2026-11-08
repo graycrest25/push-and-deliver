@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { onlineLabel, riderVehicleFilter } from "./rider-filters";
 import { apiResponse } from "@/lib/api";
 import { ApprovalChecklist } from "./approval-checklist";
 import {
@@ -74,19 +75,48 @@ export function RiderApplications() {
           title: "Application queue",
           path: "/v1/admin/riders/applications",
           initialFilters: { status: "pending" },
+          defaultPageSize: 25,
+          pageSizes: [10, 25, 50],
+          pairedDates: true,
+          updateFilterDraft: (draft, name) =>
+            name === "verificationStatus" &&
+            draft.verificationStatus === "blocked"
+              ? { ...draft, status: "" }
+              : draft,
+          search: {
+            param: "q",
+            label: "Search registered email",
+            placeholder: "Enter all or part of an email address",
+            help: "Case-insensitive email search. Clear the exact email filter to search by part of an address.",
+          },
           key: "items",
           paging: "cursor",
           idKey: "uid",
           filters: [
+            riderVehicleFilter,
             select(
               "status",
               ["incomplete", "pending", "approved", "rejected", "unavailable"],
               "Application status",
             ),
+            select(
+              "verificationStatus",
+              ["verified", "blocked", "unverified"],
+              "Verification status",
+            ),
+            field("email", "Exact email address", {
+              type: "email",
+              required: false,
+            }),
+            field("startDate", "Start date", { type: "date", required: false }),
+            field("endDate", "End date", { type: "date", required: false }),
           ],
+          note: "Dates include both selected days in Africa/Lagos, using submission date or account creation date for older applications.",
           columns: [
             { key: "uid", label: "Rider ID" },
             { key: "username", label: "Name" },
+            { key: "email" },
+            { key: "verificationStatus" },
             { key: "status" },
             { key: "submittedAt" },
           ],
@@ -98,6 +128,7 @@ export function RiderApplications() {
 }
 export function RiderApplication() {
   const { id = "" } = useParams();
+  const [reviewRevision, setReviewRevision] = useState(0);
   const { adminType } = useCurrentUser();
   const path = `/v1/admin/riders/${segment(id)}/application`;
   return (
@@ -140,7 +171,14 @@ export function RiderApplication() {
               />
             </InformationCard>
             <InformationCard title="Applicant information">
-              <RecordView data={data.applicant} />
+              <RecordView
+                data={{
+                  ...data.applicant,
+                  imageUrl: data.applicant?.imageUrl ?? null,
+                  onlineStatus: undefined,
+                  onlineStatusLabel: onlineLabel(data.applicant || {}),
+                }}
+              />
             </InformationCard>
             <InformationCard title="Verification documents">
               <div className="space-y-5">
@@ -255,6 +293,7 @@ export function RiderApplication() {
                               ? "Rider approved. The rider remains offline."
                               : "Application rejected.",
                           );
+                          setReviewRevision((value) => value + 1);
                           reload();
                         }}
                         action={{
@@ -311,6 +350,7 @@ export function RiderApplication() {
         )}
       </CurrentRecord>
       <DataList
+        revision={reviewRevision}
         spec={{
           title: "Review history",
           path: `${path}/reviews`,

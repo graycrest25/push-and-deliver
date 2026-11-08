@@ -15,6 +15,14 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogDescription,
+} from "@/components/ui/dialog";
+import { toast } from "sonner";
 import { RecordSkeleton } from "@/components/ui/loading-skeletons";
 import { RefreshButton } from "@/components/ui/refresh-button";
 import { ErrorNotice, Notice, RecordView, display } from "./shared";
@@ -33,13 +41,15 @@ function useTicketCommand(id: string, reload: () => void) {
   const [busy, setBusy] = useState(false);
   const [pendingCommand, setPendingCommand] = useState<Command>();
   const [error, setError] = useState<unknown>(null);
+  const [conflict, setConflict] = useState(false);
   async function run(
     command: Command,
     body: () => Promise<RecordData>,
-    success: () => void,
+    success: (result: RecordData) => void,
   ) {
     if (
       lock.current ||
+      conflict ||
       (pending.current && pending.current.command !== command)
     )
       return;
@@ -55,14 +65,14 @@ function useTicketCommand(id: string, reload: () => void) {
         };
         setPendingCommand(command);
       }
-      await api(`${ticketPath(id)}/${command}`, {
+      const result = await api(`${ticketPath(id)}/${command}`, {
         method: command === "status" ? "PUT" : "POST",
         body: pending.current.body,
         headers: { "Idempotency-Key": pending.current.key },
       });
       pending.current = undefined;
       setPendingCommand(undefined);
-      success();
+      success(result);
     } catch (failure) {
       if (
         failure instanceof ApiError &&
@@ -72,7 +82,10 @@ function useTicketCommand(id: string, reload: () => void) {
       ) {
         pending.current = undefined;
         setPendingCommand(undefined);
-        if (failure.status === 409) reload();
+        if (failure.status === 409) {
+          if (command === "status") setConflict(true);
+          reload();
+        }
       }
       setError(failure);
     } finally {
@@ -80,7 +93,17 @@ function useTicketCommand(id: string, reload: () => void) {
       setBusy(false);
     }
   }
-  return { run, busy, error, pendingCommand };
+  return {
+    run,
+    busy,
+    error,
+    pendingCommand,
+    conflict,
+    reviewConflict: () => {
+      setConflict(false);
+      setError(null);
+    },
+  };
 }
 async function versioned(id: string, changes: RecordData = {}) {
   const current = await api(ticketPath(id));
@@ -153,13 +176,15 @@ function useMessages(id: string, enabled: boolean) {
   useEffect(() => {
     if (!enabled) return;
     const controller = new AbortController();
+    let latestRequest = 0;
     const load = async () => {
+      const request = ++latestRequest;
       try {
         const data = await api(
           queryPath(`${ticketPath(id)}/messages`, { limit: DEFAULT_PAGE_SIZE }),
           { signal: controller.signal },
         );
-        if (controller.signal.aborted) return;
+        if (controller.signal.aborted || request !== latestRequest) return;
         setItems((previous) => mergeMessages(previous, data.items || []));
         if (!initialized.current) {
           setCursor(data.hasMore ? data.nextCursor : null);
@@ -167,9 +192,11 @@ function useMessages(id: string, enabled: boolean) {
         }
         setError(null);
       } catch (failure) {
-        if (!controller.signal.aborted) setError(failure);
+        if (!controller.signal.aborted && request === latestRequest)
+          setError(failure);
       } finally {
-        if (!controller.signal.aborted) setLoading(false);
+        if (!controller.signal.aborted && request === latestRequest)
+          setLoading(false);
       }
     };
     void load();
@@ -196,6 +223,7 @@ function useMessages(id: string, enabled: boolean) {
         }),
         { signal: controller.signal },
       );
+      if (controller.signal.aborted) return;
       setItems((previous) => mergeMessages(previous, data.items || []));
       setCursor(data.hasMore ? data.nextCursor : null);
       setError(null);
@@ -215,6 +243,10 @@ export function SupportConversation() {
 }
 function Conversation({ id }: { id: string }) {
   const { user, adminType } = useCurrentUser();
+  const navigate = useNavigate();
+  const [closeOpen, setCloseOpen] = useState(false);
+  const [summary, setSummary] = useState("");
+  const [closure, setClosure] = useState<RecordData | null>(null);
   const [data, setData] = useState<RecordData | null>(null);
   const [error, setError] = useState<unknown>(null);
   const [loading, setLoading] = useState(true);
@@ -267,6 +299,13 @@ function Conversation({ id }: { id: string }) {
   };
   async function statusBody() {
     const status = data?.status === "open" ? "closed" : "open";
+    const trimmed = summary.trim();
+    if (status === "closed" && (!trimmed || [...trimmed].length > 1000))
+      throw new Error(
+        "Enter a closure summary of 1–1,000 characters after trimming.",
+      );
+    if (status === "open" && adminType !== "super")
+      throw new Error("Only a super administrator can reopen tickets.");
     if (status === "closed") {
       const notice = (closingNotice.current ??= {
         body: JSON.stringify({
@@ -298,7 +337,25 @@ function Conversation({ id }: { id: string }) {
       }
     }
     // Posting the notice changes the ticket version. Read it only afterwards.
-    return versioned(id, { status });
+    return versioned(id, {
+      status,
+      ...(status === "closed" ? { summary: trimmed } : {}),
+    });
+  }
+  function statusSaved(result: RecordData) {
+    closingNotice.current = undefined;
+    setCloseOpen(false);
+    setSummary("");
+    if (data?.status === "open") {
+      toast.success("Ticket closed. Closure summary saved.");
+      if (adminType !== "super") {
+        navigate("/support-tickets", { replace: true });
+        return;
+      }
+      setClosure(result.closure || null);
+    } else
+      toast.success("Ticket reopened. Previous closure history is retained.");
+    refresh();
   }
   async function send(event: React.FormEvent) {
     event.preventDefault();
@@ -359,7 +416,10 @@ function Conversation({ id }: { id: string }) {
                   </Badge>
                 </div>
                 <p className="text-sm text-muted-foreground">
-                  {data.customerName || "Customer"} ·{" "}
+                  {data.customer?.name ||
+                    data.customerName ||
+                    "Customer details unavailable"}{" "}
+                  ·{" "}
                   {claimed
                     ? "Assigned to you"
                     : data.assignedSupportUid
@@ -395,10 +455,9 @@ function Conversation({ id }: { id: string }) {
                       command.pendingCommand !== "status")
                   }
                   onClick={() =>
-                    void command.run("status", statusBody, () => {
-                      closingNotice.current = undefined;
-                      refresh();
-                    })
+                    data.status === "open"
+                      ? setCloseOpen(true)
+                      : void command.run("status", statusBody, statusSaved)
                   }
                 >
                   {command.busy && command.pendingCommand === "status"
@@ -484,7 +543,9 @@ function Conversation({ id }: { id: string }) {
                               ? item.senderId === user?.id
                                 ? "You"
                                 : "Support"
-                              : data.customerName || "Customer"}
+                              : data.customer?.name ||
+                                data.customerName ||
+                                "Customer"}
                           </p>
                           {item.message && (
                             <p className="whitespace-pre-wrap break-words text-sm leading-relaxed [overflow-wrap:anywhere]">
@@ -600,6 +661,120 @@ function Conversation({ id }: { id: string }) {
               )}
             </div>
           </section>
+          <Dialog
+            open={closeOpen}
+            onOpenChange={(open) => {
+              if (!command.busy && command.pendingCommand !== "status")
+                setCloseOpen(open);
+            }}
+          >
+            <DialogContent
+              showCloseButton={
+                !command.busy && command.pendingCommand !== "status"
+              }
+            >
+              <DialogHeader>
+                <DialogTitle>Close support ticket</DialogTitle>
+                <DialogDescription>
+                  Record the issue and resolution before closing this ticket.
+                </DialogDescription>
+              </DialogHeader>
+              <form
+                className="space-y-4"
+                onSubmit={(event) => {
+                  event.preventDefault();
+                  void command.run("status", statusBody, statusSaved);
+                }}
+              >
+                <Label htmlFor="closure-summary">
+                  Briefly describe the issue and how you handled it.
+                </Label>
+                <Textarea
+                  id="closure-summary"
+                  required
+                  value={summary}
+                  onChange={(event) => setSummary(event.target.value)}
+                  disabled={command.busy || command.pendingCommand === "status"}
+                  aria-describedby="closure-summary-help"
+                />
+                <p
+                  id="closure-summary-help"
+                  className="text-xs text-muted-foreground"
+                >
+                  {[...summary.trim()].length}/1,000 characters after trimming.
+                  Your summary is kept if saving fails.
+                </p>
+                {command.error != null && <ErrorNotice error={command.error} />}
+                {command.conflict && (
+                  <div className="space-y-3">
+                    <p className="text-sm">
+                      The ticket changed. Review the refreshed ticket before
+                      starting a new close operation.
+                    </p>
+                    <RecordView
+                      data={{
+                        status: data.status,
+                        version: data.version,
+                        assignedSupportUid: data.assignedSupportUid,
+                      }}
+                    />
+                    <Button
+                      type="button"
+                      variant="outline"
+                      disabled={loading || !!error}
+                      onClick={command.reviewConflict}
+                    >
+                      I reviewed the refreshed ticket
+                    </Button>
+                  </div>
+                )}
+                <Button
+                  type="submit"
+                  disabled={
+                    command.busy ||
+                    command.conflict ||
+                    !summary.trim() ||
+                    [...summary.trim()].length > 1000 ||
+                    data.status !== "open"
+                  }
+                >
+                  {command.busy
+                    ? "Closing…"
+                    : command.pendingCommand === "status"
+                      ? "Retry closing ticket"
+                      : "Confirm closure"}
+                </Button>
+              </form>
+            </DialogContent>
+          </Dialog>
+          {command.conflict && !closeOpen && (
+            <Notice>
+              <p>Review the refreshed ticket before retrying.</p>
+              <Button
+                disabled={loading || !!error}
+                onClick={command.reviewConflict}
+              >
+                I reviewed the refreshed ticket
+              </Button>
+            </Notice>
+          )}
+          {closure && adminType === "super" && (
+            <section
+              aria-label="Saved closure"
+              className="rounded-lg border p-4 space-y-3"
+            >
+              <h2 className="font-semibold">Saved closure</h2>
+              <RecordView data={closure} />
+            </section>
+          )}
+          {adminType === "super" && (
+            <Link
+              className="text-sm text-primary underline"
+              to={`/support-closures?ticketId=${segment(id)}`}
+            >
+              View closure history
+            </Link>
+          )}
           <details className="rounded-lg border px-4 py-3">
             <summary className="cursor-pointer text-sm font-medium">
               Ticket details
@@ -609,6 +784,13 @@ function Conversation({ id }: { id: string }) {
                 data={{
                   ticket: data.id,
                   customer: data.customerUid,
+                  customerName:
+                    data.customer?.name || "Customer details unavailable",
+                  customerEmail:
+                    data.customer?.email || "Customer details unavailable",
+                  customerPhone:
+                    data.customer?.phoneNumber ||
+                    "Customer details unavailable",
                   assignedTo: data.assignedSupportUid || "Unassigned",
                   createdAt: data.createdAt,
                   updatedAt: data.updatedAt,

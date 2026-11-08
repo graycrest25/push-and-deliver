@@ -169,7 +169,7 @@ export function features(path, req, res, body, success, error) {
     return true;
   }
   if (path === "/v1/admin/referrals") {
-    if (![10, 20, 30, 50].includes(Number(q.get("limit")))) {
+    if (![10, 20, 30, 50, 100].includes(Number(q.get("limit")))) {
       error(res, 400, "invalid_limit", "Unsupported referral limit");
       return true;
     }

@@ -518,6 +518,9 @@ export function NativeJobs() {
 }
 export function NativeJob() {
   const { id = "" } = useParams();
+  return <JobDetails key={id} id={id} />;
+}
+function JobDetails({ id }: { id: string }) {
   const { adminType } = useCurrentUser();
   const [cursors, setCursors] = useState([""]);
   const cursor = cursors[cursors.length - 1];
@@ -595,29 +598,133 @@ export function NativeJob() {
   );
 }
 export function NativeReferrals() {
+  const [tab, setTab] = useState("user");
+  const [draft, setDraft] = useState({ startDate: "", endDate: "" });
+  const [dates, setDates] = useState(draft);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<unknown>(null);
+  const params = { ...dates, referrerAccountType: tab || undefined };
   return (
     <div className="space-y-6">
       <Heading
         title="Referrals"
-        description="Referral attribution and totals. Export dates include both selected days in Africa/Lagos."
+        description="Filter by who made the referral, not who registered. Dates include both selected days in Africa/Lagos."
       >
         <Button asChild variant="outline">
           <Link to="/promoter-links">Manage promoter links</Link>
         </Button>
       </Heading>
       <ResourcePanel
-        title="Referral totals"
+        title="Global referral totals · all dates and referrers"
         path="/v1/admin/referrals/summary"
       />
+      <div
+        className="flex flex-wrap gap-2"
+        role="group"
+        aria-label="Referral lists"
+      >
+        {[
+          ["user", "User Referrals"],
+          ["rider", "Rider Referrals"],
+          ["", "All"],
+        ].map(([value, label]) => (
+          <Button
+            key={value}
+            variant={tab === value ? "default" : "outline"}
+            aria-pressed={tab === value}
+            onClick={() => setTab(value)}
+          >
+            {label}
+          </Button>
+        ))}
+      </div>
+      <form
+        className="flex flex-wrap items-end gap-3"
+        onSubmit={(event) => {
+          event.preventDefault();
+          if (
+            !!draft.startDate !== !!draft.endDate ||
+            (draft.startDate && draft.startDate > draft.endDate)
+          ) {
+            setError(
+              new Error(
+                "Select both dates, with the end date on or after the start date, or clear both.",
+              ),
+            );
+            return;
+          }
+          setError(null);
+          setDates({ ...draft });
+        }}
+      >
+        {[
+          ["startDate", "Start date"],
+          ["endDate", "End date"],
+        ].map(([name, label]) => (
+          <label className="space-y-2 text-sm" key={name}>
+            {label}
+            <Input
+              type="date"
+              name={name}
+              value={draft[name as keyof typeof draft]}
+              onChange={(event) =>
+                setDraft({ ...draft, [name]: event.target.value })
+              }
+            />
+          </label>
+        ))}
+        <Button>Apply dates</Button>
+        <Button
+          type="button"
+          variant="outline"
+          onClick={() => {
+            setDraft({ startDate: "", endDate: "" });
+            setDates({ startDate: "", endDate: "" });
+            setError(null);
+          }}
+        >
+          Clear dates
+        </Button>
+        <Button
+          type="button"
+          variant="outline"
+          disabled={busy}
+          onClick={async () => {
+            setBusy(true);
+            setError(null);
+            try {
+              const response = await apiResponse(
+                queryPath("/v1/admin/referrals/export.csv", params),
+              );
+              saveBlob(
+                await response.blob(),
+                dates.startDate
+                  ? `referrals-${dates.startDate}-${dates.endDate}.csv`
+                  : "referrals.csv",
+              );
+            } catch (failure) {
+              setError(failure);
+            } finally {
+              setBusy(false);
+            }
+          }}
+        >
+          {busy ? "Exporting…" : "Download filtered CSV"}
+        </Button>
+      </form>
+      {error != null && <ErrorNotice error={error} />}
       <DataList
         spec={{
           path: "/v1/admin/referrals",
           key: "items",
           paging: "cursor",
-          pageSizes: [10, 20, 30, 50],
-          defaultPageSize: 50,
+          params,
+          pageSizes: [10, 20, 30, 50, 100],
+          defaultPageSize: 20,
+          filters: [
+            field("referredUid", "Referred user ID"),
+            field("referralCodeUsed", "Referral code"),
+          ],
           columns: cols(
             "id",
             "referredUid",
@@ -626,59 +733,9 @@ export function NativeReferrals() {
             "referralCodeUsed",
             "createdAt",
           ),
-          filters: [
-            field("referredUid", "Referred user ID"),
-            field("referreduserType", "Referred user type"),
-            field("referralCodeUsed", "Referral code"),
-          ],
+          note: "CSV uses the selected referrer tab and applied dates. Global totals above do not change with these filters.",
         }}
       />
-      <form
-        className="space-y-4 rounded-xl border bg-card p-5"
-        onSubmit={async (e) => {
-          e.preventDefault();
-          if (busy) return;
-          const data = Object.fromEntries(new FormData(e.currentTarget));
-          setBusy(true);
-          setError(null);
-          try {
-            if (String(data.startDate) > String(data.endDate))
-              throw new Error("End date must be on or after the start date.");
-            const response = await apiResponse(
-              queryPath("/v1/admin/referrals/export.csv", data),
-            );
-            saveBlob(
-              await response.blob(),
-              `referrals-${data.startDate}-${data.endDate}.csv`,
-            );
-          } catch (failure) {
-            setError(failure);
-          } finally {
-            setBusy(false);
-          }
-        }}
-      >
-        <h2 className="text-lg font-semibold">Export referrals</h2>
-        <div className="flex flex-wrap gap-4">
-          {[
-            ["startDate", "Start date"],
-            ["endDate", "End date"],
-          ].map(([name, label]) => (
-            <label className="space-y-2 text-sm" key={name}>
-              {label}
-              <Input name={name} type="date" required />
-            </label>
-          ))}
-          <label className="space-y-2 text-sm">
-            Referred user type (optional)
-            <Input name="referreduserType" maxLength={100} />
-          </label>
-        </div>
-        {error != null && <ErrorNotice error={error} />}
-        <Button disabled={busy}>
-          {busy ? "Exporting…" : "Download referral CSV"}
-        </Button>
-      </form>
     </div>
   );
 }

@@ -119,6 +119,13 @@ export const navigation: NavigationItem[] = [
     group: "Operations",
   },
   {
+    title: "Support closure history",
+    url: "/support-closures",
+    icon: IconHeadset,
+    group: "Operations",
+    parentUrl: "/support-tickets",
+  },
+  {
     title: "Users",
     url: "/users",
     icon: IconUsers,
