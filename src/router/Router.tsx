@@ -16,7 +16,7 @@ import {
   CountryPolicy,
   StatePolicy,
 } from "@/features/admin/pricing";
-import { BrowserRouter, Link, Navigate, Route, Routes } from "react-router-dom";
+import { BrowserRouter, Navigate, Route, Routes } from "react-router-dom";
 import { Layout } from "@/components/layout";
 import ProtectedRoutes from "./ProtectedRoutes";
 import PublicRoute from "./PublicRoute";
@@ -47,13 +47,12 @@ import {
   NativeReferrals,
 } from "@/features/admin/native-operations";
 import { NativeFiles } from "@/features/uploads/native-files";
-import { MobileReleaseSettings } from "@/features/admin/release-settings";
+import { AppConfigurationPage } from "@/features/admin/app-configuration";
 import {
   AdminRoles,
   NativeCoupons,
   NativeSupport,
   NativeConversation,
-  SignupFunding,
 } from "@/features/admin/native-dashboard";
 import {
   NativeAccounts,
@@ -314,23 +313,7 @@ export default function Router() {
                     />
                     <Route
                       path="/app-config"
-                      element={
-                        <div className="space-y-6">
-                          <Heading title="App configuration" />
-                          <Notice>
-                            Manage Ten Seconds timing and rewards from{" "}
-                            <Link
-                              to="/game-rules"
-                              className="text-primary underline"
-                            >
-                              Game rules
-                            </Link>
-                            .
-                          </Notice>
-                          <MobileReleaseSettings />
-                          <SignupFunding />
-                        </div>
-                      }
+                      element={<AppConfigurationPage />}
                     />
                     <Route path="/settings" element={<SecurityPage />} />
                     <Route

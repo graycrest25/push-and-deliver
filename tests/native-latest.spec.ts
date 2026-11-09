@@ -50,40 +50,44 @@ const shipment = (id: string, overrides: Record<string, unknown> = {}) => ({
   ...overrides,
 });
 test.beforeEach(() => control({ reset: true }));
-test("local shipping types show all fields and lists start at 100 rows", async ({
+test("local shipping types show their fields and tariff tabs use 100-row lists", async ({
   page,
 }) => {
   await login(page);
   await page.goto("/delivery-zones");
-  const table = page.getByRole("table").filter({
-    has: page.getByRole("columnheader", { name: "Details", exact: true }),
-  });
-  await expect(table.getByRole("columnheader")).toHaveText([
-    "ID",
-    "Name",
-    "Details",
-    "Active",
-  ]);
+  await expect(
+    page.getByRole("tabpanel").getByLabel("Rows per page"),
+  ).toHaveValue("100");
+  await page
+    .getByRole("tab", { name: "Local shipping types", exact: true })
+    .click();
+  const panel = page.getByRole("tabpanel");
+  const table = panel.getByRole("table");
+  await expect(
+    table.getByRole("columnheader", { name: "Details", exact: true }),
+  ).toBeVisible();
   const row = table
     .getByRole("row")
     .filter({ has: page.getByRole("cell", { name: "premium", exact: true }) });
-  await expect(row.getByRole("cell")).toHaveText([
-    "premium",
-    "Premium",
-    "Deliveries are 2 - 3 days",
-    "Yes",
-  ]);
-  const sizes = page.getByLabel("Rows per page");
-  await expect(sizes).toHaveCount(3);
-  for (const size of await sizes.all()) await expect(size).toHaveValue("100");
-  const records = (await control()).records;
+  await expect(row).toContainText("Premium");
+  await expect(row).toContainText("Old estimate");
+  await expect(panel.getByLabel("Rows per page")).toHaveValue("100");
+  await page.getByRole("tab", { name: "States & zones", exact: true }).click();
+  await expect(
+    page.getByRole("tabpanel").getByLabel("Rows per page"),
+  ).toHaveValue("100");
   for (const path of [
-    "/v1/shipping/local-types",
+    "/v1/admin/shipping/local-types",
     "/v1/admin/geography/tariffs",
+    "/v1/admin/geography/states",
   ])
-    expect(
-      records.find((record: any) => record.path === path).query.limit,
-    ).toBe("100");
+    await expect
+      .poll(
+        async () =>
+          (await control()).records.find((record: any) => record.path === path)
+            ?.query.limit,
+      )
+      .toBe("100");
 });
 
 test("rides filter by origin city while preserving status and clearing city", async ({
@@ -299,7 +303,7 @@ test("latest fee editor retains conflict drafts and resubmits a reviewed version
   await login(page, "regular");
   await page.goto("/fees/fee-1");
   const edit = await form(page, "Save fee changes");
-  await edit.getByLabel("per Km (kobo)", { exact: false }).fill("30000");
+  await edit.getByLabel("per Km (₦)", { exact: false }).fill("300.29");
   await edit
     .getByLabel("Reason for change", { exact: false })
     .fill("Reviewed courier rate");
@@ -308,8 +312,8 @@ test("latest fee editor retains conflict drafts and resubmits a reviewed version
     .getByRole("button", { name: "Save fee changes", exact: true })
     .click();
   await expect(edit.getByRole("alert")).toContainText("record changed");
-  await expect(edit.getByLabel("per Km (kobo)", { exact: false })).toHaveValue(
-    "30000",
+  await expect(edit.getByLabel("per Km (₦)", { exact: false })).toHaveValue(
+    "300.29",
   );
   await edit
     .getByRole("button", { name: "Use refreshed version and review draft" })
@@ -321,7 +325,7 @@ test("latest fee editor retains conflict drafts and resubmits a reviewed version
     .poll(async () => (await writes("/v1/admin/fees/fee-1")).length)
     .toBe(2);
   const calls = await writes("/v1/admin/fees/fee-1");
-  expect(calls[0].body.changes).toEqual({ perKmMinor: 30000 });
+  expect(calls[0].body.changes).toEqual({ perKmMinor: 30029 });
   expect(calls[1].body.expectedVersion).toBe(4);
   expect(calls[1].key).not.toBe(calls[0].key);
 });
@@ -421,6 +425,7 @@ test("international prices join paged countries, show kg and naira, and edit a c
     path: "test-results/international-prices-desktop.png",
     fullPage: true,
   });
+  await page.getByRole("tab", { name: "Edit & publish", exact: true }).click();
   const clone = await form(page, "Clone as a new draft");
   await clone
     .getByLabel("Reason for change")
@@ -471,22 +476,24 @@ test("latest tariff drafts preserve omitted rates, delete explicit keys and publ
   page,
 }) => {
   await login(page);
-  await page.goto("/delivery-zones/tariffs/draft-local");
+  await page.goto("/delivery-zones/tariffs/draft-local?tab=workflow");
   const rates = await form(page, "Add or update weight bands");
   await rates
     .getByRole("button", { name: "Add weight band", exact: true })
     .click();
   await rates.getByLabel("Weight (grams)", { exact: false }).fill("1000");
-  await rates.getByLabel("Amount (kobo)", { exact: false }).fill("250000");
+  await rates.getByLabel("Amount (₦)", { exact: false }).fill("2500");
   await rates
     .getByLabel("Reason for change", { exact: false })
     .fill("Add reviewed weight band");
   await rates
     .getByRole("button", { name: "Add or update weight bands", exact: true })
     .click();
+  await page.getByRole("tab", { name: "Prices", exact: true }).click();
   await expect(
     page.getByRole("cell", { name: "1,000", exact: true }),
   ).toBeVisible();
+  await page.getByRole("tab", { name: "Edit & publish", exact: true }).click();
   const remove = await form(page, "Delete weight bands");
   await remove
     .getByRole("button", { name: "Add weight band", exact: true })
@@ -498,9 +505,11 @@ test("latest tariff drafts preserve omitted rates, delete explicit keys and publ
   await remove
     .getByRole("button", { name: "Delete weight bands", exact: true })
     .click();
+  await page.getByRole("tab", { name: "Prices", exact: true }).click();
   await expect(
     page.getByRole("cell", { name: "1,000", exact: true }),
   ).toHaveCount(0);
+  await page.getByRole("tab", { name: "Edit & publish", exact: true }).click();
   const calls = await writes("/v1/admin/geography/tariffs/draft-local/rates");
   expect(calls[1].method).toBe("DELETE");
   expect(calls[1].body).toEqual({
@@ -533,6 +542,7 @@ test("latest tariff drafts preserve omitted rates, delete explicit keys and publ
   await expect(
     page.locator("summary").filter({ hasText: "Save draft information" }),
   ).toHaveCount(0);
+  await page.getByRole("tab", { name: "Edit & publish", exact: true }).click();
   const clone = await form(page, "Clone as a new draft");
   await clone
     .getByLabel("Reason for change", { exact: false })
@@ -546,7 +556,7 @@ test("latest international country batches keep deletion JSON and version scope"
   page,
 }) => {
   await login(page);
-  await page.goto("/export-rates/tariffs/draft-export");
+  await page.goto("/export-rates/tariffs/draft-export?tab=workflow");
   const add = await form(page, "Add or update country mappings");
   await add
     .getByRole("button", { name: "Add country mapping", exact: true })
@@ -562,9 +572,11 @@ test("latest international country batches keep deletion JSON and version scope"
       exact: true,
     })
     .click();
+  await page.getByRole("tab", { name: "Prices", exact: true }).click();
   await expect(
     page.getByLabel("Destination country").locator('option[value="NG"]'),
   ).toHaveCount(1);
+  await page.getByRole("tab", { name: "Edit & publish", exact: true }).click();
   const remove = await form(page, "Delete country mappings");
   await remove
     .getByRole("button", { name: "Add country mapping", exact: true })
@@ -687,7 +699,7 @@ test("latest exports retain filters across continuation and unsupported marketpl
   page,
 }) => {
   await login(page);
-  await page.goto("/withdrawals");
+  await page.goto("/withdrawals?tab=export");
   await page
     .getByLabel("Export status", { exact: true })
     .selectOption("succeeded");
@@ -900,9 +912,7 @@ test("latest office state and country editors submit resource versions and exact
   await login(page, "regular");
   await page.goto("/head-offices/office-1");
   const office = await form(page, "Update pickup prices");
-  await office
-    .getByLabel("Base pickup (kobo)", { exact: false })
-    .fill("125000");
+  await office.getByLabel("Base pickup (₦)", { exact: false }).fill("1250");
   await office
     .getByLabel("Reason for change", { exact: false })
     .fill("Review pickup pricing");

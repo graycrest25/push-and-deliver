@@ -21,7 +21,7 @@ test("local types create inactive, edit GET version, and retry with the same key
   page,
 }) => {
   await login(page);
-  await page.goto("/delivery-zones");
+  await page.goto("/delivery-zones?tab=local-types");
   await expect(
     page.locator('td[data-column="name"]').filter({ hasText: /^Premium$/ }),
   ).toBeVisible();

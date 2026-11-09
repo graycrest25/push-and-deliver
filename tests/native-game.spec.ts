@@ -364,6 +364,9 @@ test("game campaigns use gameEligible and current native campaign versions", asy
 }) => {
   await login(page);
   await page.goto("/game-rules");
+  await page
+    .getByRole("tab", { name: "Reward campaigns", exact: true })
+    .click();
   const create = await openForm(page, "Create game reward campaign");
   await expect(create.getByLabel("Eligible for game rewards")).toBeChecked();
   await create.getByLabel("Campaign title").fill("Ten Seconds reward");
@@ -438,6 +441,7 @@ test("game campaigns use gameEligible and current native campaign versions", asy
   });
   expect(statuses[1].body).toEqual({ enabled: false, expectedVersion: 8 });
   expect(await mutations()).toHaveLength(0);
+  await page.getByRole("tab", { name: "Game rules", exact: true }).click();
   await expect(
     page.getByRole("switch", { name: "Enable new attempts" }),
   ).toBeChecked();
@@ -461,7 +465,7 @@ test("version-zero campaigns can be included in game rewards and disabled", asyn
       },
     ],
   });
-  await page.goto("/game-rules");
+  await page.goto("/game-rules?tab=campaigns");
   const row = page.getByRole("row").filter({
     has: page.getByRole("cell", { name: "version-zero-campaign", exact: true }),
   });
@@ -611,4 +615,42 @@ test("retired endpoints are blocked and retained rules are isolated by environme
       ),
     ),
   ).toHaveLength(0);
+});
+
+test("game tabs preserve drafts and remain independent inside app configuration", async ({
+  page,
+}, info) => {
+  await login(page);
+  await page.goto("/game-rules");
+  await page.getByLabel("Daily reward cap (UTC)").fill("22");
+  await page
+    .getByRole("tab", { name: "Reward campaigns", exact: true })
+    .click();
+  await expect(page.getByLabel("Daily reward cap (UTC)")).not.toBeVisible();
+  await page.goBack();
+  await expect(page.getByLabel("Daily reward cap (UTC)")).toHaveValue("22");
+  await page.goto("/app-config?tab=game&gameTab=campaigns");
+  await expect(
+    page
+      .getByRole("tablist", { name: "Configuration features" })
+      .getByRole("tab", { name: "Game rules", exact: true }),
+  ).toHaveAttribute("aria-selected", "true");
+  await expect(
+    page.getByRole("tab", { name: "Reward campaigns", exact: true }),
+  ).toHaveAttribute("aria-selected", "true");
+  await page
+    .getByRole("tablist", { name: "Ten Seconds sections" })
+    .getByRole("tab", { name: "Game rules", exact: true })
+    .click();
+  await expect(page).toHaveURL(/tab=game&gameTab=rules/);
+  await expect(page.getByLabel("Daily reward cap (UTC)")).toHaveValue("22");
+  await page.screenshot({
+    path: info.outputPath("game-tabs-desktop.png"),
+    fullPage: true,
+  });
+  await page.setViewportSize({ width: 390, height: 844 });
+  await page.screenshot({
+    path: info.outputPath("game-tabs-mobile.png"),
+    fullPage: true,
+  });
 });

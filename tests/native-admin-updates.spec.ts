@@ -211,6 +211,7 @@ test("promoter links honor pending retries, copy exact returned values and updat
     origin: "http://localhost:4320",
   });
   await page.goto("/promoter-links");
+  await page.getByRole("tab", { name: "Create or renew", exact: true }).click();
   const form = await openAction(page, "Create or renew promoter link");
   await form.getByLabel("Promoter name").fill("LagosPromoter01");
   await control({ promoterPendingOnce: true });
@@ -250,6 +251,7 @@ test("promoter links honor pending retries, copy exact returned values and updat
   expect(creates).toHaveLength(2);
   expect(creates[0].key).toBe(creates[1].key);
   expect(creates[1].body).toEqual({ name: "LagosPromoter01" });
+  await page.getByRole("tab", { name: "Promoter links", exact: true }).click();
   const row = page.getByRole("row").filter({
     has: page.getByRole("cell", { name: "ExistingPromoter", exact: true }),
   });

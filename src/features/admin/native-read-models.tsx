@@ -1,3 +1,4 @@
+import { FeatureTabs } from "./feature-tabs";
 import { LocalShippingTypes } from "./local-shipping-types";
 import { RideDetails, RideDetailsSkeleton } from "./ride-details";
 import { RideCommands } from "./ride-commands";
@@ -410,17 +411,8 @@ export function NativeOffice() {
 export function NativeTariffs({ domestic = false }: { domestic?: boolean }) {
   const root = domestic ? "/delivery-zones" : "/export-rates";
   const [includeInactive, setIncludeInactive] = useState(false);
-  return (
-    <div className="space-y-6">
-      <Heading
-        title={domestic ? "Delivery tariffs" : "Shipping tariffs"}
-        description={
-          domestic
-            ? "Inspect current and historical tariffs, including their weight bands and prices."
-            : "Choose a tariff to review destination countries, weight tiers and prices in naira. Clone an active tariff to make changes in a draft."
-        }
-      />
-      {domestic && <TariffCreate domestic />}
+  const tariffs = (
+    <div className="space-y-4">
       {!domestic && (
         <label className="flex items-center gap-2 text-sm">
           <input
@@ -432,7 +424,6 @@ export function NativeTariffs({ domestic = false }: { domestic?: boolean }) {
           Show drafts and retired tariffs
         </label>
       )}
-      {domestic && <LocalShippingTypes />}
       <DataList
         key={root}
         spec={{
@@ -472,49 +463,70 @@ export function NativeTariffs({ domestic = false }: { domestic?: boolean }) {
           link: (row) => `${root}/tariffs/${segment(row.id)}`,
         }}
       />
-      {!domestic && (
-        <details className="rounded-lg border bg-card p-5">
-          <summary className="cursor-pointer font-semibold">
-            Create a new shipping tariff
-          </summary>
-          <div className="mt-4">
-            <TariffCreate />
-          </div>
-        </details>
-      )}
-      {domestic ? (
-        <section className="space-y-3">
-          <h2 className="text-lg font-semibold">States & local zones</h2>
-          <DataList
-            spec={{
-              ...page("/v1/admin/geography/states", [
-                "id",
-                "name",
-                "localZone",
-              ]),
-              link: (row) => `/delivery-zones/states/${segment(row.id)}`,
-            }}
-          />
-        </section>
-      ) : (
-        <details className="space-y-3 rounded-lg border bg-card p-5">
-          <summary className="cursor-pointer text-lg font-semibold">
-            Manage shipping countries
-          </summary>
-          <DataList
-            spec={{
-              ...page("/v1/admin/shipping/countries", [
-                "code",
-                "name",
-                "active",
-                "postalCodeRequired",
-              ]),
-              params: { includeInactive: true },
-              link: (row) => `/export-rates/countries/${segment(row.id)}`,
-            }}
-          />
-        </details>
-      )}
+    </div>
+  );
+  const states = (
+    <section className="space-y-3">
+      <h2 className="text-lg font-semibold">States & local zones</h2>
+      <DataList
+        spec={{
+          ...page("/v1/admin/geography/states", ["id", "name", "localZone"]),
+          link: (row) => `/delivery-zones/states/${segment(row.id)}`,
+        }}
+      />
+    </section>
+  );
+  const countries = (
+    <section className="space-y-3">
+      <h2 className="text-lg font-semibold">Shipping countries</h2>
+      <DataList
+        spec={{
+          ...page("/v1/admin/shipping/countries", [
+            "code",
+            "name",
+            "active",
+            "postalCodeRequired",
+          ]),
+          params: { includeInactive: true },
+          link: (row) => `/export-rates/countries/${segment(row.id)}`,
+        }}
+      />
+    </section>
+  );
+  return (
+    <div className="space-y-6">
+      <Heading
+        title={domestic ? "Delivery tariffs" : "Shipping tariffs"}
+        description={
+          domestic
+            ? "Manage delivery prices, local shipping types and state zones."
+            : "Manage international prices and shipping countries. Open an active DHL export tariff to upload a price-list PDF."
+        }
+      />
+      <FeatureTabs
+        key={root}
+        label={
+          domestic ? "Delivery tariff features" : "Shipping tariff features"
+        }
+        sections={[
+          { id: "tariffs", label: "Tariffs", content: tariffs },
+          ...(domestic
+            ? [
+                {
+                  id: "local-types",
+                  label: "Local shipping types",
+                  content: <LocalShippingTypes />,
+                },
+                { id: "states", label: "States & zones", content: states },
+              ]
+            : [{ id: "countries", label: "Countries", content: countries }]),
+          {
+            id: "create",
+            label: "Create tariff",
+            content: <TariffCreate domestic={domestic} />,
+          },
+        ]}
+      />
     </div>
   );
 }

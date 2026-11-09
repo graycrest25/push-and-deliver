@@ -1,3 +1,5 @@
+import { FeatureTabs } from "./feature-tabs";
+import { TabSectionSkeleton } from "@/components/ui/tab-section-skeleton";
 import { RewardCampaignManager } from "./reward-campaigns";
 import { RecordSkeleton } from "@/components/ui/loading-skeletons";
 import { RefreshButton } from "@/components/ui/refresh-button";
@@ -12,6 +14,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import {
   ActionForm,
+  nairaField,
   DataList,
   ErrorNotice,
   Heading,
@@ -46,6 +49,7 @@ export function CurrentRecord({
         </RefreshButton>
       </div>
       {resource.loading &&
+        !resource.data &&
         (skeleton || (
           <RecordSkeleton label={`Loading ${title.toLowerCase()}…`} />
         ))}
@@ -217,7 +221,6 @@ export function AdminRoles() {
 }
 const coupons = "/v1/admin/coupons";
 export function NativeCoupons() {
-  const [tab, setTab] = useState("Campaigns");
   const [revision, setRevision] = useState(0);
   const refresh = () => setRevision((n) => n + 1);
   return (
@@ -226,150 +229,167 @@ export function NativeCoupons() {
         title="Coupons & signup rewards"
         description="Manage discount templates, generate customer codes and monitor signup issuance."
       />
-      <div
-        className="flex flex-wrap gap-2"
-        role="group"
-        aria-label="Coupon sections"
-      >
-        {["Campaigns", "Signup coupons", "Processing"].map((name) => (
-          <Button
-            key={name}
-            variant={tab === name ? "default" : "outline"}
-            aria-pressed={tab === name}
-            onClick={() => setTab(name)}
-          >
-            {name}
-          </Button>
-        ))}
-      </div>
-      {tab === "Campaigns" && (
-        <>
-          <RewardCampaignManager />
-          <ActionForm
-            action={{
-              title: "Generate customer coupon code",
-              description:
-                "Copy a campaign ID from the list and enter the customer’s user ID. The generated code will appear here; this action does not confirm delivery to the customer.",
-              path: `${coupons}/grants`,
-              preserveRetry: true,
-              fields: [
-                field("uid", "Customer user ID"),
-                field("campaignId", "Campaign ID"),
-              ],
-              body: (values) => ({
-                uid: values.uid.trim(),
-                campaignId: values.campaignId.trim(),
-              }),
-              success:
-                "Coupon generated. Copy the code below for the customer.",
-            }}
-          />
-        </>
-      )}
-      {tab === "Signup coupons" && (
-        <CurrentRecord
-          title="Signup coupon settings"
-          path={`${coupons}/signup/settings`}
-        >
-          {(data, reload) => (
-            <>
-              <RecordView data={data} />
-              {data.selection === "all_eligible" && (
-                <Notice>
-                  Signup currently uses all eligible campaigns. Saving here
-                  switches to the specific campaign IDs you select.
-                </Notice>
-              )}
+      <FeatureTabs
+        label="Coupon sections"
+        sections={[
+          {
+            id: "campaigns",
+            label: "Campaigns",
+            content: <RewardCampaignManager />,
+          },
+          {
+            id: "generate",
+            label: "Generate code",
+            content: (
               <ActionForm
-                onSuccess={reload}
                 action={{
-                  title: "Save signup coupon settings",
-                  method: "PUT",
-                  path: `${coupons}/signup/settings`,
+                  title: "Generate customer coupon code",
+                  description:
+                    "Copy a campaign ID from the list and enter the customer’s user ID. The generated code will appear here; this action does not confirm delivery to the customer.",
+                  path: `${coupons}/grants`,
                   preserveRetry: true,
-                  initial: data,
                   fields: [
-                    bool("enabled", "Issue coupons at signup"),
-                    field("campaignIds", "Campaign IDs", {
-                      type: "list",
-                      required: false,
-                      help: "Comma-separated IDs from Campaigns. Choose enabled 24- or 48-hour templates.",
-                    }),
+                    field("uid", "Customer user ID"),
+                    field("campaignId", "Campaign ID"),
                   ],
-                  body: (values) => {
-                    const ids = values.campaignIds;
-                    if (ids.length > 100 || new Set(ids).size !== ids.length)
-                      throw new Error("Choose at most 100 distinct campaigns.");
-                    if (values.enabled && !ids.length)
-                      throw new Error(
-                        "Choose at least one campaign before enabling signup coupons.",
-                      );
-                    return { ...values, expectedVersion: currentVersion(data) };
-                  },
+                  body: (values) => ({
+                    uid: values.uid.trim(),
+                    campaignId: values.campaignId.trim(),
+                  }),
+                  success:
+                    "Coupon generated. Copy the code below for the customer.",
                 }}
               />
-            </>
-          )}
-        </CurrentRecord>
-      )}
-      {tab === "Processing" && (
-        <>
-          <Notice>
-            Only failed jobs marked dead can be requeued. Requeueing preserves
-            the original signup entitlement and job history.
-          </Notice>
-          <DataList
-            revision={revision}
-            spec={{
-              path: `${coupons}/signup/jobs`,
-              key: "items",
-              paging: "cursor",
-              filters: [
-                select("status", [
-                  "",
-                  "pending",
-                  "processing",
-                  "retry_wait",
-                  "done",
-                  "dead",
-                ]),
-              ],
-              columns: [
-                { key: "uid", label: "Customer" },
-                { key: "jobType", label: "Task" },
-                { key: "status" },
-                { key: "attemptCount", label: "Attempts" },
-                { key: "lastError" },
-                {
-                  key: "action",
-                  label: "Recovery",
-                  render: (row) =>
-                    row.status === "dead" ? (
-                      <ActionForm
-                        onSuccess={refresh}
-                        action={{
-                          title: "Requeue job",
-                          preserveRetry: true,
-                          path: `${coupons}/signup/jobs/${segment(row.uid)}/requeue`,
-                          fields: [
-                            field("reason", "Reason", { maxLength: 500 }),
-                          ],
-                          body: (values) => ({
-                            jobId: row.id,
-                            expectedGeneration: row.generation,
-                            reason: bytes(values.reason, 5, 500, "Reason"),
+            ),
+          },
+          {
+            id: "signup-coupons",
+            label: "Signup coupons",
+            content: (
+              <CurrentRecord
+                title="Signup coupon settings"
+                skeleton={<TabSectionSkeleton section="signup-coupons" />}
+                path={`${coupons}/signup/settings`}
+              >
+                {(data, reload) => (
+                  <>
+                    <RecordView data={data} />
+                    {data.selection === "all_eligible" && (
+                      <Notice>
+                        Signup currently uses all eligible campaigns. Saving
+                        here switches to the specific campaign IDs you select.
+                      </Notice>
+                    )}
+                    <ActionForm
+                      onSuccess={reload}
+                      action={{
+                        title: "Save signup coupon settings",
+                        method: "PUT",
+                        path: `${coupons}/signup/settings`,
+                        preserveRetry: true,
+                        initial: data,
+                        fields: [
+                          bool("enabled", "Issue coupons at signup"),
+                          field("campaignIds", "Campaign IDs", {
+                            type: "list",
+                            required: false,
+                            help: "Comma-separated IDs from Campaigns. Choose enabled 24- or 48-hour templates.",
                           }),
-                        }}
-                      />
-                    ) : (
-                      "—"
-                    ),
-                },
-              ],
-            }}
-          />
-        </>
-      )}
+                        ],
+                        body: (values) => {
+                          const ids = values.campaignIds;
+                          if (
+                            ids.length > 100 ||
+                            new Set(ids).size !== ids.length
+                          )
+                            throw new Error(
+                              "Choose at most 100 distinct campaigns.",
+                            );
+                          if (values.enabled && !ids.length)
+                            throw new Error(
+                              "Choose at least one campaign before enabling signup coupons.",
+                            );
+                          return {
+                            ...values,
+                            expectedVersion: currentVersion(data),
+                          };
+                        },
+                      }}
+                    />
+                  </>
+                )}
+              </CurrentRecord>
+            ),
+          },
+          {
+            id: "processing",
+            label: "Processing",
+            content: (
+              <>
+                <Notice>
+                  Only failed jobs marked dead can be requeued. Requeueing
+                  preserves the original signup entitlement and job history.
+                </Notice>
+                <DataList
+                  revision={revision}
+                  spec={{
+                    path: `${coupons}/signup/jobs`,
+                    key: "items",
+                    paging: "cursor",
+                    filters: [
+                      select("status", [
+                        "",
+                        "pending",
+                        "processing",
+                        "retry_wait",
+                        "done",
+                        "dead",
+                      ]),
+                    ],
+                    columns: [
+                      { key: "uid", label: "Customer" },
+                      { key: "jobType", label: "Task" },
+                      { key: "status" },
+                      { key: "attemptCount", label: "Attempts" },
+                      { key: "lastError" },
+                      {
+                        key: "action",
+                        label: "Recovery",
+                        render: (row) =>
+                          row.status === "dead" ? (
+                            <ActionForm
+                              onSuccess={refresh}
+                              action={{
+                                title: "Requeue job",
+                                preserveRetry: true,
+                                path: `${coupons}/signup/jobs/${segment(row.uid)}/requeue`,
+                                fields: [
+                                  field("reason", "Reason", { maxLength: 500 }),
+                                ],
+                                body: (values) => ({
+                                  jobId: row.id,
+                                  expectedGeneration: row.generation,
+                                  reason: bytes(
+                                    values.reason,
+                                    5,
+                                    500,
+                                    "Reason",
+                                  ),
+                                }),
+                              }}
+                            />
+                          ) : (
+                            "—"
+                          ),
+                      },
+                    ],
+                  }}
+                />
+              </>
+            ),
+          },
+        ]}
+      />
     </div>
   );
 }
@@ -377,6 +397,7 @@ export function SignupFunding() {
   return (
     <CurrentRecord
       title="Signup wallet bonus"
+      skeleton={<TabSectionSkeleton section="signup" />}
       path="/v1/admin/config/signup-bonus"
     >
       {(data, reload) => (
@@ -397,13 +418,13 @@ export function SignupFunding() {
               initial: data,
               fields: [
                 bool("enabled", "Credit new signups"),
-                number(
+                nairaField(
                   "amountMinor",
                   "Bonus per signup (kobo)",
                   0,
                   100000000000,
                 ),
-                number(
+                nairaField(
                   "budgetMinor",
                   "Total promotional budget (kobo)",
                   data.spentMinor,
@@ -411,7 +432,7 @@ export function SignupFunding() {
                 ),
               ],
               description:
-                "100 kobo = ₦1. The budget is the total allowance, not an amount to add. This changes future signup settings; it does not credit arbitrary wallets.",
+                "Enter amounts in naira. The budget is the total allowance, not an amount to add. This changes future signup settings; it does not credit arbitrary wallets.",
               body: (values) => ({
                 ...values,
                 expectedVersion: currentVersion(data),

@@ -1,5 +1,6 @@
 // Native integrations plus historical routes awaiting reconciliation. No arbitrary upstream URLs.
 export const routes: readonly [string, string][] = [
+  ["POST", "/v1/admin/shipping/tariffs/{id}/import-pdf"],
   ["GET", "/v1/admin/game/rules"],
   ["PUT", "/v1/admin/game/rules"],
   ["POST", "/v1/admin/riders/{uid}/application/upload-intents"],
@@ -61,6 +62,8 @@ export const routes: readonly [string, string][] = [
 
   ["POST", "/v1/shipments/{id}/transitions"],
   ["GET", "/v1/admin/config/mobile/{app}/{platform}"],
+  ["GET", "/v1/admin/config/dispatch"],
+  ["PUT", "/v1/admin/config/dispatch"],
   ["GET", "/v1/admin/users/{id}"],
   ["GET", "/v1/admin/rides"],
   ["GET", "/v1/admin/rides/{id}"],

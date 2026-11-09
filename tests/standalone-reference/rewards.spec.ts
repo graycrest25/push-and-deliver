@@ -15,13 +15,9 @@ async function coupons(page: Page) {
   await page.goto("/coupons");
 }
 function action(page: Page, title: string) {
-  return page
-    .locator("details")
-    .filter({
-      has: page
-        .locator("summary")
-        .filter({ hasText: new RegExp(`^${title}$`) }),
-    });
+  return page.locator("details").filter({
+    has: page.locator("summary").filter({ hasText: new RegExp(`^${title}$`) }),
+  });
 }
 test.beforeEach(async () => {
   await control({ reset: true });
@@ -92,18 +88,16 @@ test("super admins configure wallet signup amount and budget as scalar integers"
   await expect(section.getByText("₦100.00", { exact: true })).toBeVisible();
   const amount = action(page, "Set signup cash bonus");
   await amount.locator("summary").click();
-  await expect(amount.getByLabel("Bonus (minor units) *")).toHaveValue("10000");
-  await amount.getByLabel("Bonus (minor units) *").fill("20000");
+  await expect(amount.getByLabel("Bonus (₦) *")).toHaveValue("100");
+  await amount.getByLabel("Bonus (₦) *").fill("200");
   await amount
     .getByRole("button", { name: "Set signup cash bonus", exact: true })
     .click();
   await expect(section.getByText("₦200.00", { exact: true })).toBeVisible();
   const budget = action(page, "Set signup bonus budget");
   await budget.locator("summary").click();
-  await expect(budget.getByLabel("Total budget (minor units) *")).toHaveValue(
-    "",
-  );
-  await budget.getByLabel("Total budget (minor units) *").fill("500000");
+  await expect(budget.getByLabel("Total budget (₦) *")).toHaveValue("");
+  await budget.getByLabel("Total budget (₦) *").fill("5000");
   await budget
     .getByRole("button", { name: "Set signup bonus budget", exact: true })
     .click();
@@ -146,10 +140,8 @@ test("campaign creation and coupon grants use separate backend IDs without fabri
   await campaign.locator("summary").click();
   await campaign.getByLabel("Name *", { exact: true }).fill("Welcome discount");
   await campaign.getByLabel("Discount (basis points) *").fill("1000");
-  await campaign.getByLabel("Maximum discount (minor units) *").fill("50000");
-  await campaign
-    .getByLabel("Budget (minor units) *", { exact: true })
-    .fill("10000000");
+  await campaign.getByLabel("Maximum discount (₦) *").fill("500");
+  await campaign.getByLabel("Budget (₦) *", { exact: true }).fill("100000");
   await campaign.getByLabel("Maximum issuances *").fill("1000");
   await campaign
     .getByLabel("Starts at *")

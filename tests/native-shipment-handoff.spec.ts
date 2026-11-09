@@ -40,78 +40,80 @@ async function mount(page: Page) {
   });
 }
 for (const role of ["regular", "super"]) {
-  test(`${role} admin issues, retries and replaces an HQ code without changing version`, async ({
-    page,
-  }) => {
-    await mount(page);
-    const issuedAt = Date.now();
-    await page.clock.install({ time: issuedAt });
-    await page.route("**/api/proxy/v1/shipments/shipment-1", (route) =>
-      route.fulfill({ json: { data: shipment } }),
-    );
-    const writes: { body: any; key: string }[] = [];
-    await page.route(
-      "**/api/proxy/v1/admin/shipments/shipment-1/office-handoff-code",
-      (route) => {
-        writes.push({
-          body: route.request().postDataJSON(),
-          key: route.request().headers()["idempotency-key"],
-        });
-        if (writes.length === 1)
-          return route.fulfill({
-            status: 504,
-            json: { error: { message: "Response timed out" } },
+  for (const shipmentType of ["express", "local"]) {
+    test(`${role} admin issues, retries and replaces an HQ code for ${shipmentType} without changing version`, async ({
+      page,
+    }) => {
+      await mount(page);
+      const issuedAt = Date.now();
+      await page.clock.install({ time: issuedAt });
+      await page.route("**/api/proxy/v1/shipments/shipment-1", (route) =>
+        route.fulfill({ json: { data: { ...shipment, shipmentType } } }),
+      );
+      const writes: { body: any; key: string }[] = [];
+      await page.route(
+        "**/api/proxy/v1/admin/shipments/shipment-1/office-handoff-code",
+        (route) => {
+          writes.push({
+            body: route.request().postDataJSON(),
+            key: route.request().headers()["idempotency-key"],
           });
-        return route.fulfill({
-          json: {
-            data: {
-              id: "shipment-1",
-              version: 3,
-              officeHandoffCode: writes.length === 2 ? "024591" : "824591",
-              expiresAt: new Date(
-                issuedAt + (writes.length === 2 ? 600000 : 1200000),
-              ).toISOString(),
-              radiusMeters: 20,
+          if (writes.length === 1)
+            return route.fulfill({
+              status: 504,
+              json: { error: { message: "Response timed out" } },
+            });
+          return route.fulfill({
+            json: {
+              data: {
+                id: "shipment-1",
+                version: 3,
+                officeHandoffCode: writes.length === 2 ? "024591" : "824591",
+                expiresAt: new Date(
+                  issuedAt + (writes.length === 2 ? 600000 : 1200000),
+                ).toISOString(),
+                radiusMeters: 20,
+              },
             },
-          },
-        });
-      },
-    );
-    await page.goto(
-      `http://localhost:4320/shipment-orders/shipment-1?role=${role}`,
-    );
-    const form = page.locator("details").filter({
-      has: page.locator("summary", { hasText: "Generate HQ handoff code" }),
+          });
+        },
+      );
+      await page.goto(
+        `http://localhost:4320/shipment-orders/shipment-1?role=${role}`,
+      );
+      const form = page.locator("details").filter({
+        has: page.locator("summary", { hasText: "Generate HQ handoff code" }),
+      });
+      await form.locator("summary").click();
+      const generate = form.getByRole("button", {
+        name: "Generate HQ handoff code",
+        exact: true,
+      });
+      await generate.click();
+      await expect(form.getByRole("alert")).toContainText("Response timed out");
+      await generate.click();
+      await expect(
+        form.getByLabel("HQ handoff code: 024591", { exact: true }),
+      ).toBeVisible();
+      expect(writes[0]).toEqual(writes[1]);
+      expect(writes[0].body).toEqual({ expectedVersion: 3 });
+      expect(writes[0].key).toBeTruthy();
+      await page.clock.fastForward(601000);
+      await expect(form.getByText(/Handoff code expired/)).toBeVisible();
+      await expect(
+        form.getByLabel("HQ handoff code: 024591", { exact: true }),
+      ).toHaveCount(0);
+      await form
+        .getByRole("button", { name: "Generate replacement code" })
+        .click();
+      await generate.click();
+      await expect(
+        form.getByLabel("HQ handoff code: 824591", { exact: true }),
+      ).toBeVisible();
+      expect(writes[2].key).not.toBe(writes[1].key);
+      expect(writes[2].body).toEqual({ expectedVersion: 3 });
     });
-    await form.locator("summary").click();
-    const generate = form.getByRole("button", {
-      name: "Generate HQ handoff code",
-      exact: true,
-    });
-    await generate.click();
-    await expect(form.getByRole("alert")).toContainText("Response timed out");
-    await generate.click();
-    await expect(
-      form.getByLabel("HQ handoff code: 024591", { exact: true }),
-    ).toBeVisible();
-    expect(writes[0]).toEqual(writes[1]);
-    expect(writes[0].body).toEqual({ expectedVersion: 3 });
-    expect(writes[0].key).toBeTruthy();
-    await page.clock.fastForward(601000);
-    await expect(form.getByText(/Handoff code expired/)).toBeVisible();
-    await expect(
-      form.getByLabel("HQ handoff code: 024591", { exact: true }),
-    ).toHaveCount(0);
-    await form
-      .getByRole("button", { name: "Generate replacement code" })
-      .click();
-    await generate.click();
-    await expect(
-      form.getByLabel("HQ handoff code: 824591", { exact: true }),
-    ).toBeVisible();
-    expect(writes[2].key).not.toBe(writes[1].key);
-    expect(writes[2].body).toEqual({ expectedVersion: 3 });
-  });
+  }
 }
 for (const shipmentType of ["local", "express"]) {
   test(`${shipmentType} onward delivery uses admin alias and refreshes detail and timeline`, async ({
