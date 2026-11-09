@@ -15,6 +15,7 @@ import {
   useResource,
   DataList,
   ActionForm,
+  nairaField,
   ResourcePanel,
   ExportForm,
   field,
@@ -397,7 +398,7 @@ const customsFields: Field[] = [
         fields: contactFields.map((f) => ({ ...f, required: false })),
       }),
       field("description", "Description", { type: "textarea" }),
-      number("declared_value_minor", "Declared value (minor units)"),
+      nairaField("declared_value_minor", "Declared value (minor units)"),
       field("country_code", "Country code", { pattern: "[A-Z]{2}" }),
       number("weight_grams", "Weight (grams)", 0, 100000000),
       field("dimensions", "Dimensions (millimetres)", {
@@ -500,13 +501,13 @@ function shipmentActions(id: string, data: RecordData): Action[] {
       title: "Assess charge",
       path: `${admin}/charges`,
       fields: [
-        number("amount_minor", "Amount (minor units)", 1),
+        nairaField("amount_minor", "Amount (minor units)", 1),
         reason,
-        number("pickup_minor", "Pickup component (minor units)"),
+        nairaField("pickup_minor", "Pickup component (minor units)"),
         number("weight_grams", "Assessed weight (grams)", 0, 100000000),
       ],
       description:
-        "100 minor units = ₦1 for NGN. Clearance-only shipments require a zero pickup component. A new charge is payable by the customer.",
+        "Enter amounts in naira. Clearance-only shipments require a zero pickup component. A new charge is payable by the customer.",
     });
   if (
     Array.isArray(data.charges) &&

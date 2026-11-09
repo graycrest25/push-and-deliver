@@ -1,5 +1,6 @@
 import { tableColumnClass } from "@/lib/table-layout";
-import type { ReactNode } from "react";
+import { useEffect, useState, type ReactNode } from "react";
+import { TabSectionSkeleton, tabPageLayout } from "./tab-section-skeleton";
 import { Skeleton } from "./skeleton";
 import {
   Table,
@@ -204,6 +205,17 @@ export function OverviewSkeleton() {
   );
 }
 export function WorkspaceSkeleton() {
+  const [location, setLocation] = useState({ pathname: "", search: "" });
+  useEffect(() => {
+    setLocation({
+      pathname: window.location.pathname,
+      search: window.location.search,
+    });
+  }, []);
+  const layout = tabPageLayout(location.pathname);
+  const requested = new URLSearchParams(location.search).get("tab");
+  const active =
+    layout?.tabs.find(([id]) => id === requested)?.[0] || layout?.tabs[0][0];
   return (
     <LoadingRegion label="Loading workspace…">
       <div className="min-h-screen bg-background flex">
@@ -226,7 +238,28 @@ export function WorkspaceSkeleton() {
           <div className="p-4 md:p-8 space-y-6">
             <Skeleton className="h-8 w-56 max-w-full" />
             <Skeleton className="h-4 w-80 max-w-full" />
-            <SectionPlaceholder fields={9} />
+            {layout ? (
+              <div className="space-y-6">
+                <div className="overflow-x-auto border-b pb-3">
+                  <div className="flex min-w-max gap-1 rounded-lg bg-muted p-1">
+                    {layout.tabs.map(([id, label]) => (
+                      <div
+                        key={id}
+                        className={`min-h-10 px-4 py-2 text-sm ${id === active ? "rounded-md bg-background shadow-sm" : "text-muted-foreground"}`}
+                      >
+                        {label}
+                      </div>
+                    ))}
+                  </div>
+                </div>
+                <TabSectionSkeleton
+                  section={active!}
+                  domestic={layout.domestic}
+                />
+              </div>
+            ) : (
+              <SectionPlaceholder fields={9} />
+            )}
           </div>
         </div>
       </div>

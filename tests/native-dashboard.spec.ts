@@ -78,7 +78,7 @@ test("release editing reads the selected rider platform and submits its version 
   page,
 }) => {
   await login(page);
-  await page.goto("/app-config");
+  await page.goto("/app-config?tab=releases");
   await page.getByLabel("App", { exact: true }).selectOption("rider");
   await page.getByLabel("Platform", { exact: true }).selectOption("ios");
   await openForm(page, "Publish release settings");
@@ -196,6 +196,7 @@ test("campaign creation, status and coupon generation use native contracts and s
   expect(
     (await writes("/v1/admin/coupons/campaigns/campaign-1/status"))[0].body,
   ).toEqual({ enabled: false, expectedVersion: 2 });
+  await page.getByRole("tab", { name: "Generate code", exact: true }).click();
   await openForm(page, "Generate customer coupon code");
   await page.getByLabel("Customer user ID").fill("customer-1");
   await page.getByLabel("Campaign ID").fill("campaign-1");
@@ -221,9 +222,7 @@ test("signup selection, job recovery and total wallet allowance retain native ve
 }) => {
   await login(page);
   await page.goto("/coupons");
-  await page
-    .getByRole("button", { name: "Signup coupons", exact: true })
-    .click();
+  await page.getByRole("tab", { name: "Signup coupons", exact: true }).click();
   await openForm(page, "Save signup coupon settings");
   await page
     .getByRole("button", { name: "Save signup coupon settings", exact: true })
@@ -238,7 +237,7 @@ test("signup selection, job recovery and total wallet allowance retain native ve
     campaignIds: ["campaign-1"],
     expectedVersion: 3,
   });
-  await page.getByRole("button", { name: "Processing", exact: true }).click();
+  await page.getByRole("tab", { name: "Processing", exact: true }).click();
   await openForm(page, "Requeue job");
   await page.getByLabel("Reason").fill("Provider issue resolved");
   await page.getByRole("button", { name: "Requeue job", exact: true }).click();
@@ -256,9 +255,9 @@ test("signup selection, job recovery and total wallet allowance retain native ve
     expectedGeneration: 3,
     reason: "Provider issue resolved",
   });
-  await page.goto("/app-config");
+  await page.goto("/app-config?tab=signup");
   await openForm(page, "Save signup bonus and budget");
-  await page.getByLabel("Total promotional budget (kobo)").fill("2000000");
+  await page.getByLabel("Total promotional budget (₦)").fill("20000");
   await page
     .getByRole("button", { name: "Save signup bonus and budget", exact: true })
     .click();
@@ -823,10 +822,7 @@ test("native rides, fares and catalogues use admin reads and preserve monetary u
   ).toBeVisible();
   await page.getByRole("link", { name: /Open International tariff/ }).click();
   await expect(page.getByRole("cell", { name: /₦1,500\.00/ })).toBeVisible();
-  await page
-    .locator("summary")
-    .filter({ hasText: /^Country zones/ })
-    .click();
+  await page.getByRole("tab", { name: "Country zones", exact: true }).click();
   await expect(page.getByText("NG", { exact: true })).toBeVisible();
   await page.goto("/export-rates/countries/NG");
   await expect(page.getByText("Nigeria", { exact: true })).toBeVisible();
@@ -834,9 +830,11 @@ test("native rides, fares and catalogues use admin reads and preserve monetary u
   await expect(
     page.getByRole("cell", { name: "Within state", exact: true }),
   ).toBeVisible();
+  await page.getByRole("tab", { name: "States & zones", exact: true }).click();
   await expect(
     page.getByRole("cell", { name: "Lagos", exact: true }),
   ).toBeVisible();
+  await page.getByRole("tab", { name: "Tariffs", exact: true }).click();
   await page.getByRole("link", { name: /Open local-1/ }).click();
   await expect(
     page.getByRole("cell", { name: "150,000", exact: true }),
@@ -907,7 +905,7 @@ test("missing release editor creates a reviewed configuration with expectedVersi
 }) => {
   await control({ missingRelease: true });
   await login(page);
-  await page.goto("/app-config");
+  await page.goto("/app-config?tab=releases");
   await expect(
     page.getByText(/Release settings have not been created/),
   ).toBeVisible();

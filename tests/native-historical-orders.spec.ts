@@ -156,7 +156,7 @@ test("shipment review sends full gross price with fresh version and retains paym
     .filter({ hasText: "Review shipment price" });
   await form.locator("summary").click();
   await form.getByLabel("Reweighed weight (kg)").fill("3.2");
-  await form.getByLabel("Full revised gross price (kobo)").fill("450000");
+  await form.getByLabel("Full revised gross price (₦)").fill("4500");
   await form.getByLabel("Reason for change").fill("Office reweighing");
   await page.screenshot({
     path: testInfo.outputPath("price-review-desktop.png"),

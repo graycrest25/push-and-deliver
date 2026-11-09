@@ -1,3 +1,4 @@
+import { FeatureTabs } from "./feature-tabs";
 import { ShipmentCheckoutPanels } from "./shipment-checkout";
 import {
   riderEarnings,
@@ -419,37 +420,51 @@ function ShipmentTracking({ id, status }: { id: string; status: unknown }) {
   );
 }
 export function NativeWithdrawals() {
+  const { adminType } = useCurrentUser();
   return (
     <div className="space-y-6">
       <Heading
         title="Withdrawals"
         description="Manual company bank payments. Claim a request before making its transfer."
       />
-      <DataList
-        spec={{
-          path: "/v1/admin/withdrawals",
-          key: "items",
-          paging: "cursor",
-          columns: cols(
-            "id",
-            "amountMinor",
-            "status",
-            "assignedToMe",
-            "accountNumberMasked",
-            "createdAt",
-          ),
-          filters: [
-            select("status", [
-              "requested",
-              "approved",
-              "succeeded",
-              "cancelled",
-            ]),
-          ],
-          link: (r) => `/withdrawals/${segment(r.id)}`,
-        }}
+      <FeatureTabs
+        label="Withdrawal sections"
+        sections={[
+          {
+            id: "requests",
+            label: "Requests",
+            content: (
+              <DataList
+                spec={{
+                  path: "/v1/admin/withdrawals",
+                  key: "items",
+                  paging: "cursor",
+                  columns: cols(
+                    "id",
+                    "amountMinor",
+                    "status",
+                    "assignedToMe",
+                    "accountNumberMasked",
+                    "createdAt",
+                  ),
+                  filters: [
+                    select("status", [
+                      "requested",
+                      "approved",
+                      "succeeded",
+                      "cancelled",
+                    ]),
+                  ],
+                  link: (r) => `/withdrawals/${segment(r.id)}`,
+                }}
+              />
+            ),
+          },
+          ...(canOperate(adminType)
+            ? [{ id: "export", label: "Export", content: <WithdrawalExport /> }]
+            : []),
+        ]}
       />
-      <WithdrawalExport />
     </div>
   );
 }
@@ -739,6 +754,7 @@ export function NativeReferrals() {
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<unknown>(null);
   const params = { ...dates, referrerAccountType: tab || undefined };
+  const [exportCode, setExportCode] = useState("");
   return (
     <div className="space-y-6">
       <Heading
@@ -820,6 +836,14 @@ export function NativeReferrals() {
         >
           Clear dates
         </Button>
+        <label className="space-y-2 text-sm">
+          Referral code for export (optional)
+          <Input
+            name="exportReferralCode"
+            value={exportCode}
+            onChange={(event) => setExportCode(event.target.value)}
+          />
+        </label>
         <Button
           type="button"
           variant="outline"
@@ -829,7 +853,10 @@ export function NativeReferrals() {
             setError(null);
             try {
               const response = await apiResponse(
-                queryPath("/v1/admin/referrals/export.csv", params),
+                queryPath("/v1/admin/referrals/export.csv", {
+                  ...params,
+                  referralCodeUsed: exportCode.trim() || undefined,
+                }),
               );
               saveBlob(
                 await response.blob(),
@@ -874,7 +901,7 @@ export function NativeReferrals() {
             },
             ...cols("referreduserType", "referralCodeUsed", "createdAt"),
           ],
-          note: "CSV uses the selected referrer tab and applied dates. Global totals above do not change with these filters.",
+          note: "CSV uses the selected referrer tab, applied dates and optional export referral code. The list filters below do not affect the CSV. Global totals above do not change with these filters.",
         }}
       />
     </div>

@@ -13,6 +13,7 @@ import {
   Notice,
   DataList,
   ActionForm,
+  nairaField,
   ResourcePanel,
   RecordView,
   ErrorNotice,
@@ -37,7 +38,7 @@ const rows = (name: string, label: string, fields: Field[]): Field =>
 const group = (name: string, label: string, fields: Field[]): Field =>
   field(name, label, { type: "group", fields });
 const money = (name: string, label?: string, min = 0, max = 100000000000) =>
-  number(
+  nairaField(
     name,
     label || `${name.replace(/_minor$/, "").replace(/_/g, " ")} (minor units)`,
     min,
@@ -126,7 +127,7 @@ export function OfficesPage() {
           fields: [id, ...officeFields],
           body: withoutID,
           description:
-            "Enter the complete office record. Monetary values use minor units (100 kobo = ₦1); coordinates use degrees multiplied by 10,000,000.",
+            "Enter the complete office record. Enter monetary values in naira; coordinates use degrees multiplied by 10,000,000.",
         }}
         onSuccess={() => setRevision((n) => n + 1)}
       />
@@ -209,7 +210,7 @@ export function TariffsPage({ domestic = false }: { domestic?: boolean }) {
           fields: [id, ...(domestic ? domesticFields : tariffFields)],
           body: withoutID,
           description:
-            "Saving replaces the entire draft. Add every required rate. 100 minor units = ₦1 for NGN. Publish only after reviewing the saved draft.",
+            "Saving replaces the entire draft. Add every required rate. Enter amounts in naira. Publish only after reviewing the saved draft.",
         }}
         onSuccess={() => setRevision((n) => n + 1)}
       />
@@ -383,7 +384,7 @@ export function FeesPage() {
     <div className="space-y-6">
       <Heading
         title="Fees & pricing"
-        description="Ride fares, marketplace fees, and shipping capacity have separate settings. Amounts are integer minor units; 10000 basis points = 100%."
+        description="Ride fares, marketplace fees, and shipping capacity have separate settings. Enter amounts in naira; 10000 basis points = 100%."
       />
       <ResourcePanel title="Current ride fares" path="/v1/rides/fares" />
       <ActionForm

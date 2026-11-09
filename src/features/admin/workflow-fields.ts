@@ -1,4 +1,4 @@
-import { field, type Field } from "./shared";
+import { field, nairaField, type Field } from "./shared";
 import type { RecordData } from "@/lib/api";
 export const reasonField = field("reason", "Reason for change", {
   type: "textarea",
@@ -20,14 +20,8 @@ export const moneyField = (
   label: string,
   required = true,
   maximum = 100000000000,
-): Field =>
-  field(name, label, {
-    type: "number",
-    min: 0,
-    max: maximum,
-    required,
-    help: "NGN kobo (100 kobo = ₦1).",
-  });
+): Field => ({ ...nairaField(name, label, 0, maximum), required, default: "" });
+
 export function integer(value: unknown, min = 0, max = 100000000000) {
   const n = Number(value);
   if (value === "" || !Number.isSafeInteger(n) || n < min || n > max)

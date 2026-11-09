@@ -1,3 +1,4 @@
+import { TabSectionSkeleton } from "@/components/ui/tab-section-skeleton";
 import { api, queryPath } from "@/lib/api";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
@@ -75,6 +76,7 @@ export function MobileReleaseSettings() {
       <CurrentRecord
         key={`${app}:${platform}`}
         title="Release settings"
+        skeleton={<TabSectionSkeleton section="releases" />}
         path={`/v1/admin/config/mobile/${app}/${platform}`}
       >
         {(data, reload) => (

@@ -1,3 +1,4 @@
+import { createHash } from "node:crypto";
 import { gameApi, controlGame, resetGame } from "./native-game-api.mjs";
 import { latest, resetLatest, controlLatest } from "./native-latest-api.mjs";
 import { reads, resetReads, controlReads } from "./native-admin-reads-api.mjs";
@@ -82,7 +83,23 @@ http
     }
     let body;
     try {
-      body = JSON.parse(Buffer.concat(chunks).toString() || "{}");
+      if (
+        path.endsWith("/import-pdf") &&
+        req.headers["content-type"]?.startsWith("multipart/form-data")
+      ) {
+        const form = await new Response(Buffer.concat(chunks), {
+          headers: { "content-type": req.headers["content-type"] },
+        }).formData();
+        const file = form.get("file");
+        body = {
+          metadata: JSON.parse(form.get("metadata")),
+          fileName: file.name,
+          fileSize: file.size,
+          fileHash: createHash("sha256")
+            .update(Buffer.from(await file.arrayBuffer()))
+            .digest("hex"),
+        };
+      } else body = JSON.parse(Buffer.concat(chunks).toString() || "{}");
     } catch {
       return error(res, 400, "json", "Invalid JSON");
     }
@@ -132,7 +149,9 @@ http
       query: Object.fromEntries(
         new URL(req.url, "http://localhost").searchParams,
       ),
-      rawBody: Buffer.concat(chunks).toString(),
+      rawBody: path.endsWith("/import-pdf")
+        ? "[multipart]"
+        : Buffer.concat(chunks).toString(),
       method: req.method,
       body,
       authorization: req.headers.authorization,
@@ -227,6 +246,52 @@ http
       req.headers["x-account-type"] !== "user"
     )
       return error(res, 401, "expired", "Session expired");
+    if (/^\/v1\/admin\/shipping\/tariffs\/[^/]+\/import-pdf$/.test(path)) {
+      if (body.fileName === "scanned.pdf")
+        return error(
+          res,
+          422,
+          "unrecognised_pdf",
+          "PDF layout is not recognised. Live prices are unchanged.",
+        );
+      if (body.metadata.preview)
+        return success(res, {
+          applied: false,
+          baseTariffId: path.split("/").at(-2),
+          baseVersion: body.metadata.expectedVersion,
+          sourceSha256: body.fileHash,
+          currency: "NGN",
+          importedRates: 240,
+          preservedHigherWeightRates: 72,
+          maxImportedWeightGrams: 25000,
+          mappedCountries: 52,
+          preservedUnlistedCountries: 181,
+          countryChanges: [
+            { code: "DE", previousZone: 5, zone: 4 },
+            { code: "US", previousZone: 4, zone: 3 },
+          ],
+          rates: Array.from({ length: 30 }, (_, index) =>
+            index < 10 ? (index + 1) * 500 : (index - 4) * 1000,
+          ).flatMap((weightGrams) =>
+            Array.from({ length: 8 }, (_, index) => ({
+              zone: index + 1,
+              weightGrams,
+              amountMinor: index === 0 ? 7407472 : 7821768,
+            })),
+          ),
+        });
+      const publications = records.filter(
+        (row) => row.path === path && row.body?.metadata?.preview === false,
+      );
+      if (body.metadata.name === "Retry prices" && publications.length === 1)
+        return error(res, 504, "timeout", "Publication response timed out.");
+      return success(res, {
+        id: "replacement-export",
+        status: "active",
+        priceCount: 240,
+        countryCount: 52,
+      });
+    }
     if (
       await engagement(
         path,

@@ -5,12 +5,12 @@ import { useCurrentUser } from "@/contexts/UserContext";
 import { Button } from "@/components/ui/button";
 import {
   ActionForm,
+  nairaField,
   ErrorNotice,
   Notice,
   RecordView,
   bool,
   field,
-  number,
   useResource,
 } from "./shared";
 
@@ -174,14 +174,7 @@ function WalletBonusSettings() {
               path: "/v1/admin/config/signup_bonus_minor",
               method: "PUT",
               initial: { amount: knownAmount ? amount : "" },
-              fields: [
-                field("amount", "Bonus (minor units)", {
-                  type: "number",
-                  min: 0,
-                  max: 1000000,
-                  help: "100 minor units = ₦1. Maximum 1,000,000 minor units (₦10,000).",
-                }),
-              ],
+              fields: [nairaField("amount", "Bonus", 0, 1000000)],
               body: (value) => value.amount,
             }}
             onSuccess={() => {
@@ -204,14 +197,14 @@ function WalletBonusSettings() {
           method: "PUT",
           fields: [
             {
-              ...number(
+              ...nairaField(
                 "amount",
                 "Total budget (minor units)",
                 0,
                 1000000000000,
               ),
               default: "",
-              help: "Replaces the total budget; this is not an incremental top-up. 100 minor units = ₦1.",
+              help: "Replaces the total budget; this is not an incremental top-up. Enter the total in naira.",
             },
           ],
           body: (value) => value.amount,

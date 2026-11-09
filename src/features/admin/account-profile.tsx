@@ -343,6 +343,12 @@ export function AccountProfile({ riders = false }: { riders?: boolean }) {
                     identityExists: data.identityExists,
                     createdAt: data.createdAt,
                     ...data.profile,
+                    ...(riders
+                      ? {
+                          "Referred using code":
+                            data.referralCodeUsed ?? "No referral recorded",
+                        }
+                      : {}),
                   }}
                 />
                 {data.identityExists === false && (

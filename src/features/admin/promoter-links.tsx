@@ -1,3 +1,4 @@
+import { FeatureTabs } from "./feature-tabs";
 import { useState } from "react";
 import { Link } from "react-router-dom";
 import { IconCheck, IconCopy } from "@tabler/icons-react";
@@ -123,109 +124,132 @@ export function PromoterLinksPage() {
           <Link to="/referrals">View referral attribution</Link>
         </Button>
       </Heading>
-      <ActionForm
-        action={{
-          title: "Create or renew promoter link",
-          path: "/v1/admin/referrals/links",
-          expectedStatus: 201,
-          preserveRetry: true,
-          fields: [
-            field("name", "Promoter name", {
-              maxLength: 100,
-              pattern: "[A-Za-z0-9]{1,100}",
-              help: "ASCII letters and digits only. No spaces or punctuation.",
-            }),
-          ],
-          body: promoterBody,
-          success: "Promoter link saved",
-          renderResult: (result) => <PromoterReceipt result={result} />,
-          validateResult: (result) => {
-            if (!result.documentId || typeof result.code !== "string")
-              throw new Error(
-                "The service did not return a promoter identifier and code. Retry with the same name.",
-              );
-          },
-        }}
-        onSuccess={refresh}
-      />
-      <DataList
-        revision={revision}
-        spec={{
-          title: "Promoter links",
-          path: "/v1/admin/referrals/links",
-          paging: "cursor",
-          key: "items",
-          idKey: "documentId",
-          columns: [
-            { key: "name", label: "Promoter name" },
-            {
-              key: "code",
-              label: "Code",
-              render: (row) => (
-                <div className="space-y-2">
-                  <p className="select-all break-all font-semibold">
-                    {row.code}
-                  </p>
-                  <CopyValue
-                    key={row.code}
-                    value={row.code}
-                    label={`Copy code for ${row.name}`}
-                  />
-                </div>
-              ),
-            },
-            {
-              key: "shortUrl",
-              label: "Share URL",
-              render: (row) =>
-                row.shortUrl ? (
-                  <ReturnedUrl value={row.shortUrl} />
-                ) : (
-                  "Not returned"
-                ),
-            },
-            {
-              key: "active",
-              label: "Availability",
-              render: (row) => (
-                <DataStatus
-                  value={
-                    row.pending ? "pending" : row.active ? "active" : "disabled"
-                  }
-                />
-              ),
-            },
-            { key: "referralsCount", label: "Attributed referrals" },
-            { key: "expiresAt", label: "Expires" },
-            {
-              key: "actions",
-              label: "Manage",
-              render: (row) => (
-                <ActionForm
-                  key={`${row.documentId}:${row.active}`}
-                  action={{
-                    title: row.active
-                      ? "Disable promoter link"
-                      : "Enable promoter link",
-                    path: `/v1/admin/referrals/links/${segment(row.documentId)}/status`,
-                    preserveRetry: true,
-                    body: () => ({ active: !row.active }),
-                    success:
-                      "Availability updated. Existing counts and expiry are retained.",
+      <FeatureTabs
+        label="Promoter link sections"
+        sections={[
+          {
+            id: "links",
+            label: "Promoter links",
+            content: (
+              <div className="space-y-6">
+                <DataList
+                  revision={revision}
+                  spec={{
+                    title: "Promoter links",
+                    path: "/v1/admin/referrals/links",
+                    paging: "cursor",
+                    key: "items",
+                    idKey: "documentId",
+                    columns: [
+                      { key: "name", label: "Promoter name" },
+                      {
+                        key: "code",
+                        label: "Code",
+                        render: (row) => (
+                          <div className="space-y-2">
+                            <p className="select-all break-all font-semibold">
+                              {row.code}
+                            </p>
+                            <CopyValue
+                              key={row.code}
+                              value={row.code}
+                              label={`Copy code for ${row.name}`}
+                            />
+                          </div>
+                        ),
+                      },
+                      {
+                        key: "shortUrl",
+                        label: "Share URL",
+                        render: (row) =>
+                          row.shortUrl ? (
+                            <ReturnedUrl value={row.shortUrl} />
+                          ) : (
+                            "Not returned"
+                          ),
+                      },
+                      {
+                        key: "active",
+                        label: "Availability",
+                        render: (row) => (
+                          <DataStatus
+                            value={
+                              row.pending
+                                ? "pending"
+                                : row.active
+                                  ? "active"
+                                  : "disabled"
+                            }
+                          />
+                        ),
+                      },
+                      { key: "referralsCount", label: "Attributed referrals" },
+                      { key: "expiresAt", label: "Expires" },
+                      {
+                        key: "actions",
+                        label: "Manage",
+                        render: (row) => (
+                          <ActionForm
+                            key={`${row.documentId}:${row.active}`}
+                            action={{
+                              title: row.active
+                                ? "Disable promoter link"
+                                : "Enable promoter link",
+                              path: `/v1/admin/referrals/links/${segment(row.documentId)}/status`,
+                              preserveRetry: true,
+                              body: () => ({ active: !row.active }),
+                              success:
+                                "Availability updated. Existing counts and expiry are retained.",
+                            }}
+                            onSuccess={refresh}
+                          />
+                        ),
+                      },
+                    ],
                   }}
-                  onSuccess={refresh}
                 />
-              ),
-            },
-          ],
-        }}
+                <Notice>
+                  Successful activation lasts 30 days; the returned expiry is
+                  shown above. Changing availability keeps the existing referral
+                  count and expiry. These links track promoter attribution and
+                  do not configure commissions or payments.
+                </Notice>
+              </div>
+            ),
+          },
+          {
+            id: "renew",
+            label: "Create or renew",
+            content: (
+              <ActionForm
+                action={{
+                  title: "Create or renew promoter link",
+                  path: "/v1/admin/referrals/links",
+                  expectedStatus: 201,
+                  preserveRetry: true,
+                  fields: [
+                    field("name", "Promoter name", {
+                      maxLength: 100,
+                      pattern: "[A-Za-z0-9]{1,100}",
+                      help: "ASCII letters and digits only. No spaces or punctuation.",
+                    }),
+                  ],
+                  body: promoterBody,
+                  success: "Promoter link saved",
+                  renderResult: (result) => <PromoterReceipt result={result} />,
+                  validateResult: (result) => {
+                    if (!result.documentId || typeof result.code !== "string")
+                      throw new Error(
+                        "The service did not return a promoter identifier and code. Retry with the same name.",
+                      );
+                  },
+                }}
+                onSuccess={refresh}
+              />
+            ),
+          },
+        ]}
       />
-      <Notice>
-        Successful activation lasts 30 days; the returned expiry is shown above.
-        Changing availability keeps the existing referral count and expiry.
-        These links track promoter attribution and do not configure commissions
-        or payments.
-      </Notice>
     </div>
   );
 }

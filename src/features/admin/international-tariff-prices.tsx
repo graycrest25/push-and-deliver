@@ -47,7 +47,9 @@ export function InternationalTariffPrices({
   data,
   root,
   reload,
+  view = "prices",
 }: {
+  view?: "prices" | "countries";
   data: RecordData;
   root: string;
   reload: () => void;
@@ -148,6 +150,124 @@ export function InternationalTariffPrices({
     (currentCountryPage + 1) * DEFAULT_PAGE_SIZE,
   );
 
+  if (view === "countries")
+    return (
+      <InformationCard title="Country zones">
+        <div className="space-y-5">
+          <p className="text-sm text-muted-foreground">
+            Review country-to-zone mappings and open the prices for a
+            destination.
+          </p>
+          <div className="space-y-2">
+            <Label htmlFor="tariff-zone-country-search">Find a country</Label>
+            <Input
+              id="tariff-zone-country-search"
+              placeholder="Search name or country code"
+              value={search}
+              onChange={(event) => {
+                setSearch(event.target.value);
+                setCountryPage(0);
+              }}
+            />
+          </div>
+          {error != null && (
+            <ErrorNotice
+              error={error}
+              retry={() => setRevision((value) => value + 1)}
+            />
+          )}
+          <div className="mt-4 max-h-96 overflow-auto rounded-lg border">
+            {loading ? (
+              <TableSkeleton
+                label="Loading country zones…"
+                columns={["Country", "Code", "Zone", "Availability", "Prices"]}
+                rows={5}
+              />
+            ) : (
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>Country</TableHead>
+                    <TableHead>Code</TableHead>
+                    <TableHead>Zone</TableHead>
+                    <TableHead>Availability</TableHead>
+                    <TableHead>Prices</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {visibleCountries.map((country) => (
+                    <TableRow key={country.code}>
+                      <TableCell>{country.name}</TableCell>
+                      <TableCell>{country.code}</TableCell>
+                      <TableCell>{country.zone}</TableCell>
+                      <TableCell>
+                        {country.active === true
+                          ? "Available"
+                          : country.active === false
+                            ? "Disabled"
+                            : "Unknown"}
+                      </TableCell>
+                      <TableCell>
+                        <Button
+                          size="sm"
+                          variant="ghost"
+                          onClick={() => {
+                            const query = new URLSearchParams(searchParams);
+                            query.set("country", country.code);
+                            query.set("tab", "prices");
+                            setSearchParams(query);
+                          }}
+                        >
+                          View prices for {country.code}
+                        </Button>
+                      </TableCell>
+                    </TableRow>
+                  ))}
+                  {!matches.length && (
+                    <TableRow>
+                      <TableCell
+                        colSpan={5}
+                        className="h-24 text-center text-muted-foreground"
+                      >
+                        No matching countries.
+                      </TableCell>
+                    </TableRow>
+                  )}
+                </TableBody>
+              </Table>
+            )}
+          </div>
+          <nav
+            aria-label="Country zone pagination"
+            className="mt-3 flex flex-wrap items-center justify-between gap-3 text-sm"
+          >
+            <span>
+              {matches.length} countries · Page {currentCountryPage + 1} of{" "}
+              {countryPages}
+            </span>
+            <div className="flex gap-2">
+              <Button
+                size="sm"
+                variant="outline"
+                disabled={currentCountryPage === 0}
+                onClick={() => setCountryPage(currentCountryPage - 1)}
+              >
+                Previous countries
+              </Button>
+              <Button
+                size="sm"
+                variant="outline"
+                disabled={currentCountryPage + 1 >= countryPages}
+                onClick={() => setCountryPage(currentCountryPage + 1)}
+              >
+                Next countries
+              </Button>
+            </div>
+          </nav>
+        </div>
+      </InformationCard>
+    );
+
   return (
     <InformationCard title="International prices">
       <div className="space-y-5">
@@ -231,12 +351,17 @@ export function InternationalTariffPrices({
         {data.status !== "draft" && (
           <p className="text-sm text-muted-foreground">
             To change these prices,{" "}
-            <a
-              href="#tariff-workflow"
+            <button
+              type="button"
+              onClick={() => {
+                const next = new URLSearchParams(searchParams);
+                next.set("tab", "workflow");
+                setSearchParams(next);
+              }}
               className="text-primary underline underline-offset-4"
             >
               clone this tariff as a draft
-            </a>
+            </button>
             , edit it, then publish after review.
           </p>
         )}
@@ -370,98 +495,6 @@ export function InternationalTariffPrices({
             </Button>
           </div>
         </nav>
-        <details className="border-t pt-4">
-          <summary className="cursor-pointer text-sm font-semibold">
-            Country zones ({mappings.length})
-          </summary>
-          <div className="mt-4 max-h-96 overflow-auto rounded-lg border">
-            {loading ? (
-              <TableSkeleton
-                columns={["Country", "Code", "Zone", "Availability"]}
-                rows={5}
-              />
-            ) : (
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead>Country</TableHead>
-                    <TableHead>Code</TableHead>
-                    <TableHead>Zone</TableHead>
-                    <TableHead>Availability</TableHead>
-                    <TableHead>Prices</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {visibleCountries.map((country) => (
-                    <TableRow key={country.code}>
-                      <TableCell>{country.name}</TableCell>
-                      <TableCell>{country.code}</TableCell>
-                      <TableCell>{country.zone}</TableCell>
-                      <TableCell>
-                        {country.active === true
-                          ? "Available"
-                          : country.active === false
-                            ? "Disabled"
-                            : "Unknown"}
-                      </TableCell>
-                      <TableCell>
-                        <Button
-                          size="sm"
-                          variant="ghost"
-                          onClick={() => {
-                            selectCountry(country.code);
-                            document
-                              .getElementById("tariff-destination")
-                              ?.focus();
-                          }}
-                        >
-                          View prices for {country.code}
-                        </Button>
-                      </TableCell>
-                    </TableRow>
-                  ))}
-                  {!matches.length && (
-                    <TableRow>
-                      <TableCell
-                        colSpan={5}
-                        className="h-24 text-center text-muted-foreground"
-                      >
-                        No matching countries.
-                      </TableCell>
-                    </TableRow>
-                  )}
-                </TableBody>
-              </Table>
-            )}
-          </div>
-          <nav
-            aria-label="Country zone pagination"
-            className="mt-3 flex flex-wrap items-center justify-between gap-3 text-sm"
-          >
-            <span>
-              {matches.length} countries · Page {currentCountryPage + 1} of{" "}
-              {countryPages}
-            </span>
-            <div className="flex gap-2">
-              <Button
-                size="sm"
-                variant="outline"
-                disabled={currentCountryPage === 0}
-                onClick={() => setCountryPage(currentCountryPage - 1)}
-              >
-                Previous countries
-              </Button>
-              <Button
-                size="sm"
-                variant="outline"
-                disabled={currentCountryPage + 1 >= countryPages}
-                onClick={() => setCountryPage(currentCountryPage + 1)}
-              >
-                Next countries
-              </Button>
-            </div>
-          </nav>
-        </details>
         {destination?.active === false && (
           <Notice>
             This country is disabled. Its saved prices are shown for review; it

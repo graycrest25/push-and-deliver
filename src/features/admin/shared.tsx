@@ -441,6 +441,8 @@ export type Field = {
     | "group";
   // Rider selection uses the native paginated directory, not an eligibility guess.
   riderSelection?: boolean;
+  // Form values are naira; initial values and serialized values are API kobo.
+  naira?: boolean;
   imagesOnly?: boolean;
   vendorOwned?: boolean;
   ownAsset?: boolean;
@@ -474,6 +476,35 @@ export const number = (
   min = 0,
   max = 100000000000,
 ): Field => field(name, label, { type: "number", min, max, default: 0 });
+export const nairaField = (
+  name: string,
+  label: string,
+  min = 0,
+  max = 100000000000,
+): Field =>
+  field(
+    name,
+    label.replace(/\s*\((?:NGN )?(?:kobo|minor units)\)/gi, "") + " (₦)",
+    {
+      type: "number",
+      naira: true,
+      min: min / 100,
+      max: max / 100,
+      step: 0.01,
+      default: 0,
+      help: "Enter naira, with up to two decimal places.",
+    },
+  );
+export function nairaToKobo(value: unknown): number {
+  const text = String(value);
+  if (!/^\d+(\.\d{1,2})?$/.test(text))
+    throw new Error("Enter a naira amount with up to two decimal places.");
+  const [whole, fraction = ""] = text.split(".");
+  const amount = Number(whole) * 100 + Number(fraction.padEnd(2, "0"));
+  if (!Number.isSafeInteger(amount))
+    throw new Error("This amount is too large.");
+  return amount;
+}
 export const bool = (name: string, label = human(name)): Field =>
   field(name, label, { type: "boolean", default: false });
 export function defaults(
@@ -481,20 +512,26 @@ export function defaults(
   initial: RecordData = {},
 ): RecordData {
   return Object.fromEntries(
-    fields.map((f) => [
-      f.name,
-      initial[f.name] ??
-        f.default ??
-        (f.type === "group"
-          ? defaults(f.fields || [])
-          : f.type === "rows" || f.type === "assets"
-            ? []
-            : f.type === "boolean"
-              ? false
-              : f.type === "select"
-                ? f.options?.[0] || ""
-                : ""),
-    ]),
+    fields.map((f) => {
+      const raw = initial[f.name] ?? f.default;
+      let value =
+        raw ??
+        (f.type === "boolean"
+          ? false
+          : f.type === "select"
+            ? f.options?.[0] || ""
+            : "");
+      if (f.type === "group")
+        value = { ...raw, ...defaults(f.fields || [], raw || {}) };
+      else if (f.type === "rows")
+        value = (raw || []).map((row: RecordData) => ({
+          ...row,
+          ...defaults(f.fields || [], row),
+        }));
+      else if (f.type === "assets") value = raw || [];
+      else if (f.naira && value !== "") value = Number(value) / 100;
+      return [f.name, value];
+    }),
   );
 }
 function RiderSelection({
@@ -816,6 +853,15 @@ function serialize(fields: Field[], value: RecordData): RecordData {
         return [f.name, undefined];
       if (f.type === "number" && (v === "" || !Number.isFinite(v)))
         throw new Error(`${f.label} must be a number.`);
+      if (f.naira) {
+        const amount = nairaToKobo(v);
+        if (
+          (f.min !== undefined && amount < Math.round(f.min * 100)) ||
+          (f.max !== undefined && amount > Math.round(f.max * 100))
+        )
+          throw new Error(`${f.label} is outside the allowed range.`);
+        v = amount;
+      }
       return [f.name, v];
     }),
   );

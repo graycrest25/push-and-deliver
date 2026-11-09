@@ -1,3 +1,4 @@
+import { readTariffPdf, PdfUploadError } from "./tariff-pdf";
 import { createHash, randomUUID } from "node:crypto";
 import "server-only";
 import { NextRequest, NextResponse } from "next/server";
@@ -220,8 +221,24 @@ async function proxyRequest(request: NextRequest, segments: string[]) {
       return fail(400, "invalid_key", "Invalid operation key.");
     headers.set("Idempotency-Key", key);
   }
-  let body: string | undefined;
-  if (!["GET", "HEAD"].includes(method)) {
+  let body: string | FormData | undefined;
+  const pdfImport =
+    method === "POST" &&
+    /^\/v1\/admin\/shipping\/tariffs\/[^/]+\/import-pdf$/.test(path);
+  if (pdfImport) {
+    if (!key) return fail(400, "missing_key", "An operation key is required.");
+    try {
+      body = await readTariffPdf(request);
+    } catch (error) {
+      return fail(
+        error instanceof PdfUploadError ? error.status : 400,
+        "invalid_pdf_upload",
+        error instanceof PdfUploadError
+          ? error.message
+          : "The PDF upload or metadata could not be read.",
+      );
+    }
+  } else if (!["GET", "HEAD"].includes(method)) {
     if (Number(request.headers.get("content-length") || 0) > 2_000_000)
       return fail(413, "body_too_large", "The request is too large.");
     const reader = request.body?.getReader();
@@ -491,7 +508,9 @@ async function proxyRequest(request: NextRequest, segments: string[]) {
       const statusUpdate =
         method === "PUT" &&
         /^\/v1\/admin\/support\/tickets\/[^/]+\/status$/.test(path);
-      const statusBody = statusUpdate ? JSON.parse(body || "{}") : null;
+      const statusBody = statusUpdate
+        ? JSON.parse(typeof body === "string" ? body : "{}")
+        : null;
       if (
         statusUpdate &&
         (!statusBody ||

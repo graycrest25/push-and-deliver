@@ -1,3 +1,5 @@
+import { FeatureTabs } from "./feature-tabs";
+import { useLocation } from "react-router-dom";
 import { useEffect, useRef, useState } from "react";
 import { useCurrentUser } from "@/contexts/UserContext";
 import { ApiError } from "@/lib/api";
@@ -24,7 +26,7 @@ import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
-import { RecordSkeleton } from "@/components/ui/loading-skeletons";
+import { TabSectionSkeleton } from "@/components/ui/tab-section-skeleton";
 import { RefreshButton } from "@/components/ui/refresh-button";
 import {
   ErrorNotice,
@@ -41,7 +43,31 @@ const milliseconds = (value: number) =>
   `${value.toLocaleString("en-NG", { maximumFractionDigits: 3 })} ms`;
 export function GameRulesPage() {
   const { user } = useCurrentUser();
-  return user ? <GameRulesBootstrap key={user.id} actor={user.id} /> : null;
+  const { pathname } = useLocation();
+  return user ? (
+    <div className="space-y-6">
+      <Heading
+        title="Ten Seconds"
+        description="Configure game timing, reward limits and campaigns."
+      />
+      <FeatureTabs
+        label="Ten Seconds sections"
+        queryKey={pathname === "/app-config" ? "gameTab" : "tab"}
+        sections={[
+          {
+            id: "rules",
+            label: "Game rules",
+            content: <GameRulesBootstrap key={user.id} actor={user.id} />,
+          },
+          {
+            id: "campaigns",
+            label: "Reward campaigns",
+            content: <RewardCampaignManager forGame />,
+          },
+        ]}
+      />
+    </div>
+  ) : null;
 }
 function GameRulesBootstrap({ actor }: { actor: string }) {
   const [snapshot, setSnapshot] = useState<GameSnapshot>();
@@ -62,17 +88,13 @@ function GameRulesBootstrap({ actor }: { actor: string }) {
   if (!snapshot)
     return (
       <div className="space-y-6">
-        <Heading
-          title="Ten Seconds"
-          description="Configure game timing and reward quotas."
-        />
         {error ? (
           <ErrorNotice
             error={error}
             retry={() => setRevision((value) => value + 1)}
           />
         ) : (
-          <RecordSkeleton label="Loading saved game rules…" fields={12} />
+          <TabSectionSkeleton section="game" />
         )}
       </div>
     );
@@ -434,10 +456,6 @@ function GameRulesEditor({
   if (!setup && !error)
     return (
       <div className="space-y-6">
-        <Heading
-          title="Ten Seconds"
-          description="Configure game timing and reward quotas."
-        />
         <Notice>
           {reason === "invalid"
             ? "The service reports invalid game configuration."
@@ -445,19 +463,14 @@ function GameRulesEditor({
           Current version: {version}. Set up a draft explicitly before saving.
         </Notice>
         <Button onClick={() => setSetup(true)}>Set up game rules</Button>
-        <section className="space-y-4">
-          <h2 className="text-lg font-semibold">Game reward campaigns</h2>
-          <RewardCampaignManager forGame />
-        </section>
       </div>
     );
   return (
     <div className="space-y-6">
       <div className="flex flex-wrap items-start justify-between gap-4">
-        <Heading
-          title="Ten Seconds"
-          description="One game. Three timing levels. One active level for every new attempt."
-        />
+        <p className="text-sm text-muted-foreground">
+          One game. Three timing levels. One active level for every new attempt.
+        </p>
         <Badge
           variant={dirty || pending || readBlocked ? "outline" : "secondary"}
         >
@@ -948,12 +961,6 @@ function GameRulesEditor({
           </Button>
         </div>
       )}
-      <section className="space-y-4" aria-labelledby="game-campaigns-title">
-        <h2 id="game-campaigns-title" className="text-lg font-semibold">
-          Game reward campaigns
-        </h2>
-        <RewardCampaignManager forGame />
-      </section>
     </div>
   );
 }

@@ -197,7 +197,7 @@ export function ShipmentCommands({
               "The due assessment changed. Refresh the shipment before recording customer cash.",
             );
         },
-        description: `Confirm receipt of exactly ${assessment.amountMinor} NGN kobo against this assessment. This records escrow funding and cannot be toggled back to unpaid.`,
+        description: `Confirm receipt of exactly ₦${(assessment.amountMinor / 100).toFixed(2)} against this assessment. This records escrow funding and cannot be toggled back to unpaid.`,
         initial: { amountMinor: assessment.amountMinor },
         fields: [
           moneyField("amountMinor", "Confirm amount received (kobo)"),
