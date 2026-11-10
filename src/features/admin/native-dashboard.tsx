@@ -3,6 +3,7 @@ import { TabSectionSkeleton } from "@/components/ui/tab-section-skeleton";
 import { RewardCampaignManager } from "./reward-campaigns";
 import { RecordSkeleton } from "@/components/ui/loading-skeletons";
 import { RefreshButton } from "@/components/ui/refresh-button";
+import { SectionHelp } from "@/components/section-help";
 import { ClaimTicketButton } from "./support-conversation";
 export { SupportConversation as NativeConversation } from "./support-conversation";
 import { useEffect, useRef, useState, type ReactNode } from "react";
@@ -43,7 +44,10 @@ export function CurrentRecord({
   return (
     <section className="space-y-4">
       <div className="flex flex-wrap items-center justify-between gap-3">
-        <h2 className="text-lg font-semibold">{title}</h2>
+        <div className="flex items-center gap-2">
+          <h2 className="text-lg font-semibold">{title}</h2>
+          <SectionHelp title={title} />
+        </div>
         <RefreshButton loading={resource.loading} onClick={resource.reload}>
           Refresh {title.toLowerCase()}
         </RefreshButton>

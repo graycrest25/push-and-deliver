@@ -127,14 +127,16 @@ export function TariffPdfPreview({ preview }: { preview: PdfPreview }) {
           prices.
         </p>
         <div
-          className="max-h-[28rem] overflow-auto rounded-lg border"
+          className="max-h-[28rem] overflow-auto rounded-lg border [&>[data-slot=table-container]]:overflow-visible"
           tabIndex={0}
           aria-label="Imported price table"
         >
           <Table>
-            <TableHeader>
+            <TableHeader className="sticky top-0 z-20 bg-card">
               <TableRow>
-                <TableHead>Weight (kg)</TableHead>
+                <TableHead className="sticky left-0 z-30 min-w-28 bg-card">
+                  Weight (kg)
+                </TableHead>
                 {zones.map((zone) => (
                   <TableHead
                     key={zone}
@@ -148,7 +150,7 @@ export function TariffPdfPreview({ preview }: { preview: PdfPreview }) {
             <TableBody>
               {weights.map((weight) => (
                 <TableRow key={weight}>
-                  <TableCell className="font-medium tabular-nums">
+                  <TableCell className="sticky left-0 z-10 bg-card font-medium tabular-nums">
                     {weight / 1000}
                   </TableCell>
                   {zones.map((zone) => {

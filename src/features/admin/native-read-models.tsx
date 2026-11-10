@@ -173,6 +173,9 @@ function DirectoryExport({
       const response = await apiResponse(
         queryPath(`/v1/admin/reports/${riders ? "riders" : "users"}`, {
           ...filters,
+          // Directory pagination must never truncate a complete export.
+          limit: undefined,
+          cursor: undefined,
           format,
         }),
         {
@@ -201,7 +204,8 @@ function DirectoryExport({
       <div className="mt-4 space-y-4">
         <p className="text-sm text-muted-foreground">
           Download all matching {riders ? "riders" : "users"} in one file. Dates
-          use Africa/Lagos. CSV wallet amounts are formatted in NGN.
+          use Africa/Lagos. CSV wallet amounts are formatted in NGN. The file is
+          saved only after the download completes.
         </p>
         <fieldset disabled={busy} className="flex flex-wrap gap-4">
           <RiderExportFilters

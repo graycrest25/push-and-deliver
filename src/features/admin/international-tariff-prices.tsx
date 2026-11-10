@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useId, useRef, useState } from "react";
 import { useSearchParams } from "react-router-dom";
 import { api, queryPath, type RecordData } from "@/lib/api";
 import { DEFAULT_PAGE_SIZE } from "@/lib/pagination";
@@ -29,6 +29,7 @@ const naira = new Intl.NumberFormat("en-NG", {
   currency: "NGN",
 });
 const weight = new Intl.NumberFormat("en-NG", { maximumFractionDigits: 3 });
+const rateKey = (rate: RecordData) => `${rate.zone}:${rate.weightGrams}`;
 
 function amountMinor(value: unknown) {
   const text = String(value);
@@ -63,6 +64,30 @@ export function InternationalTariffPrices({
   const selected = searchParams.get("country") || "";
   const [page, setPage] = useState(0);
   const [countryPage, setCountryPage] = useState(0);
+  const editorId = useId();
+  const [editors, setEditors] = useState<RecordData[]>([]);
+  const [selectedEditor, setSelectedEditor] = useState<string | null>(null);
+  const [pendingEditor, setPendingEditor] = useState<string | null>(null);
+  const pendingEditorRef = useRef<string | null>(null);
+  function editPrice(rate: RecordData) {
+    const key = rateKey(rate);
+    if (pendingEditorRef.current && pendingEditorRef.current !== key) return;
+    setEditors((current) =>
+      current.some((item) => rateKey(item) === key)
+        ? current
+        : [...current, { ...rate, snapshotVersion: version(data) }],
+    );
+    setSelectedEditor(key);
+    requestAnimationFrame(() => {
+      const editor = document.getElementById(`${editorId}-${key}`);
+      const disclosure = editor?.querySelector("form")?.closest("details");
+      if (disclosure) disclosure.open = true;
+      editor?.querySelector<HTMLInputElement>('input[type="number"]')?.focus({
+        preventScroll: true,
+      });
+      editor?.scrollIntoView({ block: "nearest" });
+    });
+  }
   useEffect(() => {
     const controller = new AbortController();
     setLoading(true);
@@ -416,40 +441,23 @@ export function InternationalTariffPrices({
                       </details>
                     </TableCell>
                     {data.status === "draft" && (
-                      <TableCell className="min-w-60">
-                        <ActionForm
-                          key={`${data.version}:${rate.zone}:${rate.weightGrams}:${rate.amountMinor}`}
-                          onSuccess={reload}
-                          action={{
-                            title: "Edit price",
-                            path: `${root}/rates`,
-                            method: "PUT",
-                            preserveRetry: true,
-                            versionPath: `${root}/snapshot`,
-                            description: `Updates the ${weight.format(rate.weightGrams / 1000)} kg tier for every country in zone ${rate.zone}. Other tiers stay unchanged.`,
-                            initial: { amountNaira: rate.amountMinor / 100 },
-                            fields: [
-                              field("amountNaira", "Price (NGN)", {
-                                type: "number",
-                                min: 0.01,
-                                max: 1000000000,
-                                step: 0.01,
-                              }),
-                              reasonField,
-                            ],
-                            body: (values) => ({
-                              expectedVersion: version(data),
-                              reason: reason(values.reason),
-                              rates: [
-                                {
-                                  zone: rate.zone,
-                                  weightGrams: rate.weightGrams,
-                                  amountMinor: amountMinor(values.amountNaira),
-                                },
-                              ],
-                            }),
-                          }}
-                        />
+                      <TableCell>
+                        <Button
+                          size="sm"
+                          variant="ghost"
+                          className="px-2"
+                          id={`${editorId}-trigger-${rateKey(rate)}`}
+                          aria-label="Edit price"
+                          aria-expanded={selectedEditor === rateKey(rate)}
+                          aria-controls={`${editorId}-${rateKey(rate)}`}
+                          disabled={
+                            pendingEditor !== null &&
+                            pendingEditor !== rateKey(rate)
+                          }
+                          onClick={() => editPrice(rate)}
+                        >
+                          Edit
+                        </Button>
                       </TableCell>
                     )}
                   </TableRow>
@@ -495,6 +503,126 @@ export function InternationalTariffPrices({
             </Button>
           </div>
         </nav>
+        {pendingEditor && selectedEditor !== pendingEditor && (
+          <div className="flex flex-wrap items-center gap-3 text-sm">
+            <p className="text-muted-foreground">
+              Finish the pending price update before editing another price.
+            </p>
+            <Button
+              size="sm"
+              variant="outline"
+              onClick={() => {
+                const rate = editors.find(
+                  (item) => rateKey(item) === pendingEditor,
+                );
+                if (rate) editPrice(rate);
+              }}
+            >
+              Return to price update
+            </Button>
+          </div>
+        )}
+        {data.status === "draft" &&
+          editors.map((rate) => {
+            const key = rateKey(rate);
+            const mapped = mappings.filter(
+              (country) => String(country.zone) === String(rate.zone),
+            );
+            return (
+              <section
+                key={key}
+                id={`${editorId}-${key}`}
+                aria-label={`Edit zone ${rate.zone} price at ${weight.format(rate.weightGrams / 1000)} kg`}
+                hidden={selectedEditor !== key}
+                className="border-t pt-4"
+              >
+                <div className="flex flex-wrap items-center justify-between gap-3">
+                  <h3 className="font-semibold">
+                    Zone {rate.zone} · {weight.format(rate.weightGrams / 1000)}{" "}
+                    kg
+                  </h3>
+                  <Button
+                    size="sm"
+                    variant="ghost"
+                    onClick={() => {
+                      setSelectedEditor(null);
+                      const target =
+                        document.getElementById(`${editorId}-trigger-${key}`) ||
+                        document.getElementById("tariff-destination");
+                      target?.focus();
+                    }}
+                  >
+                    Hide editor
+                  </Button>
+                </div>
+                <p className="mt-2 text-sm text-muted-foreground">
+                  Applies to all {mapped.length}{" "}
+                  {mapped.length === 1 ? "country" : "countries"} in this zone.
+                  Other weight tiers stay unchanged.
+                </p>
+                {!!mapped.length && (
+                  <details className="mt-2 text-sm">
+                    <summary className="cursor-pointer text-primary">
+                      View affected countries
+                    </summary>
+                    <p className="mt-2 max-w-3xl text-muted-foreground">
+                      {mapped
+                        .map((country) => `${country.name} (${country.code})`)
+                        .join(", ")}
+                    </p>
+                  </details>
+                )}
+                {/* Keep hidden editors mounted so a retry retains its body and key. */}
+                <ActionForm
+                  presentation="inline"
+                  defaultOpen
+                  onPendingChange={(pending) => {
+                    if (pending) pendingEditorRef.current = key;
+                    else if (pendingEditorRef.current === key)
+                      pendingEditorRef.current = null;
+                    setPendingEditor(pendingEditorRef.current);
+                  }}
+                  onSuccess={() => {
+                    setSelectedEditor((current) =>
+                      current === key ? null : current,
+                    );
+                    setEditors((current) =>
+                      current.filter((item) => rateKey(item) !== key),
+                    );
+                    reload();
+                  }}
+                  action={{
+                    title: "Edit price",
+                    path: `${root}/rates`,
+                    method: "PUT",
+                    preserveRetry: true,
+                    versionPath: `${root}/snapshot`,
+                    initial: { amountNaira: rate.amountMinor / 100 },
+                    fields: [
+                      field("amountNaira", "Price (NGN)", {
+                        type: "number",
+                        min: 0.01,
+                        max: 1000000000,
+                        step: 0.01,
+                      }),
+                      reasonField,
+                    ],
+                    body: (values) => ({
+                      expectedVersion: rate.snapshotVersion,
+                      reason: reason(values.reason),
+                      rates: [
+                        {
+                          zone: rate.zone,
+                          weightGrams: rate.weightGrams,
+                          amountMinor: amountMinor(values.amountNaira),
+                        },
+                      ],
+                    }),
+                  }}
+                />
+              </section>
+            );
+          })}
         {destination?.active === false && (
           <Notice>
             This country is disabled. Its saved prices are shown for review; it

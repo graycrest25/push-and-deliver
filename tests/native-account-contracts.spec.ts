@@ -672,11 +672,12 @@ for (const domestic of [false, true]) {
       await page.getByLabel("Show drafts and retired tariffs").check();
     await page.getByRole("tab", { name: "Create tariff", exact: true }).click();
     const form = page.getByRole("tabpanel").locator("details");
-    await form.locator("summary").click();
+    await expect(form).toHaveAttribute("open", "");
     const field = form.getByLabel(
-      domestic ? "Local service ID" : "Tariff name",
+      domestic ? "Delivery service" : "Tariff name",
     );
-    await field.fill("Unfinished tariff");
+    if (domestic) await field.selectOption("premium");
+    else await field.fill("Unfinished tariff");
     await page
       .getByRole("tab", {
         name: domestic ? "States & zones" : "Countries",
@@ -693,7 +694,7 @@ for (const domestic of [false, true]) {
     await expect(
       page.getByRole("tab", { name: "Create tariff", exact: true }),
     ).toHaveAttribute("aria-selected", "true");
-    await expect(field).toHaveValue("Unfinished tariff");
+    await expect(field).toHaveValue(domestic ? "premium" : "Unfinished tariff");
     await page.getByRole("tab", { name: "Tariffs", exact: true }).click();
     if (!domestic)
       await expect(
@@ -739,13 +740,13 @@ for (const domestic of [false, true]) {
       .getByRole("tabpanel")
       .locator("details")
       .filter({
-        has: page.locator("summary", { hasText: /^Save draft information$/ }),
+        has: page.locator("summary", { hasText: /^Tariff details/ }),
       });
     await edit.locator("summary").click();
-    const input = edit.getByLabel(domestic ? "Local service ID" : "Name", {
+    const input = edit.getByLabel(domestic ? "Volumetric divisor" : "Name", {
       exact: false,
     });
-    await input.fill("Draft edit retained");
+    await input.fill(domestic ? "6000" : "Draft edit retained");
     await page
       .getByRole("tab", { name: "Tariff information", exact: true })
       .click();
@@ -753,7 +754,7 @@ for (const domestic of [false, true]) {
       domestic ? "draft-local" : "draft-export",
     );
     await page.goBack();
-    await expect(input).toHaveValue("Draft edit retained");
+    await expect(input).toHaveValue(domestic ? "6000" : "Draft edit retained");
     await page.getByRole("tab", { name: "Prices", exact: true }).click();
     await expect(
       page.getByRole("tabpanel").getByRole("table").first(),
@@ -831,7 +832,7 @@ test("tariff skeletons follow the selected detail tab while the snapshot loads",
     page
       .getByRole("tabpanel")
       .locator("summary")
-      .filter({ hasText: /^Save draft information$/ }),
+      .filter({ hasText: /^Tariff details/ }),
   ).toBeVisible();
 });
 

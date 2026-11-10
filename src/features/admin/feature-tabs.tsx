@@ -21,10 +21,31 @@ export function FeatureTabs({
   const selected = useRef(active);
   selected.current = active;
   const [visited, setVisited] = useState(() => new Set([active]));
+  const tabBar = useRef<HTMLDivElement>(null);
   useEffect(() => {
     setVisited((previous) =>
       previous.has(active) ? previous : new Set([...previous, active]),
     );
+  }, [active]);
+  useEffect(() => {
+    const bar = tabBar.current;
+    if (!bar) return;
+    const showSelectedTab = () => {
+      const tab = bar.querySelector<HTMLElement>(
+        '[role="tab"][data-state="active"]',
+      );
+      if (!tab) return;
+      const bounds = bar.getBoundingClientRect();
+      const selectedBounds = tab.getBoundingClientRect();
+      if (selectedBounds.right > bounds.right)
+        bar.scrollLeft += selectedBounds.right - bounds.right;
+      else if (selectedBounds.left < bounds.left)
+        bar.scrollLeft -= bounds.left - selectedBounds.left;
+    };
+    showSelectedTab();
+    const observer = new ResizeObserver(showSelectedTab);
+    observer.observe(bar);
+    return () => observer.disconnect();
   }, [active]);
   return (
     <Tabs
@@ -39,7 +60,7 @@ export function FeatureTabs({
       }}
       className="gap-6"
     >
-      <div className="overflow-x-auto border-b pb-3">
+      <div ref={tabBar} className="overflow-x-auto border-b pb-3">
         <TabsList aria-label={label} className="h-auto min-w-max gap-1">
           {sections.map((section) => (
             <TabsTrigger

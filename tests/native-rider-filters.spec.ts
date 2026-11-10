@@ -10,7 +10,9 @@ async function login(page: Page) {
   await page.getByLabel("Email", { exact: true }).fill("admin@example.test");
   await page.getByLabel("Password", { exact: true }).fill("example-password");
   await page.getByRole("button", { name: "Sign In", exact: true }).click();
-  await expect(page.locator("#workspace-content")).toBeVisible({ timeout: 30_000 });
+  await expect(page.locator("#workspace-content")).toBeVisible({
+    timeout: 30_000,
+  });
 }
 test("rider filters and online labels apply to the directory and single-download exports", async ({
   page,
@@ -243,11 +245,9 @@ test("users export preserves all rows and sends date and contact filters without
     return route.fulfill({ contentType: "text/csv", body: csv });
   });
   await page.goto("/users");
-  const panel = page
-    .locator("details")
-    .filter({
-      has: page.locator("summary").filter({ hasText: "Export users" }),
-    });
+  const panel = page.locator("details").filter({
+    has: page.locator("summary").filter({ hasText: "Export users" }),
+  });
   await panel.locator("summary").click();
   await panel.getByLabel("Start date", { exact: true }).fill("2025-01-08");
   await panel.getByLabel("End date", { exact: true }).fill("2026-11-08");
@@ -275,4 +275,106 @@ test("users export preserves all rows and sends date and contact filters without
   await expect(
     panel.getByRole("button", { name: "Download export", exact: true }),
   ).toBeEnabled();
+});
+
+test("rider CSV saves all 2,001 rows only after the response completes", async ({
+  page,
+}) => {
+  await login(page);
+  await fetch("http://127.0.0.1:4319/control", {
+    method: "POST",
+    body: JSON.stringify({ riderExportStream: "complete" }),
+  });
+  const requests: URL[] = [];
+  page.on("request", (request) => {
+    if (request.url().includes("/api/proxy/v1/admin/reports/riders?"))
+      requests.push(new URL(request.url()));
+  });
+  const downloads: string[] = [];
+  page.on("download", (download) =>
+    downloads.push(download.suggestedFilename()),
+  );
+  await page.goto("/riders");
+  const panel = page.locator("details").filter({
+    has: page.locator("summary").filter({ hasText: "Export riders" }),
+  });
+  await panel.locator("summary").click();
+  await panel
+    .getByRole("combobox", { name: "Vehicle type", exact: true })
+    .selectOption("bike");
+  await panel.getByLabel("Start date", { exact: true }).fill("2026-11-01");
+  await panel.getByLabel("End date", { exact: true }).fill("2026-11-08");
+  const headers = page.waitForResponse((response) =>
+    response.url().includes("/api/proxy/v1/admin/reports/riders?"),
+  );
+  const download = page.waitForEvent("download");
+  await panel
+    .getByRole("button", { name: "Download export", exact: true })
+    .click();
+  await headers;
+  await expect(
+    panel.getByRole("button", { name: "Downloading…" }),
+  ).toBeDisabled();
+  expect(downloads).toEqual([]);
+  const saved = await download;
+  const csv = await readFile((await saved.path())!, "utf8");
+  expect(saved.suggestedFilename()).toBe("riders.csv");
+  expect(csv.trimEnd().split("\n")).toHaveLength(2002);
+  expect(csv).toContain("rider-2000,rider,Export Rider 2000\n");
+  await expect(panel.getByText("Export downloaded.")).toBeVisible();
+  expect(downloads).toEqual(["riders.csv"]);
+  expect(requests).toHaveLength(1);
+  expect(Object.fromEntries(requests[0].searchParams)).toEqual({
+    vehicleType: "bike",
+    startDate: "2026-11-01",
+    endDate: "2026-11-08",
+    format: "csv",
+  });
+});
+
+test("an interrupted rider CSV is discarded and can be retried as one complete file", async ({
+  page,
+}) => {
+  await login(page);
+  await fetch("http://127.0.0.1:4319/control", {
+    method: "POST",
+    body: JSON.stringify({ riderExportStream: "interrupted" }),
+  });
+  const downloads: string[] = [];
+  page.on("download", (download) =>
+    downloads.push(download.suggestedFilename()),
+  );
+  await page.goto("/riders");
+  const panel = page.locator("details").filter({
+    has: page.locator("summary").filter({ hasText: "Export riders" }),
+  });
+  await panel.locator("summary").click();
+  const headers = page.waitForResponse((response) =>
+    response.url().includes("/api/proxy/v1/admin/reports/riders?"),
+  );
+  await panel
+    .getByRole("button", { name: "Download export", exact: true })
+    .click();
+  expect((await headers).status()).toBe(200);
+  await expect(panel.getByRole("alert")).toBeVisible();
+  await expect(panel.getByText("Export downloaded.")).toHaveCount(0);
+  await expect(
+    panel.getByRole("button", { name: "Download export", exact: true }),
+  ).toBeEnabled();
+  expect(downloads).toEqual([]);
+
+  await fetch("http://127.0.0.1:4319/control", {
+    method: "POST",
+    body: JSON.stringify({ riderExportStream: "complete" }),
+  });
+  const download = page.waitForEvent("download");
+  await panel
+    .getByRole("button", { name: "Download export", exact: true })
+    .click();
+  const saved = await download;
+  const csv = await readFile((await saved.path())!, "utf8");
+  expect(csv.trimEnd().split("\n")).toHaveLength(2002);
+  expect(downloads).toEqual(["riders.csv"]);
+  await expect(panel.getByRole("alert")).toHaveCount(0);
+  await expect(panel.getByText("Export downloaded.")).toBeVisible();
 });

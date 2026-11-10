@@ -54,6 +54,102 @@ function application(emailVerified = true) {
   };
 }
 test.beforeEach(() => control({ reset: true }));
+for (const response of [
+  {
+    name: "current",
+    data: {
+      onlineStatus: true,
+      onlineStatusLabel: "Online",
+      message: "Rider verified successfully. The rider is now online.",
+    },
+    expectedMessage: "Rider verified successfully. The rider is now online.",
+  },
+  {
+    name: "saved legacy",
+    data: {},
+    expectedMessage: "Rider application updated",
+  },
+]) {
+  test(`approval uses the ${response.name} response message and refreshes the applicant profile`, async ({
+    page,
+  }) => {
+    await login(page);
+    let reviewed = false;
+    let refreshedProfile = false;
+    let refreshedHistory = false;
+    let submitted: unknown;
+    let idempotencyKey: string | undefined;
+    await page.route(
+      "**/api/proxy/v1/admin/riders/rider-1/application",
+      (route) => {
+        const current = application();
+        if (reviewed) refreshedProfile = true;
+        return route.fulfill({
+          json: {
+            data: {
+              ...current,
+              version: reviewed ? 8 : 7,
+              status: reviewed ? "approved" : "pending",
+              allowedDecisions: reviewed ? [] : current.allowedDecisions,
+              applicant: {
+                ...current.applicant,
+                onlineStatus: reviewed,
+                onlineStatusLabel: reviewed ? "Online" : "Offline",
+              },
+            },
+          },
+        });
+      },
+    );
+    await page.route(
+      "**/api/proxy/v1/admin/riders/rider-1/application/reviews?*",
+      (route) => {
+        if (reviewed) refreshedHistory = true;
+        return route.fulfill({ json: { data: { items: [] } } });
+      },
+    );
+    await page.route(
+      "**/api/proxy/v1/admin/riders/rider-1/application/review",
+      (route) => {
+        submitted = route.request().postDataJSON();
+        idempotencyKey = route.request().headers()["idempotency-key"];
+        reviewed = true;
+        return route.fulfill({
+          json: { data: { version: 8, ...response.data } },
+        });
+      },
+    );
+    await page.goto("/rider-applications/rider-1");
+    const profile = page.getByRole("region", {
+      name: "Applicant information",
+      exact: true,
+    });
+    await expect(profile.getByText("Offline", { exact: true })).toBeVisible();
+    const edit = page.locator("details").filter({
+      has: page.locator("summary").filter({ hasText: "Approve rider" }),
+    });
+    await edit.locator("summary").click();
+    await edit
+      .getByLabel("Reason for change", { exact: false })
+      .fill("Application and photos reviewed");
+    await edit
+      .getByRole("button", { name: "Approve rider", exact: true })
+      .click();
+    await expect(
+      page.getByText(response.expectedMessage, { exact: true }),
+    ).toBeVisible();
+    await expect(profile.getByText("Online", { exact: true })).toBeVisible();
+    await expect(profile.getByText("Offline", { exact: true })).toHaveCount(0);
+    await expect.poll(() => refreshedProfile && refreshedHistory).toBeTruthy();
+    expect(submitted).toEqual({
+      decision: "approve",
+      reason: "Application and photos reviewed",
+      expectedVersion: 7,
+    });
+    expect(idempotencyKey).toBeTruthy();
+    await expect(page.getByText(/rider remains offline/i)).toHaveCount(0);
+  });
+}
 test("approval prerequisites and enum labels are clear without converting versions or IDs", async ({
   page,
 }) => {
