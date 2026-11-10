@@ -148,6 +148,12 @@ test("shipment review sends full gross price with fresh version and retains paym
     readOnly: false,
     historicalStatusEditable: false,
     nativeWriteEligible: true,
+    weightKg: 3,
+    pricing: {
+      grossAmountMinor: 400000,
+      totalAmountMinor: 350000,
+      currency: "NGN",
+    },
   };
   await control({ latestShipment: data });
   await page.goto(`/shipment-orders/${data.id}`);
@@ -155,8 +161,13 @@ test("shipment review sends full gross price with fresh version and retains paym
     .locator("details")
     .filter({ hasText: "Review shipment price" });
   await form.locator("summary").click();
+  await expect(form.getByLabel("Full revised price (₦)")).toHaveValue("4000");
   await form.getByLabel("Reweighed weight (kg)").fill("3.2");
-  await form.getByLabel("Full revised gross price (₦)").fill("4500");
+  await form.getByLabel("Full revised price (₦)").fill("4500");
+  await expect(form.getByLabel("Price comparison")).toContainText("₦4,500.00");
+  await expect(form.getByLabel("Price comparison")).toContainText(
+    "₦500.00 increase",
+  );
   await form.getByLabel("Reason for change").fill("Office reweighing");
   await page.screenshot({
     path: testInfo.outputPath("price-review-desktop.png"),
@@ -169,11 +180,15 @@ test("shipment review sends full gross price with fresh version and retains paym
   });
   await control({ latestShipment: { ...data, version: 6 } });
   await form
-    .getByRole("button", { name: "Review shipment price", exact: true })
+    .getByRole("button", { name: "Save revised price", exact: true })
     .click();
   await expect(
     page.getByRole("heading", { name: "Price review outcome" }),
   ).toBeVisible();
+  await expect(
+    page.getByRole("status", { name: "Price review outcome" }),
+  ).toContainText("₦3,000.00");
+  await page.getByText("Review details", { exact: true }).click();
   await expect(
     page.getByText("assessment-review", { exact: true }),
   ).toBeVisible();
@@ -232,5 +247,85 @@ test("regular admin cannot call historical or price-review endpoints", async ({
       data: { expectedVersion: 1, reason: "Test" },
     });
     expect(response.status()).toBe(403);
+  }
+});
+
+test("shipment billing keeps payment actions with their charge across themes and screen sizes", async ({
+  page,
+}, testInfo) => {
+  await login(page);
+  await control({
+    latestShipment: {
+      ...shipment,
+      id: "billing-layout",
+      readOnly: false,
+      historicalStatusEditable: false,
+      nativeWriteEligible: true,
+      status: "sentToHq",
+      weightKg: 3,
+      pricing: {
+        grossAmountMinor: 1573678,
+        totalAmountMinor: 1573678,
+        currency: "NGN",
+      },
+      payment: { status: "unpaid", method: "cash" },
+      onwardDeliveryBlockers: [
+        "customer_payment_required",
+        "assessment_payment_required",
+      ],
+      allowedAdminActions: [
+        "review_price",
+        "record_cash_receipt",
+        "request_payment_link",
+      ],
+      assessments: [
+        {
+          id: "assessment-12345678",
+          kind: "initial",
+          status: "due",
+          amountMinor: 1573678,
+          checkoutStatus: "ready",
+          paymentId: "payment-12345678",
+          reference: "pnd-payment-12345678",
+          authorizationUrl: "https://checkout.paystack.com/example",
+        },
+      ],
+    },
+  });
+  await page.goto("/shipment-orders/billing-layout");
+  const billing = page.locator("#shipment-billing");
+  await billing
+    .locator("summary", { hasText: "Review shipment price" })
+    .click();
+  await billing.getByLabel("Full revised price (₦)").fill("18000");
+  await expect(billing.getByLabel("Price comparison")).toContainText(
+    "₦2,263.22 increase",
+  );
+  await expect(
+    page
+      .getByRole("region", { name: "Update shipment status", exact: true })
+      .getByRole("button", { name: /Record cash/ }),
+  ).toHaveCount(0);
+  await expect(
+    billing.getByRole("link", { name: "Open payment link" }),
+  ).toHaveAttribute("href", "https://checkout.paystack.com/example");
+  for (const width of [1280, 390]) {
+    await page.setViewportSize({ width, height: 900 });
+    for (const theme of ["light", "dark"]) {
+      await page.evaluate((dark) => {
+        document.documentElement.classList.toggle("dark", dark);
+        document.documentElement.style.colorScheme = dark ? "dark" : "light";
+      }, theme === "dark");
+      await expect
+        .poll(() =>
+          page.evaluate(
+            () => document.documentElement.scrollWidth <= window.innerWidth,
+          ),
+        )
+        .toBe(true);
+      await billing.screenshot({
+        path: testInfo.outputPath(`billing-${width}-${theme}.png`),
+      });
+    }
   }
 });

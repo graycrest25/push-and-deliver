@@ -7,7 +7,7 @@ import {
   riderTaskStatus,
   riderConfirmation,
 } from "./shipment-rider-payment";
-import { ShipmentPriceReview } from "./shipment-price-review";
+import { ShipmentPriceReviewOutcome } from "./shipment-price-review";
 import { AccountSummary } from "./account-summary";
 import { OrderSummary } from "./order-summary";
 import { ShipmentTimeline } from "./shipment-commands";
@@ -338,18 +338,22 @@ export function NativeShipment() {
           Refresh
         </RefreshButton>
       </Heading>
-      {priceResult?.id === id && (
-        <InformationCard title="Price review outcome">
-          <RecordView data={priceResult.result} />
-        </InformationCard>
+      {(record.loading || !!record.error) && (
+        <>
+          {priceResult?.id === id && (
+            <InformationCard title="Shipment pricing">
+              <ShipmentPriceReviewOutcome result={priceResult.result} />
+            </InformationCard>
+          )}
+          <ShipmentCheckoutPanels
+            data={record.data}
+            result={checkoutResult?.result}
+            pending={assessmentPending}
+            reload={record.reload}
+            loading={record.loading}
+          />
+        </>
       )}
-      <ShipmentCheckoutPanels
-        data={record.data}
-        result={checkoutResult?.result}
-        pending={assessmentPending}
-        reload={record.reload}
-        loading={record.loading}
-      />
       {record.error ? (
         <ErrorNotice error={record.error} retry={record.reload} />
       ) : record.loading ? (
@@ -357,17 +361,19 @@ export function NativeShipment() {
       ) : (
         record.data && (
           <>
-            <ShipmentPriceReview
-              data={record.data}
-              onSuccess={(result) => {
-                setPriceResult({ id, result });
-                record.reload();
-              }}
-            />
             <ShipmentDetails
               data={record.data}
               reload={record.reload}
               assessmentPending={assessmentPending}
+              checkoutResult={checkoutResult?.result}
+              priceResult={
+                priceResult?.id === id ? priceResult.result : undefined
+              }
+              onPriceReview={(result) => {
+                setPriceResult({ id, result });
+                setCheckout(null);
+                record.reload();
+              }}
               onCheckoutResult={(result, pending) =>
                 setCheckout({
                   id,

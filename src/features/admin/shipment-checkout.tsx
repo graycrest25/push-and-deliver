@@ -1,11 +1,13 @@
-import { useState } from "react";
+import { useState, type ReactNode } from "react";
 import { useCurrentUser } from "@/contexts/UserContext";
 import { canOperate } from "@/lib/admin-access";
 import type { RecordData } from "@/lib/api";
 import { Button } from "@/components/ui/button";
+import { DataStatus } from "@/components/ui/data-status";
+import { IconCopy, IconExternalLink, IconRefresh } from "@tabler/icons-react";
 import { InformationCard, display } from "./shared";
 
-function checkoutUrl(value: unknown) {
+export function checkoutUrl(value: unknown) {
   if (typeof value !== "string") return undefined;
   try {
     const url = new URL(value);
@@ -20,10 +22,12 @@ function Checkout({
   assessment,
   reload,
   loading,
+  actions,
 }: {
   assessment: RecordData;
   reload: () => void;
   loading: boolean;
+  actions?: ReactNode;
 }) {
   const [copyStatus, setCopyStatus] = useState("");
   const state = [
@@ -32,62 +36,106 @@ function Checkout({
     assessment.status,
   ];
   const superseded = state.includes("superseded");
+  const cancelled = state.includes("cancelled");
   const credited = state.includes("refunded");
   const settled =
     state.includes("paid") || assessment.checkoutStatus === "settled";
   const status = assessment.checkoutStatus;
   const url =
-    status === "ready" && !superseded && !credited && !settled
+    status === "ready" && !superseded && !credited && !settled && !cancelled
       ? checkoutUrl(assessment.authorizationUrl)
       : undefined;
+  const inactive = superseded || credited || settled || cancelled;
+  const label = credited
+    ? "Wallet credited"
+    : superseded
+      ? "Replaced"
+      : cancelled
+        ? "Cancelled"
+        : settled
+          ? "Paid"
+          : assessment.status === "due"
+            ? "Payment due"
+            : "Processing";
+  const id = assessment.assessmentId || assessment.id;
   return (
-    <InformationCard
-      title={
-        assessment.assessmentId || assessment.id
-          ? `Assessment · ${String(assessment.assessmentId || assessment.id).slice(-8)}`
-          : "Assessment processing"
+    <article
+      className="min-w-0 space-y-4 py-5"
+      aria-label={
+        id ? `Assessment · ${String(id).slice(-8)}` : "Assessment processing"
       }
     >
+      <div className="flex flex-wrap items-start justify-between gap-3">
+        <div>
+          <h3 className="text-sm font-medium">
+            {assessment.kind === "initial" ||
+            assessment.assessmentType === "initial"
+              ? "Initial shipment charge"
+              : "Shipment charge"}
+          </h3>
+          {(assessment.amountMinor ?? assessment.totalAmountMinor) != null && (
+            <p className="mt-1 text-xl font-semibold tabular-nums">
+              {display(
+                assessment.amountMinor ?? assessment.totalAmountMinor,
+                "amountMinor",
+                assessment.currency || "NGN",
+              )}
+            </p>
+          )}
+          {id && (
+            <p className="mt-1 text-xs text-muted-foreground">
+              Assessment · {String(id).slice(-8)}
+            </p>
+          )}
+        </div>
+        <DataStatus
+          value={label}
+          label={label}
+          tone={
+            settled || credited
+              ? "positive"
+              : inactive
+                ? "neutral"
+                : "attention"
+          }
+        />
+      </div>
       <div className="space-y-3">
-        {(assessment.amountMinor ?? assessment.totalAmountMinor) != null && (
-          <p className="font-semibold">
-            Assessment amount:{" "}
-            {display(
-              assessment.amountMinor ?? assessment.totalAmountMinor,
-              "amountMinor",
-              assessment.currency || "NGN",
-            )}
-          </p>
-        )}
-        {assessment.status && (
-          <p className="text-sm">Assessment status: {assessment.status}</p>
-        )}
         {credited ? (
-          <p>
+          <p className="text-sm text-muted-foreground">
             Extra payment credited to the customer’s wallet. This is not a bank
             or card refund.
           </p>
         ) : superseded ? (
-          <p>
+          <p className="text-sm text-muted-foreground">
             This checkout has been superseded. Use the current payment
             information.
           </p>
+        ) : cancelled ? (
+          <p className="text-sm text-muted-foreground">
+            This assessment was cancelled. No payment is needed for this charge.
+          </p>
         ) : settled ? (
-          <p>
+          <p className="text-sm text-muted-foreground">
             Payment confirmed. Refresh shipment details while the payment update
             finishes.
           </p>
         ) : status === "pending" ? (
-          <p>Preparing payment link</p>
+          <p className="text-sm text-muted-foreground">
+            Preparing payment link
+          </p>
         ) : status === "review_required" ? (
-          <p>Payment link requires review.</p>
+          <p className="text-sm text-muted-foreground">
+            Payment link requires review.
+          </p>
         ) : status === "not_required" ? (
-          <p>No payable link is needed.</p>
+          <p className="text-sm text-muted-foreground">
+            No payable link is needed.
+          </p>
         ) : url ? (
           <>
             <div className="flex flex-wrap gap-2">
               <Button
-                variant="outline"
                 disabled={loading}
                 onClick={async () => {
                   try {
@@ -100,45 +148,68 @@ function Checkout({
                   }
                 }}
               >
+                <IconCopy aria-hidden="true" />
                 Copy payment link
               </Button>
               {!loading && (
-                <Button asChild>
+                <Button asChild variant="outline">
                   <a href={url} target="_blank" rel="noopener noreferrer">
+                    <IconExternalLink aria-hidden="true" />
                     Open payment link
                   </a>
                 </Button>
               )}
             </div>
-            <p className="text-sm text-muted-foreground">
-              A ready link does not mean the customer has paid or that email
-              delivery is complete. The backend queues the link to the
-              customer’s registered email.
+            <p className="max-w-2xl text-xs text-muted-foreground">
+              Share this link to collect payment. Payment remains due until
+              confirmed. The link is also queued for email to the customer.
             </p>
           </>
         ) : (
-          <p>Payment link is not available yet.</p>
+          <p className="text-sm text-muted-foreground">
+            Payment link is not available yet.
+          </p>
         )}
         {copyStatus && (
           <p role="status" className="text-sm">
             {copyStatus}
           </p>
         )}
-        {assessment.paymentId && (
-          <p className="break-all text-sm">
-            Payment ID: {assessment.paymentId}
-          </p>
-        )}
-        {assessment.reference && (
-          <p className="break-all text-sm">
-            Payment reference: {assessment.reference}
-          </p>
-        )}
-        <Button variant="outline" disabled={loading} onClick={reload}>
+        <Button
+          variant="ghost"
+          className="-ml-3"
+          disabled={loading}
+          onClick={reload}
+        >
+          <IconRefresh aria-hidden="true" />
           Refresh payment status
         </Button>
       </div>
-    </InformationCard>
+      {!inactive && actions && (
+        <div className="divide-y border-t">{actions}</div>
+      )}
+      {(assessment.paymentId || assessment.reference) && (
+        <details className="text-xs text-muted-foreground">
+          <summary className="cursor-pointer">
+            Payment reference details
+          </summary>
+          <dl className="mt-3 space-y-2">
+            {assessment.paymentId && (
+              <div>
+                <dt>Payment ID</dt>
+                <dd className="break-all">{assessment.paymentId}</dd>
+              </div>
+            )}
+            {assessment.reference && (
+              <div>
+                <dt>Payment reference</dt>
+                <dd className="break-all">{assessment.reference}</dd>
+              </div>
+            )}
+          </dl>
+        </details>
+      )}
+    </article>
   );
 }
 export function ShipmentCheckoutPanels({
@@ -147,12 +218,14 @@ export function ShipmentCheckoutPanels({
   pending,
   reload,
   loading,
+  renderActions,
 }: {
   data: RecordData | null;
   result?: RecordData;
   pending?: boolean;
   reload: () => void;
   loading: boolean;
+  renderActions?: (assessment: RecordData) => ReactNode;
 }) {
   const { adminType } = useCurrentUser();
   if (!canOperate(adminType)) return null;
@@ -190,16 +263,22 @@ export function ShipmentCheckoutPanels({
   }
   if (!items.length) return null;
   return (
-    <section aria-label="Customer shipment assessments" className="space-y-4">
-      <h2 className="text-lg font-semibold">Customer shipment assessments</h2>
-      {items.map((assessment, index) => (
-        <Checkout
-          key={`${assessment.assessmentId || assessment.id || index}:${assessment.checkoutStatus}:${assessment.authorizationUrl || ""}`}
-          assessment={assessment}
-          reload={reload}
-          loading={loading}
-        />
-      ))}
-    </section>
+    <InformationCard title="Customer shipment assessments">
+      <p className="max-w-2xl text-sm text-muted-foreground">
+        Collect payment and track each shipment charge here. A payment link is
+        ready to use only when it appears below.
+      </p>
+      <div className="divide-y">
+        {items.map((assessment, index) => (
+          <Checkout
+            key={`${assessment.assessmentId || assessment.id || index}:${assessment.checkoutStatus}:${assessment.authorizationUrl || ""}`}
+            assessment={assessment}
+            reload={reload}
+            loading={loading}
+            actions={renderActions?.(assessment)}
+          />
+        ))}
+      </div>
+    </InformationCard>
   );
 }
