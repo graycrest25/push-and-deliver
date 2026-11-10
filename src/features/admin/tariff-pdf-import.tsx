@@ -4,9 +4,17 @@ import {
   type PdfPreview,
 } from "./tariff-pdf-preview";
 import { useRef, useState } from "react";
+import { Link } from "react-router-dom";
+import { IconChevronRight } from "@tabler/icons-react";
 import { useCurrentUser } from "@/contexts/UserContext";
 import { canOperate } from "@/lib/admin-access";
-import { api, apiResponse, ApiError, type RecordData } from "@/lib/api";
+import {
+  api,
+  apiResponse,
+  ApiError,
+  segment,
+  type RecordData,
+} from "@/lib/api";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { ErrorNotice, Notice, RecordView } from "./shared";
@@ -57,6 +65,7 @@ export function TariffPdfImport({
   reload: () => void;
 }) {
   const { adminType, user } = useCurrentUser();
+  const [open, setOpen] = useState(true);
   const [file, setFile] = useState<File | null>(null);
   const [name, setName] = useState("");
   const [reason, setReason] = useState("");
@@ -68,6 +77,13 @@ export function TariffPdfImport({
   const [error, setError] = useState<unknown>(null);
   const lock = useRef(false);
   const previewAttempt = useRef<Operation | null>(null);
+  const publishedTariffId =
+    typeof published?.id === "string" &&
+    published.id.trim() &&
+    published.id !== data.id &&
+    ![".", ".."].includes(published.id)
+      ? published.id
+      : null;
   if (
     !canOperate(adminType) ||
     data.carrier !== "dhl" ||
@@ -223,19 +239,31 @@ export function TariffPdfImport({
     }
   }
   return (
-    <details className="rounded-xl border bg-card p-5">
-      <summary className="cursor-pointer font-semibold">
-        Upload price-list PDF
+    <details
+      open={open}
+      onToggle={(event) => setOpen(event.currentTarget.open)}
+      className="group/pdf min-w-0"
+    >
+      <summary className="-mx-2 flex min-h-14 cursor-pointer list-none items-center justify-between gap-4 rounded-md px-2 py-3 text-sm font-semibold outline-none hover:bg-muted/60 focus-visible:ring-2 focus-visible:ring-ring [&::-webkit-details-marker]:hidden">
+        <span>Upload price-list PDF</span>
+        <IconChevronRight
+          className="size-4 shrink-0 text-muted-foreground transition-transform duration-150 group-open/pdf:rotate-90 motion-reduce:transition-none"
+          aria-hidden="true"
+        />
       </summary>
-      <div className="mt-4 space-y-5">
-        <p className="text-sm text-muted-foreground">
-          Preview the DHL price and country-zone changes before publishing.
-          Publication activates the replacement automatically. Higher-weight
-          prices and unlisted country mappings are preserved.
+      <div className="space-y-5 pb-5 pt-2">
+        <p className="max-w-prose text-sm text-muted-foreground">
+          Choose a PDF, preview the changes, then publish the reviewed prices.
+          Publishing activates the replacement tariff. Higher-weight prices and
+          unlisted country mappings stay unchanged.
         </p>
-        <details className="text-sm">
-          <summary className="cursor-pointer text-primary">
-            PDF template requirements
+        <details className="group/template text-sm">
+          <summary className="-mx-2 flex min-h-11 cursor-pointer list-none items-center justify-between gap-4 rounded-md px-2 py-2 text-primary outline-none hover:bg-muted/60 focus-visible:ring-2 focus-visible:ring-ring [&::-webkit-details-marker]:hidden">
+            <span>PDF template requirements</span>
+            <IconChevronRight
+              className="size-4 shrink-0 text-muted-foreground transition-transform duration-150 group-open/template:rotate-90 motion-reduce:transition-none"
+              aria-hidden="true"
+            />
           </summary>
           <ul className="mt-3 list-disc space-y-2 pl-5 text-muted-foreground">
             <li>
@@ -352,9 +380,19 @@ export function TariffPdfImport({
               Prices published. The replacement tariff is active.
             </p>
             <RecordView data={published} />
-            <Button variant="outline" onClick={reload}>
-              Refresh tariff details
-            </Button>
+            {publishedTariffId ? (
+              <Button asChild>
+                <Link
+                  to={`/export-rates/tariffs/${segment(publishedTariffId)}`}
+                >
+                  Open published tariff
+                </Link>
+              </Button>
+            ) : (
+              <Button variant="outline" onClick={reload}>
+                Refresh tariff details
+              </Button>
+            )}
           </div>
         )}
       </div>

@@ -699,8 +699,39 @@ function Fields({
               className="col-span-full space-y-3 border-t pt-4"
             >
               <legend className="text-sm font-semibold">{f.label}</legend>
+              {!(value[f.name] || []).length && (
+                <p className="text-sm text-muted-foreground">
+                  Add the first {f.label.toLowerCase().replace(/s$/, "")} below.
+                </p>
+              )}
               {(value[f.name] || []).map((row: RecordData, i: number) => (
-                <div className="space-y-3 rounded-lg border p-4" key={i}>
+                <div className="min-w-0 space-y-3 border-b pb-4" key={i}>
+                  <div className="flex flex-wrap items-center justify-between gap-2">
+                    <p className="text-sm font-medium">
+                      {f.label.replace(/s$/, "")} {i + 1}
+                    </p>
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      size="sm"
+                      disabled={uploads.hasDrafts}
+                      title={
+                        uploads.hasDrafts
+                          ? "Save or discard uploaded files before removing rows."
+                          : undefined
+                      }
+                      onClick={() =>
+                        update(
+                          value[f.name].filter(
+                            (_: unknown, n: number) => n !== i,
+                          ),
+                        )
+                      }
+                    >
+                      <IconTrash size={16} aria-hidden="true" />
+                      Remove {f.label.toLowerCase().replace(/s$/, "")} {i + 1}
+                    </Button>
+                  </div>
                   <div className="grid gap-4 sm:grid-cols-2">
                     <Fields
                       fields={f.fields || []}
@@ -716,27 +747,6 @@ function Fields({
                       path={`${path}.${f.name}.${i}`}
                     />
                   </div>
-                  <Button
-                    type="button"
-                    variant="ghost"
-                    size="sm"
-                    disabled={uploads.hasDrafts}
-                    title={
-                      uploads.hasDrafts
-                        ? "Save or discard uploaded files before removing rows."
-                        : undefined
-                    }
-                    onClick={() =>
-                      update(
-                        value[f.name].filter(
-                          (_: unknown, n: number) => n !== i,
-                        ),
-                      )
-                    }
-                  >
-                    <IconTrash size={16} />
-                    Remove {f.label.toLowerCase().replace(/s$/, "")} {i + 1}
-                  </Button>
                 </div>
               ))}
               <Button
@@ -874,6 +884,7 @@ function serialize(fields: Field[], value: RecordData): RecordData {
 export interface Action {
   title: string;
   summaryHint?: string;
+  intent?: "default" | "destructive";
   submitLabel?: string;
   renderPreview?: (draft: RecordData, current: RecordData | null) => ReactNode;
   description?: string;
@@ -903,13 +914,18 @@ export interface Action {
 export function ActionForm({
   action,
   onSuccess,
+  onPendingChange,
   presentation = "card",
+  defaultOpen = false,
 }: {
   action: Action;
   onSuccess?: (result: RecordData, responseStatus?: number) => void;
+  onPendingChange?: (pending: boolean) => void;
   presentation?: "card" | "inline";
+  defaultOpen?: boolean;
 }) {
   const formId = useId();
+  const [open, setOpen] = useState(defaultOpen);
   const { user } = useCurrentUser();
   const location = useLocation();
   const uploads = useRef(
@@ -968,6 +984,7 @@ export function ActionForm({
     )
       return;
     lock.current = true;
+    onPendingChange?.(true);
     setBusy(true);
     setError(null);
     setResult(null);
@@ -1090,6 +1107,7 @@ export function ActionForm({
       }
       sessionStorage.removeItem(storageKey);
       pending.current = undefined;
+      onPendingChange?.(false);
       // Clear before a successful resource reload can unmount this form.
       const uploadPrefix = `pnd-upload:${user?.id}:${location.pathname}:${action.title}:`;
       for (const key of Object.keys(sessionStorage))
@@ -1144,37 +1162,38 @@ export function ActionForm({
     } finally {
       lock.current = false;
       setBusy(false);
+      if (!pending.current) onPendingChange?.(false);
     }
   }
   return (
     <details
+      open={open}
+      onToggle={(event) => setOpen(event.currentTarget.open)}
       className={
         presentation === "inline"
-          ? "group/action min-w-0 py-4"
-          : "rounded-xl border bg-card p-5"
+          ? "group/action min-w-0"
+          : "group/action min-w-0 border-b last:border-b-0"
       }
     >
-      <summary
-        className={
-          presentation === "inline"
-            ? "flex cursor-pointer list-none items-center justify-between gap-4 rounded-md text-sm font-semibold outline-none focus-visible:ring-2 focus-visible:ring-ring [&::-webkit-details-marker]:hidden"
-            : "cursor-pointer text-sm font-semibold"
-        }
-      >
-        <span>
-          {action.title}
+      <summary className="-mx-2 flex min-h-14 cursor-pointer list-none items-center justify-between gap-4 rounded-md px-2 py-3 text-sm font-semibold outline-none hover:bg-muted/60 focus-visible:ring-2 focus-visible:ring-ring [&::-webkit-details-marker]:hidden">
+        <span className="min-w-0">
+          <span
+            className={
+              action.intent === "destructive" ? "text-destructive" : undefined
+            }
+          >
+            {action.title}
+          </span>
           {action.summaryHint && (
             <span className="mt-1 block text-sm font-normal text-muted-foreground">
               {action.summaryHint}
             </span>
           )}
         </span>
-        {presentation === "inline" && (
-          <IconChevronRight
-            className="size-4 shrink-0 transition-transform group-open/action:rotate-90 motion-reduce:transition-none"
-            aria-hidden="true"
-          />
-        )}
+        <IconChevronRight
+          className="size-4 shrink-0 text-muted-foreground transition-transform duration-150 group-open/action:rotate-90 motion-reduce:transition-none"
+          aria-hidden="true"
+        />
       </summary>
       <UploadFormContext.Provider
         value={{
@@ -1185,8 +1204,8 @@ export function ActionForm({
           track: trackUploads,
         }}
       >
-        <form className="mt-4 space-y-4" onSubmit={submit}>
-          {action.description && (
+        <form className="space-y-5 pb-5 pt-2" onSubmit={submit}>
+          {action.description && action.description !== action.summaryHint && (
             <p className="max-w-3xl text-sm text-muted-foreground">
               {action.description}
             </p>
@@ -1284,6 +1303,9 @@ export function ActionForm({
             </p>
           )}
           <Button
+            variant={
+              action.intent === "destructive" ? "destructive" : "default"
+            }
             disabled={
               busy ||
               !!retryAt ||
@@ -1981,8 +2003,11 @@ export function ExportForm({
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<unknown>(null);
   const [message, setMessage] = useState("");
+  const controller = useRef<AbortController>();
+  useEffect(() => () => controller.current?.abort(), []);
   async function download(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
+    if (busy) return;
     setBusy(true);
     setError(null);
     setMessage("");
@@ -1990,23 +2015,28 @@ export function ExportForm({
     const filters = Object.fromEntries([...form].filter(([, v]) => v !== ""));
     let after = "";
     let count = 0;
+    const abort = new AbortController();
+    controller.current = abort;
     try {
       do {
         const response = await apiResponse(
           queryPath(`/v1/admin/reports/${type}`, {
             ...filters,
-            after,
-            limit: 2000,
+            ...(type === "riders" ? {} : { after, limit: 2000 }),
           }),
+          { signal: abort.signal },
         );
         const blob = await response.blob();
+        if (abort.signal.aborted) return;
         const url = URL.createObjectURL(blob);
         const a = document.createElement("a");
         a.href = url;
-        a.download = `${type}-${++count}.${filters.format || "csv"}`;
+        count++;
+        a.download = `${type}${type === "riders" ? "" : `-${count}`}.${filters.format || "csv"}`;
         a.click();
         setTimeout(() => URL.revokeObjectURL(url), 1000);
-        const next = response.headers.get("x-next-cursor") || "";
+        const next =
+          type === "riders" ? "" : response.headers.get("x-next-cursor") || "";
         if (next === after && next)
           throw new Error(
             "Export returned a repeated cursor. Download stopped.",
@@ -2014,12 +2044,14 @@ export function ExportForm({
         after = next;
       } while (after);
       setMessage(
-        `Downloaded ${count} file${count === 1 ? "" : "s"}. Each file is one export page.`,
+        type === "riders"
+          ? "Export downloaded."
+          : `Downloaded ${count} file${count === 1 ? "" : "s"}. Each file is one export page.`,
       );
     } catch (e) {
-      setError(e);
+      if (!abort.signal.aborted) setError(e);
     } finally {
-      setBusy(false);
+      if (!abort.signal.aborted) setBusy(false);
     }
   }
   return (
@@ -2030,7 +2062,7 @@ export function ExportForm({
       <form onSubmit={download} className="mt-4 space-y-4">
         <p className="text-sm text-muted-foreground">
           {type === "riders"
-            ? "Exports primary-role riders. Each page is downloaded as a separate file."
+            ? "Download all matching riders in one CSV file. The file is saved only after the download completes."
             : "Dates use Africa/Lagos calendar days, up to 366 days. Each page is downloaded as a separate file."}
         </p>
         <div className="flex flex-wrap gap-4">
@@ -2053,9 +2085,7 @@ export function ExportForm({
                 name="format"
                 className="block h-10 rounded-md border bg-card px-3"
               >
-                {["csv", "pdf", "xlsx"].map((x) => (
-                  <option key={x}>{x}</option>
-                ))}
+                <option value="csv">CSV</option>
               </select>
             </label>
           ) : (

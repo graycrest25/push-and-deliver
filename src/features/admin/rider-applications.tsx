@@ -287,13 +287,15 @@ export function RiderApplication() {
                     ) : (
                       <ActionForm
                         key={`${decision}:${data.version}`}
-                        onSuccess={() => {
+                        onSuccess={(result) => {
                           toast.success(
-                            decision === "approve"
-                              ? "Rider approved. The rider remains offline."
-                              : "Application rejected.",
+                            typeof result?.message === "string" &&
+                              result.message.trim()
+                              ? result.message
+                              : "Rider application updated",
                           );
                           setReviewRevision((value) => value + 1);
+                          // Refresh the applicant profile and application together.
                           reload();
                         }}
                         action={{

@@ -2,6 +2,15 @@
 
 Integrated against [the supplied backend handoff](../../pnd-backend/docs/web-admin-latest-api-update-2026-11-03.md). Its examples are illustrative contracts. The document's historical documentation-only request and rollout checklist are source context; no deployment, price publication, cash receipt or production mutation was executed as part of this frontend integration.
 
+## 10 November: domestic weights, rider approvals and complete exports
+
+Deploy the matching backend changes before deploying this frontend update. Existing authentication headers, version checks and idempotency keys are unchanged. Local tests do not establish backend deployment.
+
+- Domestic tariffs use `weightKg` for display and PUT/DELETE rate rows, from 0.5 to 70 kg in 0.001 kg steps. Reads use the existing full `/v1/admin/geography/tariffs/{id}/snapshot`; the existing `/rates?limit=100` contract also returns `weightKg` and `weightGrams`. Each submitted row contains only `weightKg`, plus integer-kobo `amountMinor` for PUT. Both mutations retain `{expectedVersion, reason, rates}`. Published tariffs must still be cloned to an editable draft. International rate payloads and customer booking are unchanged.
+- Rider review success displays `data.message`, falling back to “Rider application updated” for saved responses without a message. The application, embedded applicant profile and review history refresh afterward; the UI does not infer offline status from approval.
+- `GET /v1/admin/reports/riders?format=csv` preserves directory filters and omits `limit` and `cursor`. A complete export is one file, without row slicing or continuation requests. The browser consumes the full response before saving; failed or interrupted bodies are discarded and can be retried.
+- Navigation groups Shipping tariffs, Delivery tariffs and Head offices under Logistics; Game rules and App configuration under Configuration; and Admin accounts, Account security, Background jobs, Files and Audit history under Administration. Existing routes and role visibility are preserved.
+
 ## Rider application contract update — 4 November 2026
 
 Admin calls use the administrator's bearer session and `X-Account-Type: user`; no server admin API key is needed. JSON mutations require a unique idempotency key. Retry the identical request with its existing key; GET requests need no key.
@@ -35,7 +44,7 @@ This repository contains the admin dashboard, with no rider signup multipart for
 | Rider applications | Separate queue/detail pages for super, regular and verifier; allowlisted applicant fields; current allowed decisions; immutable review history; unavailable historical evidence; delegated rider-owned image uploads, completion with `{}`, explicit linking and reviewed decisions. |
 | Fee pricing | Open a catalogue row to load normalized `/v1/admin/fees/{id}`. Type-specific fields use minor units, PPM or multipliers; read-only fee types remain read-only. `addedSurgeMultiplier` is used, never `addedSurgeMinor`. |
 | Office pricing | Current office version with PATCH pickup and per-kilometre charges. |
-| Local tariffs | Real service IDs, versioned draft creation, metadata, full snapshots, bounded upsert/delete weight batches, publication, clone and archive. Draft publication checks the endpoint bands at 500 and 70,000 grams. |
+| Local tariffs | Real service IDs, versioned draft creation, metadata, full snapshots, bounded upsert/delete weight batches, publication, clone and archive. Domestic weights use kilograms; draft publication checks the endpoint bands at 0.5 and 70 kg. |
 | International tariffs | Versioned drafts, zone/weight rates and explicit country mapping batches, publication, clone and archive. Snapshot validation identifies unpriced mapped zones and missing rates/countries. Backend performs authoritative coverage and publication checks. |
 | State/country policy | Versioned state-zone remapping and country active/postal policy. State lookup follows opaque pages instead of guessing a detail endpoint. |
 | Pricing history | Pricing audit feed with before/after/effects and separate eventual revision watermark. |

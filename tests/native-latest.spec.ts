@@ -20,7 +20,8 @@ async function form(page: Page, title: string) {
     .locator("details")
     .filter({ has: page.locator("summary").filter({ hasText: title }) })
     .last();
-  await details.locator("summary").click();
+  if (!(await details.evaluate((element: HTMLDetailsElement) => element.open)))
+    await details.locator("summary").click();
   return details;
 }
 async function writes(path: string) {
@@ -402,7 +403,7 @@ test("international prices join paged countries, show kg and naira, and edit a c
   ).toBeVisible();
   await expect(prices.getByRole("cell", { name: /₦1,500\.00/ })).toBeVisible();
   await expect(
-    prices.locator("summary").filter({ hasText: "Edit price" }),
+    prices.getByRole("button", { name: "Edit price", exact: true }),
   ).toHaveCount(0);
   await page.getByLabel("Find a country").fill("Nigeria");
   await destination.selectOption("NG");
@@ -433,17 +434,83 @@ test("international prices join paged countries, show kg and naira, and edit a c
   await clone
     .getByRole("button", { name: "Clone as a new draft", exact: true })
     .click();
-  await expect(page).toHaveURL(/cloned-draft$/);
+  await expect(page).toHaveURL(/cloned-draft\?tab=workflow$/);
+  await page.getByRole("tab", { name: "Prices", exact: true }).click();
   await page.getByLabel("Destination country").selectOption("GB");
   const row = page
     .getByRole("table", { name: "International tariff prices" })
     .getByRole("row")
     .filter({ has: page.getByRole("cell", { name: "0.5", exact: true }) });
-  await row.locator("summary").filter({ hasText: "Edit price" }).click();
-  await row.getByLabel("Price (NGN)").fill("1234.56");
-  await row.getByLabel("Reason for change").fill("Review half-kilogram price");
+  const attemptedUpdates: { body: unknown; key: string | undefined }[] = [];
+  await page.route(
+    "**/api/proxy/v1/admin/shipping/tariffs/cloned-draft/rates",
+    (route) => {
+      attemptedUpdates.push({
+        body: route.request().postDataJSON(),
+        key: route.request().headers()["idempotency-key"],
+      });
+      return attemptedUpdates.length === 1
+        ? route.fulfill({
+            status: 503,
+            json: {
+              error: { message: "Price update response was interrupted." },
+            },
+          })
+        : route.continue();
+    },
+  );
   await row.getByRole("button", { name: "Edit price", exact: true }).click();
+  const editor = page.getByRole("region", {
+    name: "Edit zone 1 price at 0.5 kg",
+    exact: true,
+  });
+  await expect(editor.getByLabel("Price (NGN)")).toBeFocused();
+  await editor.getByLabel("Price (NGN)").fill("1234.56");
+  await editor
+    .getByLabel("Reason for change")
+    .fill("Review half-kilogram price");
+  await page.screenshot({
+    path: "test-results/international-price-editor-desktop.png",
+    fullPage: true,
+  });
+  await page.setViewportSize({ width: 390, height: 844 });
+  expect(
+    await page.evaluate(
+      () => document.documentElement.scrollWidth <= innerWidth,
+    ),
+  ).toBe(true);
+  await page.screenshot({
+    path: "test-results/international-price-editor-mobile.png",
+    fullPage: true,
+  });
+  await page.setViewportSize({ width: 1440, height: 1000 });
+  await editor.getByRole("button", { name: "Edit price", exact: true }).click();
+  await expect(editor.getByRole("alert")).toContainText("interrupted");
+  await expect(
+    prices.getByRole("button", { name: "Edit price", exact: true }).last(),
+  ).toBeDisabled();
+  await page.getByLabel("Destination country").selectOption("NG");
+  await editor
+    .getByRole("button", { name: "Hide editor", exact: true })
+    .click();
+  await expect(page.getByLabel("Destination country")).toBeFocused();
+  await expect(
+    prices.getByRole("button", { name: "Edit price", exact: true }).last(),
+  ).toBeDisabled();
+  await page.getByLabel("Destination country").selectOption("GB");
+  await expect(
+    prices.getByRole("button", { name: "Edit price", exact: true }).last(),
+  ).toBeDisabled();
+  await row.getByRole("button", { name: "Edit price", exact: true }).click();
+  await expect(editor.getByLabel("Price (NGN)")).toHaveValue("1234.56");
+  await expect(editor.getByLabel("Price (NGN)")).toBeDisabled();
+  await editor.getByRole("button", { name: "Edit price", exact: true }).click();
   await expect(row.getByRole("cell", { name: /₦1,234\.56/ })).toBeVisible();
+  await expect(
+    prices.getByRole("button", { name: "Edit price", exact: true }).last(),
+  ).toBeEnabled();
+  expect(attemptedUpdates).toHaveLength(2);
+  expect(attemptedUpdates[1]).toEqual(attemptedUpdates[0]);
   await expect(page.getByLabel("Destination country")).toHaveValue("GB");
   const updates = await writes("/v1/admin/shipping/tariffs/cloned-draft/rates");
   expect(updates[0].body).toEqual({
@@ -472,33 +539,190 @@ test("international prices join paged countries, show kg and naira, and edit a c
   });
 });
 
+for (const domestic of [true, false]) {
+  test(`${domestic ? "delivery" : "shipping"} tariff creation opens price editing and preserves create/edit API fields`, async ({
+    page,
+  }) => {
+    await login(page);
+    const serviceReads: URL[] = [];
+    let refreshedServices = false;
+    if (domestic) {
+      await page.route(
+        "**/api/proxy/v1/admin/shipping/local-types?*",
+        (route) => {
+          const url = new URL(route.request().url());
+          serviceReads.push(url);
+          return route.fulfill({
+            json: {
+              data: url.searchParams.has("cursor")
+                ? {
+                    items: [
+                      { id: "economy-id", name: "Economy", active: false },
+                      ...(refreshedServices
+                        ? [
+                            {
+                              id: "new-service",
+                              name: "New service",
+                              active: false,
+                            },
+                          ]
+                        : []),
+                    ],
+                    nextCursor: null,
+                  }
+                : {
+                    items: [{ id: "premium", name: "Premium", active: true }],
+                    nextCursor: "more-services",
+                  },
+            },
+          });
+        },
+      );
+    }
+    const section = domestic ? "/delivery-zones" : "/export-rates";
+    const apiRoot = domestic
+      ? "/v1/admin/geography/tariffs"
+      : "/v1/admin/shipping/tariffs";
+    await page.goto(`${section}?tab=create`);
+    const title = domestic
+      ? "Create local draft"
+      : "Create international draft";
+    const create = await form(page, title);
+    if (domestic) {
+      const service = create.getByLabel("Delivery service", { exact: false });
+      await expect(service.locator('option[value="economy-id"]')).toHaveText(
+        "Economy (inactive)",
+      );
+      await service.selectOption("premium");
+      await create
+        .getByLabel("Delivery zone", { exact: false })
+        .selectOption("los");
+      expect(
+        new Set(serviceReads.map((url) => url.searchParams.get("cursor"))),
+      ).toEqual(new Set([null, "more-services"]));
+      for (const url of serviceReads) {
+        expect(url.searchParams.get("limit")).toBe("100");
+        expect(url.searchParams.get("includeInactive")).toBe("true");
+      }
+      await create
+        .getByLabel("Reason for change")
+        .fill("Prepare reviewed prices");
+      refreshedServices = true;
+      await page
+        .getByRole("button", { name: "Refresh services", exact: true })
+        .click();
+      await expect(service.locator('option[value="new-service"]')).toHaveText(
+        "New service (inactive)",
+      );
+      await expect(service).toHaveValue("premium");
+      await expect(create.getByLabel("Delivery zone")).toHaveValue("los");
+      await expect(create.getByLabel("Reason for change")).toHaveValue(
+        "Prepare reviewed prices",
+      );
+    } else {
+      await create
+        .getByLabel("Tariff name", { exact: false })
+        .fill("Reviewed DHL export");
+      await create
+        .getByLabel("Cargo", { exact: false })
+        .selectOption("non_document");
+    }
+    await create
+      .getByLabel("Reason for change", { exact: false })
+      .fill("Prepare reviewed prices");
+    await create.getByRole("button", { name: title, exact: true }).click();
+    await expect(page).toHaveURL(`${section}/tariffs/new-draft?tab=workflow`);
+    const [post] = await writes(apiRoot);
+    expect(post.method).toBe("POST");
+    expect(post.key).toBeTruthy();
+    expect(post.body).toEqual({
+      ...(domestic
+        ? { localType: "premium", zone: "los" }
+        : {
+            name: "Reviewed DHL export",
+            carrier: "dhl",
+            direction: "export",
+            cargo: "non_document",
+          }),
+      volumetricDivisor: 0,
+      reason: "Prepare reviewed prices",
+    });
+    const prices = await form(page, "Edit prices");
+    await expect(
+      prices.getByLabel(domestic ? "Weight (kg)" : "Weight (grams)", {
+        exact: false,
+      }),
+    ).toHaveCount(1);
+    const details = await form(page, "Tariff details");
+    if (domestic) {
+      await details
+        .getByLabel("Delivery service", { exact: false })
+        .selectOption("economy-id");
+      await details
+        .getByLabel("Delivery zone", { exact: false })
+        .selectOption("abv");
+    } else {
+      await details
+        .getByLabel("Name", { exact: false })
+        .fill("Updated DHL tariff");
+    }
+    await details
+      .getByLabel("Reason for change", { exact: false })
+      .fill("Update draft details");
+    await details
+      .getByRole("button", { name: "Save draft information", exact: true })
+      .click();
+    await expect
+      .poll(async () => (await writes(`${apiRoot}/new-draft`)).length)
+      .toBe(1);
+    const [patch] = await writes(`${apiRoot}/new-draft`);
+    expect(patch.method).toBe("PATCH");
+    expect(patch.key).toBeTruthy();
+    expect(patch.body).toEqual({
+      expectedVersion: 1,
+      reason: "Update draft details",
+      changes: domestic
+        ? { localType: "economy-id", zone: "abv" }
+        : { name: "Updated DHL tariff" },
+    });
+  });
+}
+
 test("latest tariff drafts preserve omitted rates, delete explicit keys and publish reviewed snapshots", async ({
   page,
 }) => {
   await login(page);
   await page.goto("/delivery-zones/tariffs/draft-local?tab=workflow");
-  const rates = await form(page, "Add or update weight bands");
-  await rates
-    .getByRole("button", { name: "Add weight band", exact: true })
-    .click();
-  await rates.getByLabel("Weight (grams)", { exact: false }).fill("1000");
+  const rates = await form(page, "Edit prices");
+  const weight = rates.getByLabel("Weight (kg)", { exact: false });
+  await expect(weight).toHaveAttribute("min", "0.5");
+  await expect(weight).toHaveAttribute("max", "70");
+  await expect(weight).toHaveAttribute("step", "0.001");
+  await weight.fill("1.251");
   await rates.getByLabel("Amount (₦)", { exact: false }).fill("2500");
   await rates
     .getByLabel("Reason for change", { exact: false })
     .fill("Add reviewed weight band");
-  await rates
-    .getByRole("button", { name: "Add or update weight bands", exact: true })
-    .click();
+  await rates.getByRole("button", { name: "Save prices", exact: true }).click();
   await page.getByRole("tab", { name: "Prices", exact: true }).click();
   await expect(
-    page.getByRole("cell", { name: "1,000", exact: true }),
+    page.getByRole("cell", { name: "1.251", exact: true }),
+  ).toBeVisible();
+  await expect(
+    page.getByRole("columnheader", { name: "Weight (kg)", exact: true }),
+  ).toBeVisible();
+  await expect(
+    page.getByRole("cell", { name: "0.5", exact: true }),
+  ).toBeVisible();
+  await expect(
+    page.getByRole("cell", { name: "70", exact: true }),
   ).toBeVisible();
   await page.getByRole("tab", { name: "Edit & publish", exact: true }).click();
   const remove = await form(page, "Delete weight bands");
   await remove
     .getByRole("button", { name: "Add weight band", exact: true })
     .click();
-  await remove.getByLabel("Weight (grams)", { exact: false }).fill("1000");
+  await remove.getByLabel("Weight (kg)", { exact: false }).fill("1.251");
   await remove
     .getByLabel("Reason for change", { exact: false })
     .fill("Remove unused draft band");
@@ -507,16 +731,25 @@ test("latest tariff drafts preserve omitted rates, delete explicit keys and publ
     .click();
   await page.getByRole("tab", { name: "Prices", exact: true }).click();
   await expect(
-    page.getByRole("cell", { name: "1,000", exact: true }),
+    page.getByRole("cell", { name: "1.251", exact: true }),
   ).toHaveCount(0);
   await page.getByRole("tab", { name: "Edit & publish", exact: true }).click();
   const calls = await writes("/v1/admin/geography/tariffs/draft-local/rates");
+  expect(calls).toHaveLength(2);
+  expect(calls[0].method).toBe("PUT");
+  expect(calls[0].body).toEqual({
+    expectedVersion: 1,
+    reason: "Add reviewed weight band",
+    rates: [{ weightKg: 1.251, amountMinor: 250000 }],
+  });
+  expect(calls[0].key).toBeTruthy();
   expect(calls[1].method).toBe("DELETE");
   expect(calls[1].body).toEqual({
     expectedVersion: 2,
     reason: "Remove unused draft band",
-    rates: [{ weightGrams: 1000 }],
+    rates: [{ weightKg: 1.251 }],
   });
+  expect(calls[1].key).toBeTruthy();
   const publish = await form(page, "Publish reviewed tariff");
   await publish
     .getByLabel("Reason for change", { exact: false })
@@ -540,9 +773,15 @@ test("latest tariff drafts preserve omitted rates, delete explicit keys and publ
     .getByRole("button", { name: "Publish reviewed tariff", exact: true })
     .click();
   await expect(
-    page.locator("summary").filter({ hasText: "Save draft information" }),
+    page.locator("summary").filter({ hasText: "Tariff details" }),
   ).toHaveCount(0);
   await page.getByRole("tab", { name: "Edit & publish", exact: true }).click();
+  await expect(
+    page.locator("summary").filter({ hasText: "Edit prices" }),
+  ).toHaveCount(0);
+  await expect(
+    page.locator("summary").filter({ hasText: "Delete weight bands" }),
+  ).toHaveCount(0);
   const clone = await form(page, "Clone as a new draft");
   await clone
     .getByLabel("Reason for change", { exact: false })
@@ -550,7 +789,75 @@ test("latest tariff drafts preserve omitted rates, delete explicit keys and publ
   await clone
     .getByRole("button", { name: "Clone as a new draft", exact: true })
     .click();
-  await expect(page).toHaveURL(/cloned-draft$/);
+  await expect(page).toHaveURL(/cloned-draft\?tab=workflow$/);
+});
+test("domestic tariffs validate kilogram bounds, precision and duplicate bands", async ({
+  page,
+}) => {
+  await login(page);
+  await page.goto("/delivery-zones/tariffs/draft-local?tab=workflow");
+  const rates = await form(page, "Edit prices");
+  const add = rates.getByRole("button", {
+    name: "Add weight band",
+    exact: true,
+  });
+  const save = rates.getByRole("button", {
+    name: "Save prices",
+    exact: true,
+  });
+  const weights = rates.getByLabel("Weight (kg)", { exact: false });
+  await rates.getByLabel("Amount (₦)", { exact: false }).fill("200");
+  await rates
+    .getByLabel("Reason for change", { exact: false })
+    .fill("Review minimum and maximum bands");
+  for (const invalid of ["0.499", "70.001", "1.2501"]) {
+    await weights.first().fill(invalid);
+    await save.click();
+    expect(
+      await weights
+        .first()
+        .evaluate((input: HTMLInputElement) => input.checkValidity()),
+    ).toBe(false);
+    expect(
+      await writes("/v1/admin/geography/tariffs/draft-local/rates"),
+    ).toHaveLength(0);
+  }
+  await weights.first().fill("0.5");
+  await add.click();
+  await weights.nth(1).fill("0.500");
+  await rates.getByLabel("Amount (₦)", { exact: false }).nth(1).fill("200");
+  await save.click();
+  await expect(
+    rates.getByText("Each weight and zone may appear only once."),
+  ).toBeVisible();
+  expect(
+    await writes("/v1/admin/geography/tariffs/draft-local/rates"),
+  ).toHaveLength(0);
+  await weights.nth(1).fill("0.501");
+  await add.click();
+  await weights.nth(2).fill("70");
+  await rates.getByLabel("Amount (₦)", { exact: false }).nth(2).fill("300");
+  await save.click();
+  await expect
+    .poll(
+      async () =>
+        (await writes("/v1/admin/geography/tariffs/draft-local/rates")).length,
+    )
+    .toBe(1);
+  const [call] = await writes("/v1/admin/geography/tariffs/draft-local/rates");
+  expect(call.body).toEqual({
+    expectedVersion: 1,
+    reason: "Review minimum and maximum bands",
+    rates: [
+      { weightKg: 0.5, amountMinor: 20000 },
+      { weightKg: 0.501, amountMinor: 20000 },
+      { weightKg: 70, amountMinor: 30000 },
+    ],
+  });
+  await page.getByRole("tab", { name: "Prices", exact: true }).click();
+  await expect(
+    page.getByRole("cell", { name: "0.501", exact: true }),
+  ).toBeVisible();
 });
 test("latest international country batches keep deletion JSON and version scope", async ({
   page,
@@ -561,7 +868,7 @@ test("latest international country batches keep deletion JSON and version scope"
   await add
     .getByRole("button", { name: "Add country mapping", exact: true })
     .click();
-  await add.getByLabel("Country code", { exact: false }).fill("NG");
+  await add.getByLabel("Country", { exact: false }).selectOption("NG");
   await add.getByLabel("Zone", { exact: false }).fill("1");
   await add
     .getByLabel("Reason for change", { exact: false })
@@ -581,7 +888,7 @@ test("latest international country batches keep deletion JSON and version scope"
   await remove
     .getByRole("button", { name: "Add country mapping", exact: true })
     .click();
-  await remove.getByLabel("Country code", { exact: false }).fill("NG");
+  await remove.getByLabel("Country", { exact: false }).selectOption("NG");
   await remove
     .getByLabel("Reason for change", { exact: false })
     .fill("Remove draft destination");

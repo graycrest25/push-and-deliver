@@ -110,7 +110,18 @@ export function reads(path, req, res, body, success, error, adminType) {
             ? ["type"]
             : path.includes("/reports/")
               ? path.endsWith("/riders")
-                ? ["format", "limit", "cursor"]
+                ? [
+                    "format",
+                    "limit",
+                    "cursor",
+                    "startDate",
+                    "endDate",
+                    "q",
+                    "email",
+                    "vehicleType",
+                    "verificationStatus",
+                    "onlineStatus",
+                  ]
                 : ["type", "format", "limit", "cursor"]
               : detail ||
                   (/^\/v1\/admin\/rides\/[^/]+$/.test(path) &&
@@ -170,6 +181,34 @@ export function reads(path, req, res, body, success, error, adminType) {
     } else if (path.startsWith("/v1/admin/users/"))
       success(res, account(type, path.endsWith("-2")));
     else if (q.get("format") === "csv") {
+      if (type === "riders" && options.riderExportStream) {
+        if (q.has("limit") || q.has("cursor")) {
+          error(
+            res,
+            400,
+            "pagination",
+            "Complete CSV exports omit pagination.",
+          );
+          return true;
+        }
+        const mode = options.riderExportStream;
+        const rows = Array.from(
+          { length: 2001 },
+          (_, index) => `rider-${index},rider,Export Rider ${index}\n`,
+        ).join("");
+        res.writeHead(200, {
+          "content-type": "text/csv",
+          // An old continuation header must not trigger a second request.
+          "x-next-cursor": "ignored-legacy-cursor",
+        });
+        res.write("uid,accountType,username\n");
+        const timer = setTimeout(() => {
+          if (mode === "interrupted") res.destroy();
+          else res.end(rows);
+        }, 1500);
+        res.on("close", () => clearTimeout(timer));
+        return true;
+      }
       res.writeHead(200, {
         "content-type": "text/csv",
         "x-next-cursor": q.has("cursor") ? "" : `export-${type}`,
@@ -288,6 +327,7 @@ export function reads(path, req, res, body, success, error, adminType) {
         {
           tariffId: "tariff-1",
           zone: 1,
+          ...(path.includes("/geography/") ? { weightKg: 0.5 } : {}),
           weightGrams: 500,
           amountMinor: 150000,
           currency: "NGN",
@@ -350,7 +390,14 @@ export function reads(path, req, res, body, success, error, adminType) {
           ? {
               ...row,
               version: 2,
-              rates: [{ zone: 1, weightGrams: 500, amountMinor: 150000 }],
+              rates: [
+                {
+                  zone: 1,
+                  ...(path.includes("/geography/") ? { weightKg: 0.5 } : {}),
+                  weightGrams: 500,
+                  amountMinor: 150000,
+                },
+              ],
               countries: [{ code: "NG", name: "Nigeria", zone: 1 }],
             }
           : row,

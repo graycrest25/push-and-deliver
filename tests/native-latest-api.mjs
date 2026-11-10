@@ -111,12 +111,12 @@ function tariff(id, domestic) {
         }),
     rates: [
       {
-        ...(!domestic ? { zone: 1 } : {}),
+        ...(domestic ? { weightKg: 0.5 } : { zone: 1 }),
         weightGrams: 500,
         amountMinor: 150000,
       },
       {
-        ...(!domestic ? { zone: 1 } : {}),
+        ...(domestic ? { weightKg: 70 } : { zone: 1 }),
         weightGrams: domestic ? 70000 : 1000,
         amountMinor: 9000000,
       },
@@ -490,21 +490,24 @@ export function latest(path, req, res, body, success, error, role) {
     if (!validate(data)) return true;
     data.version++;
     if (action === "rates") {
+      const weightKey = local ? "weightKg" : "weightGrams";
       if (req.method === "DELETE")
         data.rates = data.rates.filter(
           (r) =>
             !body.rates.some(
               (v) =>
-                v.weightGrams === r.weightGrams && (local || v.zone === r.zone),
+                v[weightKey] === r[weightKey] && (local || v.zone === r.zone),
             ),
         );
       else
         for (const r of body.rates) {
           data.rates = data.rates.filter(
             (v) =>
-              v.weightGrams !== r.weightGrams || (!local && v.zone !== r.zone),
+              v[weightKey] !== r[weightKey] || (!local && v.zone !== r.zone),
           );
-          data.rates.push(r);
+          data.rates.push(
+            local ? { ...r, weightGrams: Math.round(r.weightKg * 1000) } : r,
+          );
         }
       data.rateCount = data.rates.length;
     } else if (action === "countries") {

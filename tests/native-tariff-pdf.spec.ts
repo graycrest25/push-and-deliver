@@ -21,7 +21,10 @@ async function login(page: Page) {
   });
   await page.goto("/export-rates/tariffs/active-export");
   await page.getByRole("tab", { name: "PDF upload", exact: true }).click();
-  await page.getByText("Upload price-list PDF", { exact: true }).click();
+  if (
+    !(await upload(page).evaluate((node) => (node as HTMLDetailsElement).open))
+  )
+    await page.getByText("Upload price-list PDF", { exact: true }).click();
 }
 const upload = (page: Page) =>
   page.locator("details").filter({
@@ -111,6 +114,9 @@ test("PDF preview and publication forward multipart with stable retry keys", asy
   await expect(form.getByLabel("Price-list name")).toBeDisabled();
   await form.getByRole("button", { name: "Retry publication" }).click();
   await expect(form.getByRole("status")).toContainText("Prices published");
+  await expect(
+    form.getByRole("link", { name: "Open published tariff", exact: true }),
+  ).toHaveAttribute("href", "/export-rates/tariffs/replacement-export");
   const writes = await calls();
   expect(writes).toHaveLength(3);
   expect(writes[1].key).not.toBe(writes[0].key);

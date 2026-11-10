@@ -1,87 +1,62 @@
-export interface TutorialStep {
-  title: string;
-  description: string;
+import { adminGrowthHelp } from "./tutorials/admin-growth";
+import { operationsPeopleHelp } from "./tutorials/operations-people";
+import { pricingFinanceHelp } from "./tutorials/pricing-finance";
+import type { FeatureHelp, Tutorial } from "./tutorials/types";
+
+export type { Tutorial, TutorialStep } from "./tutorials/types";
+
+const features: FeatureHelp[] = [
+  ...adminGrowthHelp,
+  ...operationsPeopleHelp,
+  ...pricingFinanceHelp,
+].sort((a, b) => b.path.length - a.path.length);
+
+export const pageTutorials: Record<string, Tutorial> = Object.fromEntries(
+  features.map(({ path, page }) => [path, page]),
+);
+
+const defaultHelp: Tutorial = {
+  title: "Admin workspace",
+  steps: [
+    {
+      title: "Choose a feature",
+      description:
+        "Use the menu to open the page you need. The pages and actions you can use depend on your admin role.",
+    },
+  ],
+};
+
+function matchingFeatures(path: string) {
+  const pathname = path.split(/[?#]/)[0].replace(/\/$/, "");
+  return {
+    pathname,
+    matches: features.filter(
+      (feature) =>
+        pathname === feature.path || pathname.startsWith(`${feature.path}/`),
+    ),
+  };
 }
-export interface Tutorial {
-  title: string;
-  steps: TutorialStep[];
-}
-const permissions = {
-  title: "Permissions and current state",
-  description:
-    "Your membership determines access. The service checks each request. Refresh after a conflict before making a new decision.",
-};
-const paging = {
-  title: "Move through records",
-  description:
-    "Apply supported filters before paging. Previous returns to a visited page; Next uses the service continuation. Counts describe this page, not a global total. Use Refresh for new activity.",
-};
-const actions = {
-  title: "Submit and retry safely",
-  description:
-    "Review all fields before submitting. If the service times out, retry with unchanged details to reuse the operation key. A queued action is not proof of completed payment or notification delivery.",
-};
-export const pageTutorials: Record<string, Tutorial> = {
-  "/dashboard": {
-    title: "Overview",
-    steps: [
-      {
-        title: "Read the right period",
-        description:
-          "Order counts and revenue use the selected UTC date window. Queues, active users, assignments and liabilities describe the current snapshot.",
-      },
-      permissions,
-    ],
-  },
-  "/shipment-orders": {
-    title: "Shipment operations",
-    steps: [
-      paging,
-      {
-        title: "Follow the shipment lifecycle",
-        description:
-          "Open a shipment for assignment, office receipt, dispatch and proof-based delivery. Available commands depend on its state, payment and fulfillment. Refresh after saving.",
-      },
-      actions,
-    ],
-  },
-  "/support-tickets": {
-    title: "Support",
-    steps: [
-      {
-        title: "Check recent activity",
-        description:
-          "Tickets are ordered by recent activity. Open a ticket to read newest messages first, load older pages, reply or change its status. Refresh to check for new messages.",
-      },
-      actions,
-    ],
-  },
-  "/export-rates": {
-    title: "Shipping tariffs",
-    steps: [
-      {
-        title: "Draft, review, publish",
-        description:
-          "Saving replaces a draft’s full zone and rate list. Inspect the saved tariff before publishing. Published tariffs require a new draft version for price changes.",
-      },
-      actions,
-    ],
-  },
-};
+
 export function tutorialForPath(path: string): Tutorial {
-  const entry = Object.entries(pageTutorials).find(
-    ([key]) => path === key || path.startsWith(key + "/"),
-  );
-  return (
-    entry?.[1] || {
-      title: "Working in this section",
-      steps: [paging, permissions, actions],
-    }
-  );
+  const { pathname, matches } = matchingFeatures(path);
+  const feature = matches[0];
+  if (!feature) return defaultHelp;
+  return pathname !== feature.path && feature.detail
+    ? feature.detail
+    : feature.page;
 }
+
 export function tutorialForSection(
   title: string,
-  _path: string | null,
+  path: string | null,
 ): Tutorial {
-  return { title, steps: [paging, actions] };
+  const normalize = (value: string) =>
+    value.trim().replace(/\s+/g, " ").toLowerCase();
+  for (const feature of matchingFeatures(path ?? "").matches) {
+    const section = Object.entries(feature.sections ?? {}).find(
+      ([key]) => normalize(key) === normalize(title),
+    );
+    if (section) return { ...section[1], title };
+  }
+  return { ...tutorialForPath(path ?? ""), title };
 }
