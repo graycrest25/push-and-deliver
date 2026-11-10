@@ -23,7 +23,12 @@ import {
   type ReactNode,
 } from "react";
 import { Link, useLocation, useNavigate } from "react-router-dom";
-import { IconArrowRight, IconPlus, IconTrash } from "@tabler/icons-react";
+import {
+  IconArrowRight,
+  IconChevronRight,
+  IconPlus,
+  IconTrash,
+} from "@tabler/icons-react";
 import {
   api,
   apiResponse,
@@ -868,6 +873,9 @@ function serialize(fields: Field[], value: RecordData): RecordData {
 }
 export interface Action {
   title: string;
+  summaryHint?: string;
+  submitLabel?: string;
+  renderPreview?: (draft: RecordData, current: RecordData | null) => ReactNode;
   description?: string;
   path: string | ((data: RecordData) => string);
   method?: "POST" | "PUT" | "PATCH" | "DELETE";
@@ -895,9 +903,11 @@ export interface Action {
 export function ActionForm({
   action,
   onSuccess,
+  presentation = "card",
 }: {
   action: Action;
   onSuccess?: (result: RecordData, responseStatus?: number) => void;
+  presentation?: "card" | "inline";
 }) {
   const formId = useId();
   const { user } = useCurrentUser();
@@ -1137,9 +1147,34 @@ export function ActionForm({
     }
   }
   return (
-    <details className="rounded-xl border bg-card p-5">
-      <summary className="cursor-pointer text-sm font-semibold">
-        {action.title}
+    <details
+      className={
+        presentation === "inline"
+          ? "group/action min-w-0 py-4"
+          : "rounded-xl border bg-card p-5"
+      }
+    >
+      <summary
+        className={
+          presentation === "inline"
+            ? "flex cursor-pointer list-none items-center justify-between gap-4 rounded-md text-sm font-semibold outline-none focus-visible:ring-2 focus-visible:ring-ring [&::-webkit-details-marker]:hidden"
+            : "cursor-pointer text-sm font-semibold"
+        }
+      >
+        <span>
+          {action.title}
+          {action.summaryHint && (
+            <span className="mt-1 block text-sm font-normal text-muted-foreground">
+              {action.summaryHint}
+            </span>
+          )}
+        </span>
+        {presentation === "inline" && (
+          <IconChevronRight
+            className="size-4 shrink-0 transition-transform group-open/action:rotate-90 motion-reduce:transition-none"
+            aria-hidden="true"
+          />
+        )}
       </summary>
       <UploadFormContext.Provider
         value={{
@@ -1167,6 +1202,7 @@ export function ActionForm({
               prefix={formId}
             />
           </fieldset>
+          {action.renderPreview?.(value, latest)}
           {error != null && <ErrorNotice error={error} />}{" "}
           {error instanceof ApiError && error.details?.fields && (
             <RecordView data={error.details.fields} />
@@ -1257,7 +1293,7 @@ export function ActionForm({
             }
             type="submit"
           >
-            {busy ? "Submitting…" : action.title}
+            {busy ? "Submitting…" : action.submitLabel || action.title}
           </Button>
           {result != null && (
             <Button

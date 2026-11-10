@@ -76,11 +76,17 @@ export function ShipmentDetails({
   reload,
   onCheckoutResult,
   assessmentPending,
+  checkoutResult,
+  priceResult,
+  onPriceReview,
 }: {
   data: RecordData;
   reload: () => void;
   onCheckoutResult?: (result: RecordData, pending: boolean) => void;
   assessmentPending?: boolean;
+  checkoutResult?: RecordData;
+  priceResult?: RecordData;
+  onPriceReview?: (result: RecordData) => void;
 }) {
   const [busy, setBusy] = useState<string | null>(null);
   const [error, setError] = useState<unknown>(null);
@@ -156,6 +162,9 @@ export function ShipmentDetails({
         reload={reload}
         onCheckoutResult={onCheckoutResult}
         assessmentPending={assessmentPending}
+        checkoutResult={checkoutResult}
+        priceResult={priceResult}
+        onPriceReview={onPriceReview}
       />
       <Section title="Order information">
         <Fields

@@ -196,12 +196,12 @@ test("rider earnings and blockers remain separate from customer payment", async 
   );
   await page.goto("http://localhost:4320/shipment-orders/shipment-1");
   await expect(
-    page.getByText(
-      "Customer payment must be completed before onward delivery.",
-    ),
+    page.getByText("Awaiting customer payment", { exact: true }),
   ).toBeVisible();
   await expect(
-    page.getByText("An outstanding shipment assessment must be paid."),
+    page.getByText(
+      "Settle the customer’s shipment charge before onward delivery. Rider cash receipts are tracked separately.",
+    ),
   ).toBeVisible();
   const rider = page.getByRole("region", {
     name: "Rider pickup earnings and payment",
@@ -368,6 +368,10 @@ test("assessment prefills shipment amount and weight and submits edited naira as
     has: page.locator("summary", { hasText: "Assess shipment charge" }),
   });
   await form.locator("summary").click();
+  await expect(form.getByLabel("Charge type")).toHaveCount(0);
+  await expect(form.getByRole("option", { name: /additional/i })).toHaveCount(
+    0,
+  );
   const charge = form.getByLabel("Charge (₦)", { exact: false });
   await expect(charge).toHaveValue("15567.68");
   await expect(
@@ -838,12 +842,9 @@ test("replacement checkout uses fresh shipment version and payment ID and never 
   await expect(
     page.getByRole("link", { name: "Open payment link" }),
   ).toHaveAttribute("href", "https://checkout.paystack.com/new");
-  await expect(
-    page.getByText("Payment ID: new-payment", { exact: true }),
-  ).toBeVisible();
-  await expect(
-    page.getByText("Payment reference: new-ref", { exact: true }),
-  ).toBeVisible();
+  await page.getByText("Payment reference details", { exact: true }).click();
+  await expect(page.getByText("new-payment", { exact: true })).toBeVisible();
+  await expect(page.getByText("new-ref", { exact: true })).toBeVisible();
   expect(writes).toHaveLength(2);
   expect(writes[0].body).toEqual({
     expectedVersion: 6,
@@ -941,4 +942,175 @@ test("pending replacement refreshes to ready without marking the customer paid",
   const completedReads = reads;
   await page.clock.fastForward(21000);
   expect(reads).toBe(completedReads);
+});
+
+test("existing bills keep payment actions together and cannot create another initial charge", async ({
+  page,
+}) => {
+  await mount(page);
+  await page.route("**/api/proxy/v1/shipments/shipment-1", (route) =>
+    route.fulfill({
+      json: {
+        data: {
+          ...shipment,
+          allowedAdminActions: [
+            "assessment",
+            "review_price",
+            "record_cash_receipt",
+            "request_payment_link",
+          ],
+          onwardDeliveryBlockers: [
+            "customer_payment_required",
+            "assessment_payment_required",
+          ],
+          assessments: [
+            {
+              id: "initial-1",
+              kind: "initial",
+              status: "due",
+              amountMinor: 1500029,
+              checkoutStatus: "ready",
+              paymentId: "payment-1",
+              authorizationUrl: "https://checkout.paystack.com/initial",
+            },
+          ],
+        },
+      },
+    }),
+  );
+  await page.goto(
+    "http://localhost:4320/shipment-orders/shipment-1?role=super",
+  );
+  const status = page.getByRole("region", {
+    name: "Update shipment status",
+    exact: true,
+  });
+  await expect(
+    status.getByText("Awaiting customer payment", { exact: true }),
+  ).toHaveCount(1);
+  await expect(
+    status.locator("summary", { hasText: "Record cash receipt" }),
+  ).toHaveCount(0);
+  await expect(
+    page.locator("summary", { hasText: "Assess shipment charge" }),
+  ).toHaveCount(0);
+  await expect(
+    page.locator("summary", { hasText: "Review shipment price" }),
+  ).toBeVisible();
+  const assessments = page.getByRole("region", {
+    name: "Customer shipment assessments",
+    exact: true,
+  });
+  await expect(assessments).toContainText("₦15,000.29");
+  await expect(
+    assessments.locator("summary", { hasText: "Record cash receipt" }),
+  ).toBeVisible();
+  await expect(
+    assessments.locator("summary", { hasText: "Generate new payment link" }),
+  ).toBeVisible();
+  await expect(
+    assessments.locator("summary", { hasText: "Get payment link" }),
+  ).toHaveCount(0);
+});
+
+test("initial assessment rechecks for an existing bill before sending a charge", async ({
+  page,
+}) => {
+  await mount(page);
+  let reads = 0,
+    writes = 0;
+  await page.route("**/api/proxy/v1/shipments/shipment-1", (route) =>
+    route.fulfill({
+      json: {
+        data: {
+          ...shipment,
+          allowedAdminActions: ["assessment"],
+          assessments:
+            ++reads > 1
+              ? [{ id: "new-bill", status: "due", amountMinor: 500000 }]
+              : [],
+        },
+      },
+    }),
+  );
+  await page.route(
+    "**/api/proxy/v1/admin/shipments/shipment-1/assessment",
+    (route) => {
+      writes++;
+      return route.fulfill({ json: { data: {} } });
+    },
+  );
+  await page.goto(
+    "http://localhost:4320/shipment-orders/shipment-1?role=super",
+  );
+  const form = page.locator("details").filter({
+    has: page.locator("summary", { hasText: "Assess shipment charge" }),
+  });
+  await form.locator("summary").click();
+  await form.getByLabel("Reason for change").fill("Initial office assessment");
+  await form
+    .getByRole("button", { name: "Assess shipment charge", exact: true })
+    .click();
+  await expect(form).toContainText("Assessment is no longer available.");
+  expect(writes).toBe(0);
+});
+
+test("price reductions submit the full price and display the returned wallet refund", async ({
+  page,
+}) => {
+  await mount(page);
+  await page.route("**/api/proxy/v1/shipments/shipment-1", (route) =>
+    route.fulfill({
+      json: {
+        data: {
+          ...shipment,
+          weightKg: 3,
+          pricing: { grossAmountMinor: 1500000, totalAmountMinor: 1400000 },
+          allowedAdminActions: ["review_price"],
+          payment: { status: "paid", method: "wallet" },
+        },
+      },
+    }),
+  );
+  let body: any;
+  await page.route(
+    "**/api/proxy/v1/admin/shipments/shipment-1/price-reviews",
+    (route) => {
+      body = route.request().postDataJSON();
+      return route.fulfill({
+        json: {
+          data: {
+            priceReview: {
+              outcome: "wallet_refund",
+              revisedGrossAmountMinor: 1250029,
+              revisedTotalAmountMinor: 1150029,
+              walletRefundMinor: 249971,
+              amountDueMinor: 0,
+            },
+          },
+        },
+      });
+    },
+  );
+  await page.goto(
+    "http://localhost:4320/shipment-orders/shipment-1?role=super",
+  );
+  const form = page.locator("details").filter({
+    has: page.locator("summary", { hasText: "Review shipment price" }),
+  });
+  await form.locator("summary").click();
+  await form.getByLabel("Full revised price (₦)").fill("12500.29");
+  await expect(form.getByLabel("Price comparison")).toContainText(
+    "₦2,499.71 decrease",
+  );
+  await form
+    .getByLabel("Reason for change")
+    .fill("Corrected office weight and full price");
+  await form.getByRole("button", { name: "Save revised price" }).click();
+  await expect(
+    page.getByRole("status", { name: "Price review outcome" }),
+  ).toContainText("₦2,499.71");
+  expect(body.revisedGrossAmountMinor).toBe(1250029);
+  expect(body.newWeightKg).toBe(3);
+  expect(body).not.toHaveProperty("assessmentType");
 });

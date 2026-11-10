@@ -1,3 +1,9 @@
+import { checkoutUrl, ShipmentCheckoutPanels } from "./shipment-checkout";
+import {
+  canReviewShipmentPrice,
+  ShipmentPriceReview,
+  ShipmentPriceReviewOutcome,
+} from "./shipment-price-review";
 import { canOperate } from "@/lib/admin-access";
 import { HistoricalStatusCommands } from "./historical-status-commands";
 import { useCurrentUser } from "@/contexts/UserContext";
@@ -52,17 +58,30 @@ export function ShipmentCommands({
   reload,
   onCheckoutResult,
   assessmentPending = false,
+  checkoutResult,
+  priceResult,
+  onPriceReview,
 }: {
   data: RecordData;
   reload: () => void;
   onCheckoutResult?: (result: RecordData, pending: boolean) => void;
   assessmentPending?: boolean;
+  checkoutResult?: RecordData;
+  priceResult?: RecordData;
+  onPriceReview?: (result: RecordData) => void;
 }) {
   const { adminType } = useCurrentUser();
   if (!canOperate(adminType)) return null;
   if (adminType === "super" && data.historicalStatusEditable === true)
     return (
-      <HistoricalStatusCommands kind="shipments" data={data} reload={reload} />
+      <>
+        <HistoricalStatusCommands
+          kind="shipments"
+          data={data}
+          reload={reload}
+        />
+        <ShipmentCheckoutPanels data={data} reload={reload} loading={false} />
+      </>
     );
   const path = `/v1/shipments/${segment(data.id)}`,
     root = `/v1/admin/shipments/${segment(data.id)}`;
@@ -78,38 +97,36 @@ export function ShipmentCommands({
         ].includes(action),
     ),
   );
-  if (
-    adminType !== "super" &&
-    allowed.size === 0 &&
-    !data.onwardDeliveryBlockers?.length
-  )
-    return null;
   const pending =
     data.pendingCommands?.assignment || data.pendingCommands?.assessment;
-  if (
-    data.readOnly === true ||
-    !data.nativeWriteEligible ||
-    !Number.isSafeInteger(data.version) ||
-    data.version < 1 ||
-    pending
-  )
-    return (
-      <InformationCard title="Update shipment status">
-        <Notice>
-          {pending
-            ? "An assignment or assessment is processing. Refresh after the pending work finishes."
-            : "This shipment is currently available for inspection only."}
-        </Notice>
-      </InformationCard>
-    );
+  const writable =
+    data.readOnly !== true &&
+    data.nativeWriteEligible &&
+    Number.isSafeInteger(data.version) &&
+    data.version >= 1 &&
+    !pending;
   const actions: Action[] = [];
+  const paymentActions = new Map<string, Action[]>();
+  let initialCharge: Action | undefined;
   const fence = (values: RecordData) => ({
     expectedVersion: version(data),
     reason: shipmentReason(values.reason),
   });
-  const add = (code: string, action: Action) => {
-    if (allowed.has(code) && !(code === "assessment" && assessmentPending))
-      actions.push({ ...action, versionPath: path, preserveRetry: true });
+  const add = (code: string, action: Action, assessmentId?: string) => {
+    if (
+      !writable ||
+      !allowed.has(code) ||
+      (code === "assessment" && (assessmentPending || !canAssessInitial(data)))
+    )
+      return;
+    const command = { ...action, versionPath: path, preserveRetry: true };
+    if (code === "assessment") initialCharge = command;
+    else if (assessmentId)
+      paymentActions.set(assessmentId, [
+        ...(paymentActions.get(assessmentId) || []),
+        command,
+      ]);
+    else actions.push(command);
   };
   add("accept_at_office", {
     title: "Accept at office",
@@ -178,69 +195,74 @@ export function ShipmentCommands({
   );
   if (allowed.has("record_cash_receipt"))
     for (const assessment of due)
-      add("record_cash_receipt", {
-        title: `Record cash receipt · ${assessment.id.slice(-8)}`,
-        path: `${root}/cash-receipts`,
-        refreshBeforeSubmit: true,
-        reconcileBeforeRetry: true,
-        validateCurrent: (current) => {
-          if (
-            !current.allowedAdminActions?.includes("record_cash_receipt") ||
-            !current.assessments?.some(
-              (item: RecordData) =>
-                item.id === assessment.id &&
-                item.status === "due" &&
-                item.amountMinor === assessment.amountMinor,
+      add(
+        "record_cash_receipt",
+        {
+          title: `Record cash receipt · ${assessment.id.slice(-8)}`,
+          path: `${root}/cash-receipts`,
+          refreshBeforeSubmit: true,
+          reconcileBeforeRetry: true,
+          validateCurrent: (current) => {
+            if (
+              !current.allowedAdminActions?.includes("record_cash_receipt") ||
+              !current.assessments?.some(
+                (item: RecordData) =>
+                  item.id === assessment.id &&
+                  item.status === "due" &&
+                  item.amountMinor === assessment.amountMinor,
+              )
             )
-          )
-            throw new Error(
-              "The due assessment changed. Refresh the shipment before recording customer cash.",
-            );
+              throw new Error(
+                "The due assessment changed. Refresh the shipment before recording customer cash.",
+              );
+          },
+          summaryHint: "Record the customer’s cash payment for this charge.",
+          description: `Confirm receipt of exactly ₦${(assessment.amountMinor / 100).toLocaleString("en-NG", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}. Add the receipt details and evidence. Once recorded, this payment cannot be marked unpaid.`,
+          initial: { amountMinor: assessment.amountMinor },
+          fields: [
+            moneyField("amountMinor", "Confirm amount received (kobo)"),
+            field("reference", "Cash receipt reference", { maxLength: 128 }),
+            field("receivedAt", "Received at", { type: "datetime-local" }),
+            evidence("evidenceAssetId", "Cash receipt evidence"),
+            reasonField,
+          ],
+          body: (values) => {
+            if (integer(values.amountMinor, 1) !== assessment.amountMinor)
+              throw new Error(
+                "The received amount must match the authoritative due assessment exactly.",
+              );
+            if (
+              values.reference !== values.reference.trim() ||
+              /[\r\n\x00-\x1f]/.test(values.reference) ||
+              new TextEncoder().encode(values.reference).length > 128
+            )
+              throw new Error(
+                "Use a 1–128 byte reference without surrounding whitespace or control characters.",
+              );
+            return {
+              ...fence(values),
+              assessmentId: assessment.id,
+              amountMinor: assessment.amountMinor,
+              currency: "NGN",
+              reference: values.reference,
+              receivedAt: eventTime(values.receivedAt, data.createdAt),
+              evidenceAssetId: values.evidenceAssetId,
+            };
+          },
         },
-        description: `Confirm receipt of exactly ₦${(assessment.amountMinor / 100).toFixed(2)} against this assessment. This records escrow funding and cannot be toggled back to unpaid.`,
-        initial: { amountMinor: assessment.amountMinor },
-        fields: [
-          moneyField("amountMinor", "Confirm amount received (kobo)"),
-          field("reference", "Cash receipt reference", { maxLength: 128 }),
-          field("receivedAt", "Received at", { type: "datetime-local" }),
-          evidence("evidenceAssetId", "Cash receipt evidence"),
-          reasonField,
-        ],
-        body: (values) => {
-          if (integer(values.amountMinor, 1) !== assessment.amountMinor)
-            throw new Error(
-              "The received amount must match the authoritative due assessment exactly.",
-            );
-          if (
-            values.reference !== values.reference.trim() ||
-            /[\r\n\x00-\x1f]/.test(values.reference) ||
-            new TextEncoder().encode(values.reference).length > 128
-          )
-            throw new Error(
-              "Use a 1–128 byte reference without surrounding whitespace or control characters.",
-            );
-          return {
-            ...fence(values),
-            assessmentId: assessment.id,
-            amountMinor: assessment.amountMinor,
-            currency: "NGN",
-            reference: values.reference,
-            receivedAt: eventTime(values.receivedAt, data.createdAt),
-            evidenceAssetId: values.evidenceAssetId,
-          };
-        },
-      });
+        assessment.id,
+      );
   add("assessment", {
     title: "Assess shipment charge",
+    summaryHint: "Set the initial charge and create the customer’s first bill.",
+    description:
+      "Set the initial full price before discounts. To change an existing price, use Review shipment price.",
     path: `${root}/assessment`,
     expectedStatus: [200, 202],
     refreshBeforeSubmit: true,
     reconcileBeforeRetry: true,
     validateCurrent: (current) => {
-      if (
-        !current.allowedAdminActions?.includes("assessment") ||
-        current.pendingCommands?.assessment
-      )
+      if (!canAssessInitial(current) || current.pendingCommands?.assessment)
         throw new Error(
           "Assessment is no longer available. Refresh the shipment before continuing.",
         );
@@ -255,13 +277,12 @@ export function ShipmentCommands({
       newWeightKg: data.weightKg ?? "",
     },
     fields: [
-      select("assessmentType", ["initial", "additional_fee"], "Charge type"),
       field("amountNaira", "Charge (₦)", {
         type: "number",
         min: 0,
         max: 1000000000,
         step: 0.01,
-        help: "Enter the amount in naira, with up to two decimal places.",
+        help: "Initial full price in naira, before discounts.",
       }),
       field("newWeightKg", "Corrected weight (kg)", {
         type: "number",
@@ -275,7 +296,7 @@ export function ShipmentCommands({
       ...fence(values),
       amountMinor: chargeInKobo(values.amountNaira),
       currency: "NGN",
-      assessmentType: values.assessmentType,
+      assessmentType: "initial",
       ...(values.newWeightKg !== undefined
         ? { newWeightKg: values.newWeightKg }
         : {}),
@@ -285,48 +306,57 @@ export function ShipmentCommands({
     for (const assessment of due) {
       for (const replace of [false, true]) {
         if (replace && !assessment.paymentId) continue;
-        add("request_payment_link", {
-          title: `${replace ? "Generate new payment link" : "Get payment link"} · ${assessment.id.slice(-8)}`,
-          description: replace
-            ? "Request a replacement for the current checkout. The backend verifies abandonment with the payment provider; closing checkout alone does not prove abandonment. The new link is queued for email automatically."
-            : "Get checkout for this existing bill without changing its amount. This is not a resend-email operation.",
-          path: `${root}/assessment/checkout`,
-          expectedStatus: [200, 202],
-          refreshBeforeSubmit: true,
-          reconcileBeforeRetry: true,
-          errorMessages: {
-            checkout_not_abandoned:
-              "This checkout cannot be replaced yet. Refresh its payment status before retrying.",
-          },
-          validateCurrent: (current) => {
-            const bill = current.assessments?.find(
-              (item: RecordData) =>
-                item.id === assessment.id && item.status === "due",
-            );
-            if (
-              !current.allowedAdminActions?.includes("request_payment_link") ||
-              !bill
-            )
-              throw new Error(
-                "This bill is no longer payable. Refresh the shipment.",
+        add(
+          "request_payment_link",
+          {
+            title: `${replace ? "Generate new payment link" : "Get payment link"} · ${assessment.id.slice(-8)}`,
+            summaryHint: replace
+              ? "Replace a payment link that can no longer be used."
+              : "Prepare a link for this existing charge.",
+            description: replace
+              ? "Replace the current link once the payment provider confirms it is no longer active. Refresh payment status first. The replacement is queued for email to the customer."
+              : "Prepare a payment link for this charge. The charge amount stays the same.",
+            path: `${root}/assessment/checkout`,
+            expectedStatus: [200, 202],
+            refreshBeforeSubmit: true,
+            reconcileBeforeRetry: true,
+            errorMessages: {
+              checkout_not_abandoned:
+                "This checkout cannot be replaced yet. Refresh its payment status before retrying.",
+            },
+            validateCurrent: (current) => {
+              const bill = current.assessments?.find(
+                (item: RecordData) =>
+                  item.id === assessment.id && item.status === "due",
               );
-            if (replace && !bill.paymentId)
-              throw new Error(
-                "This assessment has no current payment to replace. Refresh and use Get payment link.",
+              if (
+                !current.allowedAdminActions?.includes(
+                  "request_payment_link",
+                ) ||
+                !bill
+              )
+                throw new Error(
+                  "This bill is no longer payable. Refresh the shipment.",
+                );
+              if (replace && !bill.paymentId)
+                throw new Error(
+                  "This assessment has no current payment to replace. Refresh and use Get payment link.",
+                );
+            },
+            bodyWithCurrent: (_values, current) => {
+              const bill = current.assessments.find(
+                (item: RecordData) =>
+                  item.id === assessment.id && item.status === "due",
               );
+              return {
+                expectedVersion: version(current),
+                assessmentId: bill.id,
+                ...(replace ? { replacePaymentId: bill.paymentId } : {}),
+              };
+            },
           },
-          bodyWithCurrent: (_values, current) => {
-            const bill = current.assessments.find(
-              (item: RecordData) =>
-                item.id === assessment.id && item.status === "due",
-            );
-            return {
-              expectedVersion: version(current),
-              assessmentId: bill.id,
-              ...(replace ? { replacePaymentId: bill.paymentId } : {}),
-            };
-          },
-        });
+          assessment.id,
+        );
       }
     }
   add("edit_customs", {
@@ -397,76 +427,153 @@ export function ShipmentCommands({
     fields: [reasonField],
     body: fence,
   });
+  const renderAction = (action: Action) => (
+    <ActionForm
+      key={`${data.id}:${data.version}:${action.title}`}
+      presentation="inline"
+      action={action}
+      onSuccess={(result, responseStatus) => {
+        if (
+          action.path === `${root}/assessment` ||
+          action.path === `${root}/assessment/checkout`
+        )
+          onCheckoutResult?.(result, responseStatus === 202);
+        toast.success(
+          action.path === `${root}/assessment`
+            ? "Initial charge submitted. Updating payment details."
+            : "Shipment updated. Loading current details.",
+        );
+        reload();
+      }}
+    />
+  );
+  const paymentBlocked = data.onwardDeliveryBlockers?.some((blocker: string) =>
+    ["customer_payment_required", "assessment_payment_required"].includes(
+      blocker,
+    ),
+  );
+  const otherBlockers = (data.onwardDeliveryBlockers || []).filter(
+    (blocker: string) =>
+      !["customer_payment_required", "assessment_payment_required"].includes(
+        blocker,
+      ),
+  );
   return (
-    <InformationCard title="Update shipment status">
-      <div className="space-y-4">
-        {assessmentPending && (
-          <Notice>
-            Assessment processing. Refresh shipment details before creating
-            another assessment.
-          </Notice>
+    <>
+      <InformationCard title="Update shipment status">
+        <div className="space-y-4">
+          {paymentBlocked && (
+            <div className="rounded-lg bg-warning-soft p-4 text-warning">
+              <p className="text-sm font-semibold">Awaiting customer payment</p>
+              <p className="mt-1 max-w-2xl text-sm">
+                Settle the customer’s shipment charge before onward delivery.
+                Rider cash receipts are tracked separately.
+              </p>
+              <a
+                href="#shipment-billing"
+                className="mt-2 inline-block text-sm font-semibold underline underline-offset-4"
+              >
+                Go to pricing and payments
+              </a>
+            </div>
+          )}
+          {otherBlockers.length > 0 && (
+            <Notice>
+              Onward delivery is currently blocked. Refresh the shipment for
+              updated requirements.
+            </Notice>
+          )}
+          {!writable ? (
+            <Notice>
+              {pending
+                ? "An assignment or assessment is processing. Refresh after the pending work finishes."
+                : "This shipment is currently available for inspection only."}
+            </Notice>
+          ) : actions.length ? (
+            <div className="divide-y">{actions.map(renderAction)}</div>
+          ) : (
+            !paymentBlocked && (
+              <Notice>
+                {data.clearanceStatus === "completed"
+                  ? "Clearance completed. No further changes are available."
+                  : ["deliveredToDestination", "cancelled"].includes(
+                        data.status,
+                      )
+                    ? "This shipment is complete. No further status changes are available."
+                    : "No status update is available for the current shipment state."}
+              </Notice>
+            )
+          )}
+          {allowed.has("assign_rider") && (
+            <Link
+              to="/riders"
+              className="inline-block text-sm text-primary underline"
+            >
+              Open rider directory
+            </Link>
+          )}
+        </div>
+      </InformationCard>
+      <div id="shipment-billing" className="scroll-mt-24 space-y-6">
+        {(initialCharge ||
+          priceResult ||
+          assessmentPending ||
+          (adminType === "super" &&
+            canReviewShipmentPrice(data) &&
+            onPriceReview)) && (
+          <InformationCard title="Shipment pricing">
+            <div className="divide-y">
+              {priceResult && (
+                <ShipmentPriceReviewOutcome result={priceResult} />
+              )}
+              {assessmentPending && (
+                <Notice>
+                  Assessment processing. Refresh shipment details before
+                  creating another assessment.
+                </Notice>
+              )}
+              {initialCharge && renderAction(initialCharge)}
+              {onPriceReview && (
+                <ShipmentPriceReview
+                  data={data}
+                  pending={assessmentPending}
+                  onSuccess={onPriceReview}
+                />
+              )}
+            </div>
+          </InformationCard>
         )}
-        {(data.onwardDeliveryBlockers || []).map((blocker: string) => (
-          <Notice key={blocker}>
-            {(
-              {
-                customer_payment_required:
-                  "Customer payment must be completed before onward delivery.",
-                assessment_payment_required:
-                  "An outstanding shipment assessment must be paid.",
-              } as Record<string, string>
-            )[blocker] ||
-              "Onward delivery is currently blocked. Refresh the shipment for updated requirements."}
-          </Notice>
-        ))}
-        {!!data.onwardDeliveryBlockers?.length && (
-          <p className="text-sm text-muted-foreground">
-            Confirming the rider’s HQ cash receipt does not pay the customer’s
-            bill. Use the shipment assessment and customer payment controls to
-            settle outstanding charges.
-          </p>
-        )}
-        {allowed.has("assign_rider") && (
-          <Link to="/riders" className="text-sm text-primary underline">
-            Open rider directory
-          </Link>
-        )}
-        {actions.length ? (
-          actions.map((action) => (
-            <ActionForm
-              key={`${data.id}:${data.version}:${action.title}`}
-              action={action}
-              onSuccess={(result, responseStatus) => {
-                if (
-                  action.path === `${root}/assessment` ||
-                  action.path === `${root}/assessment/checkout`
-                )
-                  onCheckoutResult?.(result, responseStatus === 202);
-
-                toast.success(
-                  "Shipment command accepted. Loading current details.",
-                );
-                reload();
-              }}
-            />
-          ))
-        ) : (
-          <Notice>
-            {data.clearanceStatus === "completed"
-              ? "Clearance completed. No further changes are available."
-              : ["deliveredToDestination", "cancelled"].includes(data.status)
-                ? "This shipment is complete. No further status changes are available."
-                : "No status update is available for the current shipment state."}
-          </Notice>
-        )}
-        {allowed.has("record_cash_receipt") && !due.length && (
-          <Notice>
-            No authoritative due assessment is available. Refresh before
-            recording a cash receipt.
-          </Notice>
-        )}
+        <ShipmentCheckoutPanels
+          data={data}
+          result={checkoutResult}
+          pending={assessmentPending}
+          reload={reload}
+          loading={false}
+          renderActions={(assessment) =>
+            (paymentActions.get(assessment.assessmentId || assessment.id) || [])
+              .filter(
+                (action) =>
+                  !(
+                    assessment.checkoutStatus === "ready" &&
+                    checkoutUrl(assessment.authorizationUrl) &&
+                    action.title.startsWith("Get payment link")
+                  ),
+              )
+              .map(renderAction)
+          }
+        />
       </div>
-    </InformationCard>
+    </>
+  );
+}
+function canAssessInitial(data: RecordData) {
+  return (
+    data.allowedAdminActions?.includes("assessment") &&
+    data.payment?.status !== "paid" &&
+    !(data.assessments || []).some(
+      (assessment: RecordData) =>
+        !["cancelled", "superseded"].includes(assessment.status),
+    )
   );
 }
 function uniqueEvidence(values: string[]) {
