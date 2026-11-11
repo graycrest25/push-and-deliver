@@ -250,3 +250,101 @@ test("PDF preview must match the requested base tariff and version", async ({
     await page.unroute(`**/api/proxy${endpoint}`);
   }
 });
+
+test("a rejected PDF explains the file error and preserves its request reference", async ({
+  page,
+}) => {
+  await login(page);
+  const form = upload(page);
+  await form.getByLabel("Price-list PDF", { exact: true }).setInputFiles({
+    name: "prices.pdf",
+    mimeType: "application/pdf",
+    buffer: pdf,
+  });
+  await form.getByLabel("Price-list name").fill("PND APP prices");
+  await form.getByLabel("Reason for price update").fill("Partner update");
+  await page.route(`**/api/proxy${endpoint}`, (route) =>
+    route.fulfill({
+      status: 400,
+      json: {
+        error: {
+          code: "invalid_request",
+          message: "Invalid request field",
+          details: { fields: { file: "invalid" } },
+        },
+        requestId: "c86e0e36b599701215541c388fc9867b",
+      },
+    }),
+  );
+  await form.getByRole("button", { name: "Preview", exact: true }).click();
+  const alert = form.getByRole("alert");
+  await expect(alert).toContainText("The price-list PDF was rejected");
+  await expect(alert).toContainText("include every page");
+  await expect(alert).toContainText("Live prices are unchanged");
+  await expect(alert).toContainText("c86e0e36b599701215541c388fc9867b");
+  await expect(
+    form.getByRole("button", { name: "Publish prices" }),
+  ).toHaveCount(0);
+  await expect(form.getByLabel("Price-list name")).toHaveValue(
+    "PND APP prices",
+  );
+});
+
+test("PND APP previews display all 312 prices through 70 kg", async ({
+  page,
+}) => {
+  await login(page);
+  const form = upload(page);
+  await form.getByLabel("Price-list PDF", { exact: true }).setInputFiles({
+    name: "app-prices.pdf",
+    mimeType: "application/pdf",
+    buffer: pdf,
+  });
+  await form.getByLabel("Price-list name").fill("PND APP prices");
+  await form.getByLabel("Reason for price update").fill("Partner update");
+  // This response checks the display contract; actual PDF extraction is covered
+  // by the backend tests against both original uploaded files.
+  await page.route(`**/api/proxy${endpoint}`, async (route) => {
+    const response = await route.fetch();
+    const result = await response.json();
+    const weights = [
+      ...Array.from({ length: 10 }, (_, i) => (i + 1) * 500),
+      ...Array.from({ length: 25 }, (_, i) => (i + 6) * 1000),
+      40000,
+      50000,
+      60000,
+      70000,
+    ];
+    await route.fulfill({
+      json: {
+        ...result,
+        data: {
+          ...result.data,
+          importedRates: 312,
+          preservedHigherWeightRates: 0,
+          maxImportedWeightGrams: 70000,
+          rates: weights.flatMap((weightGrams) =>
+            Array.from({ length: 8 }, (_, i) => ({
+              zone: i + 1,
+              weightGrams,
+              amountMinor: weightGrams === 70000 ? 405749790 : 7263314,
+            })),
+          ),
+        },
+      },
+    });
+  });
+  await form.getByRole("button", { name: "Preview", exact: true }).click();
+  const review = form.getByRole("region", { name: "PDF preview", exact: true });
+  await expect(review).toContainText("312");
+  await expect(review).toContainText("70 kg");
+  const rows = review
+    .getByRole("region", { name: "Imported prices", exact: true })
+    .getByRole("row");
+  await expect(rows).toHaveCount(40);
+  await expect(rows.last()).toContainText("70");
+  await expect(rows.last()).toContainText("₦4,057,497.90");
+  await expect(
+    form.getByRole("button", { name: "Publish prices", exact: true }),
+  ).toBeVisible();
+});

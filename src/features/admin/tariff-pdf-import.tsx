@@ -96,7 +96,8 @@ export function TariffPdfImport({
     return (
       <Notice>
         PDF upload is available on the active DHL export non-document tariff.
-        Open the active tariff from International shipment tariffs to import a price list.
+        Open the active tariff from International shipment tariffs to import a
+        price list.
       </Notice>
     );
 
@@ -232,7 +233,20 @@ export function TariffPdfImport({
         setPending(null);
         invalidate();
       }
-      setError(failure);
+      setError(
+        failure instanceof ApiError &&
+          failure.status === 400 &&
+          failure.details?.fields?.file
+          ? new ApiError(
+              failure.status,
+              failure.code,
+              "The price-list PDF was rejected. Use a supported PND export rate card with selectable text and include every page. Live prices are unchanged.",
+              failure.requestId,
+              failure.retryAfter,
+              failure.details,
+            )
+          : failure,
+      );
     } finally {
       lock.current = false;
       setBusy(false);
@@ -267,16 +281,13 @@ export function TariffPdfImport({
           </summary>
           <ul className="mt-3 list-disc space-y-2 pl-5 text-muted-foreground">
             <li>
-              Maximum 2 MiB. One page of selectable text, headed “PND EXPORT
-              RATE”.
+              Maximum 2 MiB. Use a supported PND export rate card with
+              selectable text and include every page, including any
+              country-table continuation.
             </li>
             <li>
-              Keep the existing layout: KG and ZONE 1–8, with eight naira prices
-              to two decimal places per row.
-            </li>
-            <li>
-              Include 0.5–5 kg in 0.5 kg steps, then 6–25 kg in 1 kg steps, with
-              the country-to-zone table underneath.
+              Keep the existing KG and ZONE 1–8 table, with eight naira prices
+              per row. Prices may have up to two decimal places.
             </li>
             <li>
               Scanned, encrypted, incomplete and unrecognised PDFs are rejected
