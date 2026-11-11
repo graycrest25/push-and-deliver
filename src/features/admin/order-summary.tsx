@@ -137,7 +137,7 @@ export function OrderSummary({ type }: { type: string }) {
                 Revenue includes{" "}
                 {data.roundedPaidOrders.toLocaleString("en-NG")}{" "}
                 {data.roundedPaidOrders === 1 ? "order" : "orders"} rounded to
-                the nearest kobo for reporting.
+                two decimal places in naira for reporting.
               </Notice>
             )}
           <p className="border-t pt-3 text-xs text-muted-foreground">

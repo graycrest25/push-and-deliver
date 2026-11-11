@@ -96,7 +96,7 @@ export function TariffPdfImport({
     return (
       <Notice>
         PDF upload is available on the active DHL export non-document tariff.
-        Open the active tariff from Shipping tariffs to import a price list.
+        Open the active tariff from International shipment tariffs to import a price list.
       </Notice>
     );
 

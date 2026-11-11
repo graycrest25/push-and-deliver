@@ -171,7 +171,7 @@ export function TabSectionSkeleton({
       ? ["Country", "Code", "Zone", "Availability", "Prices"]
       : section === "prices"
         ? domestic
-          ? ["Weight (grams)", "Amount (NGN kobo)"]
+          ? ["Weight (kg)", "Amount (₦)"]
           : ["Zone", "Weight (kg)", "Price (NGN)", "Destinations"]
         : section === "states"
           ? ["ID", "Name", "Local zone"]
@@ -291,7 +291,9 @@ export function tabPageLayout(path: string) {
     };
   if (["/delivery-zones", "/export-rates"].includes(path))
     return {
-      title: domestic ? "Delivery tariffs" : "Shipping tariffs",
+      title: domestic
+        ? "Local shipment tariffs"
+        : "International shipment tariffs",
       domestic,
       tabs: [
         ["tariffs", "Tariffs"],

@@ -67,15 +67,25 @@ export function display(
   if (typeof value === "boolean") return value ? "Yes" : "No";
   if (Array.isArray(value))
     return value
-      .map((item) => enumLabel(key, item, scope) ?? String(item))
+      .map((item) =>
+        /(_minor|Minor)$/.test(key)
+          ? display(item, key, currency, scope)
+          : (enumLabel(key, item, scope) ?? String(item)),
+      )
       .join(", ");
+  // Normalized fee amounts are rendered in major units; match their unit labels.
+  if (scope === "units" && value === "minor") return "Naira (₦)";
   const label = enumLabel(key, value, scope);
   if (label !== undefined) return label;
-  if (typeof value === "number" && /(_minor|Minor)$/.test(key))
+  if (
+    /(_minor|Minor)$/.test(key) &&
+    (typeof value === "number" ||
+      (typeof value === "string" && /^-?\d+(\.\d+)?$/.test(value)))
+  )
     return new Intl.NumberFormat("en-NG", {
       style: "currency",
       currency,
-    }).format(value / 100);
+    }).format(Number(value) / 100);
   if (
     typeof value === "string" &&
     /^\d{4}-\d{2}-\d{2}T/.test(value) &&

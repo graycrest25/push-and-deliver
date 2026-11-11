@@ -1,5 +1,6 @@
 import { FeatureTabs } from "./feature-tabs";
 import { LocalShippingTypes } from "./local-shipping-types";
+import { DomesticTariffPdfImport } from "./domestic-tariff-pdf-import";
 import { RideDetails, RideDetailsSkeleton } from "./ride-details";
 import { RideCommands } from "./ride-commands";
 import { enumLabel } from "@/lib/enum-labels";
@@ -415,8 +416,14 @@ export function NativeOffice() {
 export function NativeTariffs({ domestic = false }: { domestic?: boolean }) {
   const root = domestic ? "/delivery-zones" : "/export-rates";
   const [includeInactive, setIncludeInactive] = useState(false);
+  const [revision, setRevision] = useState(0);
   const tariffs = (
     <div className="space-y-4">
+      {domestic && (
+        <DomesticTariffPdfImport
+          reload={() => setRevision((value) => value + 1)}
+        />
+      )}
       {!domestic && (
         <label className="flex items-center gap-2 text-sm">
           <input
@@ -430,6 +437,7 @@ export function NativeTariffs({ domestic = false }: { domestic?: boolean }) {
       )}
       <DataList
         key={root}
+        revision={revision}
         spec={{
           ...page(
             domestic
@@ -457,10 +465,10 @@ export function NativeTariffs({ domestic = false }: { domestic?: boolean }) {
           ),
           params: domestic || includeInactive ? { includeInactive: true } : {},
           title: domestic
-            ? "Delivery tariffs"
+            ? "Local shipment tariffs"
             : includeInactive
-              ? "All shipping tariffs"
-              : "Active shipping tariffs",
+              ? "All international shipment tariffs"
+              : "Active international shipment tariffs",
           note: domestic
             ? undefined
             : "Open a tariff to find a country and review its prices. Changes stay in a draft until you publish them.",
@@ -500,7 +508,9 @@ export function NativeTariffs({ domestic = false }: { domestic?: boolean }) {
   return (
     <div className="space-y-6">
       <Heading
-        title={domestic ? "Delivery tariffs" : "Shipping tariffs"}
+        title={
+          domestic ? "Local shipment tariffs" : "International shipment tariffs"
+        }
         description={
           domestic
             ? "Manage delivery prices, local shipping types and state zones."

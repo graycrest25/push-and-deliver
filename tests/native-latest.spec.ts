@@ -51,6 +51,43 @@ const shipment = (id: string, overrides: Record<string, unknown> = {}) => ({
   ...overrides,
 });
 test.beforeEach(() => control({ reset: true }));
+test("tariff and fee amounts display naira, including decimal and string minor amounts", async ({
+  page,
+}) => {
+  await login(page);
+  await control({
+    latestTariff: {
+      id: "active-local",
+      version: 1,
+      status: "active",
+      localType: "premium",
+      zone: "los",
+      volumetricDivisor: 0,
+      rates: [
+        { weightKg: 0.5, amountMinor: 845835 },
+        { weightKg: 1, amountMinor: "855739" },
+        { weightKg: 1.5, amountMinor: 0 },
+        { weightKg: 2, amountMinor: 1 },
+        { weightKg: 2.5, amountMinor: null },
+      ],
+    },
+  });
+  await page.goto("/delivery-zones/tariffs/active-local");
+  const prices = page.getByRole("tabpanel", { name: "Prices", exact: true });
+  await expect(
+    prices.getByRole("columnheader", { name: "Amount (₦)", exact: true }),
+  ).toBeVisible();
+  for (const amount of ["₦8,458.35", "₦8,557.39", "₦0.00", "₦0.01", "—"])
+    await expect(
+      prices.getByRole("cell", { name: amount, exact: true }),
+    ).toBeVisible();
+  await expect(prices).not.toContainText("kobo");
+  await page.goto("/fees/fee-1");
+  const current = page.locator("#workspace-content");
+  await expect(current).toContainText("₦1,500.00");
+  await expect(current).toContainText("₦250.00");
+  await expect(current).not.toContainText("Kobo");
+});
 test("local shipping types show their fields and tariff tabs use 100-row lists", async ({
   page,
 }) => {
@@ -435,6 +472,7 @@ test("international prices join paged countries, show kg and naira, and edit a c
     .getByRole("button", { name: "Clone as a new draft", exact: true })
     .click();
   await expect(page).toHaveURL(/cloned-draft\?tab=workflow$/);
+  await expect(page.getByText("Draft", { exact: true }).first()).toBeVisible();
   await page.getByRole("tab", { name: "Prices", exact: true }).click();
   await page.getByLabel("Destination country").selectOption("GB");
   const row = page

@@ -95,7 +95,7 @@ const domesticPrices = guide(
   "Weight bands & prices",
   [
     "Read the price table",
-    "Weights are shown in kilograms. This table shows amounts in kobo; 100 kobo equals ₦1.",
+    "Weights are shown in kilograms. Prices are shown in naira (₦), with two decimal places.",
   ],
   [
     "Change a weight band",
@@ -364,10 +364,10 @@ export const pricingFinanceHelp: FeatureHelp[] = [
   {
     path: "/export-rates",
     page: guide(
-      "Shipping tariffs",
+      "International shipment tariffs",
       [
         "Find a tariff",
-        "The Tariffs tab shows active shipping tariffs. Turn on Show drafts and retired tariffs to see the others.",
+        "The Tariffs tab shows active international shipment tariffs. Turn on Show drafts and retired tariffs to see the others.",
       ],
       [
         "Review prices by country",
@@ -379,8 +379,8 @@ export const pricingFinanceHelp: FeatureHelp[] = [
       ],
     ),
     sections: {
-      "Active shipping tariffs": guide(
-        "Active shipping tariffs",
+      "Active international shipment tariffs": guide(
+        "Active international shipment tariffs",
         [
           "Choose a tariff",
           "Check its carrier, direction and cargo type, then open the tariff to review prices by country.",
@@ -390,8 +390,8 @@ export const pricingFinanceHelp: FeatureHelp[] = [
           "Turn on Show drafts and retired tariffs to include tariffs that are not active.",
         ],
       ),
-      "All shipping tariffs": guide(
-        "All shipping tariffs",
+      "All international shipment tariffs": guide(
+        "All international shipment tariffs",
         [
           "Check the status",
           "The list includes active tariffs, drafts and retired tariffs. Open the tariff you want to review.",
@@ -467,7 +467,11 @@ export const pricingFinanceHelp: FeatureHelp[] = [
   {
     path: "/delivery-zones",
     page: guide(
-      "Delivery tariffs",
+      "Local shipment tariffs",
+      [
+        "Upload domestic prices",
+        "Open Upload domestic rate PDF, select the service and PDF, then preview prices. Review all six zones and confirm publication. Premium is selected by default.",
+      ],
       [
         "Choose the service and zone",
         "Open a tariff to review its delivery service, zone and weight prices.",
@@ -482,8 +486,8 @@ export const pricingFinanceHelp: FeatureHelp[] = [
       ],
     ),
     sections: {
-      "Delivery tariffs": guide(
-        "Delivery tariffs",
+      "Local shipment tariffs": guide(
+        "Local shipment tariffs",
         [
           "Find the right tariff",
           "Check the delivery service, zone and status, then open the tariff to review its weight prices.",

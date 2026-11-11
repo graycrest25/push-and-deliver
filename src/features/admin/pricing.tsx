@@ -34,6 +34,7 @@ import {
   InformationCard,
   Notice,
   RecordView,
+  display,
   field,
   select,
   bool,
@@ -387,7 +388,7 @@ export function StatePolicy() {
   return (
     <div className="space-y-6">
       <Link to="/delivery-zones" className="text-primary underline text-sm">
-        Back to delivery tariffs
+        Back to local shipment tariffs
       </Link>
       <Heading title="State zone policy" description={id} />
       <InformationCard title="State mapping">
@@ -527,7 +528,7 @@ function Rates({ data, domestic }: { data: RecordData; domestic: boolean }) {
               {domestic ? "Weight (kg)" : "Weight (grams)"}
             </TableHead>
             <TableHead className={domestic ? undefined : "min-w-48"}>
-              Amount (NGN kobo)
+              Amount (₦)
             </TableHead>
           </TableRow>
         </TableHeader>
@@ -544,7 +545,7 @@ function Rates({ data, domestic }: { data: RecordData; domestic: boolean }) {
                 ) ?? "Unavailable"}
               </TableCell>
               <TableCell className="tabular-nums">
-                {row.amountMinor.toLocaleString()}
+                {display(row.amountMinor, "amountMinor")}
               </TableCell>
             </TableRow>
           ))}

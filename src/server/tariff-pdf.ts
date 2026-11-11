@@ -8,13 +8,16 @@ export class PdfUploadError extends Error {
     super(message);
   }
 }
-export async function readTariffPdf(request: Request): Promise<FormData> {
+export async function readTariffPdf(
+  request: Request,
+  domestic = false,
+): Promise<FormData> {
   const type = request.headers.get("content-type") || "";
   if (!type.toLowerCase().startsWith("multipart/form-data;"))
     throw new PdfUploadError(
       "Send the PDF and metadata as multipart/form-data.",
     );
-  const limit = PDF_LIMIT + 65_536;
+  const limit = PDF_LIMIT + (domestic ? 16_384 : 65_536);
   if (Number(request.headers.get("content-length")) > limit)
     throw new PdfUploadError("The PDF must be no larger than 2 MiB.", 413);
   const reader = request.body?.getReader();
@@ -55,7 +58,39 @@ export async function readTariffPdf(request: Request): Promise<FormData> {
     throw new PdfUploadError("The PDF must be no larger than 2 MiB.", 413);
   if (!file.size || !file.name.toLowerCase().endsWith(".pdf"))
     throw new PdfUploadError("Select a non-empty PDF file.");
+  if (domestic && new TextEncoder().encode(metadata).byteLength > 4096)
+    throw new PdfUploadError("Metadata must be no larger than 4 KiB.");
   const data = JSON.parse(metadata);
+  if (domestic) {
+    const zones = ["abv", "iba", "kad", "los", "phc", "qrw"];
+    if (
+      !data ||
+      typeof data.localType !== "string" ||
+      !data.localType.trim() ||
+      typeof data.reason !== "string" ||
+      !data.reason.trim() ||
+      typeof data.preview !== "boolean" ||
+      !Array.isArray(data.expectedTariffs) ||
+      data.expectedTariffs.length !== 6 ||
+      !zones.every(
+        (zone) =>
+          data.expectedTariffs.filter(
+            (item: any) =>
+              item?.zone === zone &&
+              typeof item.tariffId === "string" &&
+              item.tariffId.trim() &&
+              Number.isSafeInteger(item.expectedVersion) &&
+              item.expectedVersion >= 0,
+          ).length === 1,
+      )
+    )
+      throw new PdfUploadError(
+        "Provide a service, reason, explicit preview flag and all six current tariff IDs and versions.",
+      );
+    if (!data.preview && !request.headers.get("idempotency-key"))
+      throw new PdfUploadError("An operation key is required for publication.");
+    return form;
+  }
   if (
     !data ||
     typeof data.name !== "string" ||
