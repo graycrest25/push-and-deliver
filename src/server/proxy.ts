@@ -222,13 +222,17 @@ async function proxyRequest(request: NextRequest, segments: string[]) {
     headers.set("Idempotency-Key", key);
   }
   let body: string | FormData | undefined;
+  const domesticPdfImport =
+    method === "POST" && path === "/v1/admin/geography/tariffs/import-pdf";
   const pdfImport =
-    method === "POST" &&
-    /^\/v1\/admin\/shipping\/tariffs\/[^/]+\/import-pdf$/.test(path);
+    domesticPdfImport ||
+    (method === "POST" &&
+      /^\/v1\/admin\/shipping\/tariffs\/[^/]+\/import-pdf$/.test(path));
   if (pdfImport) {
-    if (!key) return fail(400, "missing_key", "An operation key is required.");
+    if (!domesticPdfImport && !key)
+      return fail(400, "missing_key", "An operation key is required.");
     try {
-      body = await readTariffPdf(request);
+      body = await readTariffPdf(request, domesticPdfImport);
     } catch (error) {
       return fail(
         error instanceof PdfUploadError ? error.status : 400,

@@ -1,4 +1,5 @@
 import { createHash } from "node:crypto";
+import { domesticPdf, controlDomesticPdf } from "./native-domestic-pdf-api.mjs";
 import { gameApi, controlGame, resetGame } from "./native-game-api.mjs";
 import { latest, resetLatest, controlLatest } from "./native-latest-api.mjs";
 import { reads, resetReads, controlReads } from "./native-admin-reads-api.mjs";
@@ -105,6 +106,7 @@ http
     }
     if (path === "/health") return success(res, { ok: true });
     if (path === "/control") {
+      controlDomesticPdf(body);
       controlFeatures(body);
       if (body.reset) {
         resetFeatures();
@@ -246,6 +248,7 @@ http
       req.headers["x-account-type"] !== "user"
     )
       return error(res, 401, "expired", "Session expired");
+    if (domesticPdf(path, req, res, body, success, error)) return;
     if (/^\/v1\/admin\/shipping\/tariffs\/[^/]+\/import-pdf$/.test(path)) {
       if (body.fileName === "scanned.pdf")
         return error(

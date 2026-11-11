@@ -1,6 +1,7 @@
 // Native integrations plus historical routes awaiting reconciliation. No arbitrary upstream URLs.
 export const routes: readonly [string, string][] = [
   ["POST", "/v1/admin/shipping/tariffs/{id}/import-pdf"],
+  ["POST", "/v1/admin/geography/tariffs/import-pdf"],
   ["GET", "/v1/admin/game/rules"],
   ["PUT", "/v1/admin/game/rules"],
   ["POST", "/v1/admin/riders/{uid}/application/upload-intents"],

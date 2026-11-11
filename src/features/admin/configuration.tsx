@@ -177,7 +177,7 @@ export function TariffsPage({ domestic = false }: { domestic?: boolean }) {
   return (
     <div className="space-y-6">
       <Heading
-        title={domestic ? "Delivery tariffs" : "Shipping tariffs"}
+        title={domestic ? "Local shipment tariffs" : "International shipment tariffs"}
         description="Create a draft, inspect its rates, then publish a reviewed version. Active tariffs cannot be edited in place."
       />
       <DataList
