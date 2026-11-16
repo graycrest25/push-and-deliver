@@ -17,7 +17,12 @@ import { RefreshButton } from "@/components/ui/refresh-button";
 import { useEffect, useRef, useState } from "react";
 import { useCurrentUser } from "@/contexts/UserContext";
 import { canOperate } from "@/lib/admin-access";
-import { onlineLabel, riderFilters, RiderExportFilters } from "./rider-filters";
+import {
+  nameFilter,
+  onlineLabel,
+  riderFilters,
+  RiderExportFilters,
+} from "./rider-filters";
 import { Link, useParams } from "react-router-dom";
 import { apiResponse, queryPath, segment, type RecordData } from "@/lib/api";
 import { Button } from "@/components/ui/button";
@@ -82,9 +87,9 @@ export function NativeAccounts({ riders = false }: { riders?: boolean }) {
           ]),
           params: { type },
           onFiltersChange: setExportFilters,
+          filters: riders ? riderFilters : [nameFilter],
           ...(riders
             ? {
-                filters: riderFilters,
                 pairedDates: true,
                 note: "Dates include both selected days in Africa/Lagos and filter registration/profile creation. Online status is the saved flag, not a live connectivity check. Browsing includes motorbike and unassigned riders.",
               }
@@ -93,7 +98,7 @@ export function NativeAccounts({ riders = false }: { riders?: boolean }) {
             param: "q",
             label: "Search name, email or phone",
             placeholder: "Enter a name, email or phone number",
-            help: "Search any part of a name, email or phone number. Names and emails ignore case; phone searches ignore spaces and punctuation.",
+            help: "Search names, emails or phone numbers. Name filters match any part of a saved name, ignoring case. All filters apply together.",
           },
           idKey: "uid",
           clickableRows: true,
@@ -159,6 +164,14 @@ function DirectoryExport({
     const abort = new AbortController();
     controller.current = abort;
     try {
+      const values = Object.fromEntries(
+        Object.entries(filters).map(([key, value]) => [
+          key,
+          typeof value === "string" ? value.trim() : value,
+        ]),
+      );
+      if (String(values.name || "").length > 100)
+        throw new Error("Name must be at most 100 characters.");
       if (
         !!filters.startDate !== !!filters.endDate ||
         (filters.startDate && filters.startDate > filters.endDate)
@@ -173,7 +186,7 @@ function DirectoryExport({
         throw new Error("Enter a valid exact email address or clear it.");
       const response = await apiResponse(
         queryPath(`/v1/admin/reports/${riders ? "riders" : "users"}`, {
-          ...filters,
+          ...values,
           // Directory pagination must never truncate a complete export.
           limit: undefined,
           cursor: undefined,
@@ -269,7 +282,10 @@ export function NativeRides() {
             help: "Exact, case-sensitive match. City and status filters still apply.",
           },
           filters: [
-            select("city", ["lagos", "ibadan", "unknown"], "Origin city"),
+            {
+              ...select("city", ["lagos", "ibadan", "unknown"], "Origin city"),
+              emptyLabel: "All cities",
+            },
             select("status", [
               "",
               "requested",
@@ -281,7 +297,7 @@ export function NativeRides() {
               "riderarrived",
             ]),
           ],
-          note: "City filters use the order’s origin. Historical orders without a clear origin city are shown as Unknown.",
+          note: "Origin city is the ride pickup city. Historical orders without a clear pickup city are shown as Unknown.",
           link: (row) => `/ride-hailing/${segment(row.id)}`,
         }}
       />

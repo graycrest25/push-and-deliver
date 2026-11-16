@@ -230,7 +230,10 @@ export function NativeShipments() {
             { key: "createdAt", label: "Created at" },
           ],
           filters: [
-            select("city", ["lagos", "ibadan", "unknown"], "Origin city"),
+            {
+              ...select("city", ["lagos", "ibadan", "unknown"], "Origin city"),
+              emptyLabel: "All cities",
+            },
             select(
               "shipmentType",
               ["local", "express", "customs_clearance"],
@@ -241,7 +244,7 @@ export function NativeShipments() {
               optionLabels: shipmentStatuses,
             },
           ],
-          note: "City filters use the shipment’s origin. Historical shipments without a clear origin city are shown as Unknown.",
+          note: "Origin city is the shipment sending-office city. Historical shipments without a clear sending-office city are shown as Unknown.",
           link: (r) => `/shipment-orders/${segment(r.id)}`,
         }}
       />

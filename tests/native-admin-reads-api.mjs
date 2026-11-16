@@ -105,7 +105,20 @@ export function reads(path, req, res, body, success, error, adminType) {
       : path === "/v1/admin/analytics/backfills"
         ? []
         : path === "/v1/admin/users" || path === "/v1/admin/users/search"
-          ? ["type", "limit", "cursor", "membership", "adminType", "q"]
+          ? [
+              "type",
+              "limit",
+              "cursor",
+              "membership",
+              "adminType",
+              "q",
+              "name",
+              "email",
+              "vehicleType",
+              "verificationStatus",
+              "startDate",
+              "endDate",
+            ]
           : path.startsWith("/v1/admin/users/")
             ? ["type"]
             : path.includes("/reports/")
@@ -117,6 +130,7 @@ export function reads(path, req, res, body, success, error, adminType) {
                     "startDate",
                     "endDate",
                     "q",
+                    "name",
                     "email",
                     "vehicleType",
                     "verificationStatus",

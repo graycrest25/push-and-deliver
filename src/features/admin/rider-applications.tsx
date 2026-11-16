@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { onlineLabel, riderVehicleFilter } from "./rider-filters";
+import { nameFilter, onlineLabel, riderVehicleFilter } from "./rider-filters";
 import { apiResponse } from "@/lib/api";
 import { ApprovalChecklist } from "./approval-checklist";
 import {
@@ -85,14 +85,15 @@ export function RiderApplications() {
               : draft,
           search: {
             param: "q",
-            label: "Search registered email",
-            placeholder: "Enter all or part of an email address",
-            help: "Case-insensitive email search. Clear the exact email filter to search by part of an address.",
+            label: "Search name or registered email",
+            placeholder: "Enter a name or part of a registered email",
+            help: "Search saved names and registered emails, ignoring case. Name and exact email filters apply together with this search.",
           },
           key: "items",
           paging: "cursor",
           idKey: "uid",
           filters: [
+            nameFilter,
             riderVehicleFilter,
             select(
               "status",

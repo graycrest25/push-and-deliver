@@ -470,6 +470,8 @@ export type Field = {
   max?: number;
   step?: number;
   maxLength?: number;
+  debounce?: boolean;
+  emptyLabel?: string;
   pattern?: string;
   help?: string;
   fields?: Field[];
@@ -1489,27 +1491,35 @@ function DataListContent({
   // Cursors belong to this mounted query, never to saved table preferences.
   const [cursors, setCursors] = useState<string[]>([""]);
   const [page, setPage] = useState(0);
-  const searchTerm = spec.search
-    ? String(draft[spec.search.param] || "").trim()
-    : "";
-  const committedSearch = spec.search
-    ? String(filters[spec.search.param] || "")
-    : "";
   const searchParam = spec.search?.param;
-  const searching = !!searchParam && searchTerm !== committedSearch;
+  const searchFields = [
+    ...(searchParam ? [searchParam] : []),
+    ...(spec.filters || []).filter((f) => f.debounce).map((f) => f.name),
+  ];
+  const searchValues = JSON.stringify(
+    Object.fromEntries(
+      searchFields.map((name) => [name, String(draft[name] || "").trim()]),
+    ),
+  );
+  const committedSearch = JSON.stringify(
+    Object.fromEntries(
+      searchFields.map((name) => [name, String(filters[name] || "")]),
+    ),
+  );
+  const searching = searchValues !== committedSearch;
   const searchId = useId();
   useEffect(() => {
-    if (!searchParam || searchTerm === committedSearch) return;
+    if (searchValues === committedSearch) return;
     const timer = setTimeout(() => {
       setFilters((current) => ({
         ...current,
-        [searchParam]: searchTerm || undefined,
+        ...JSON.parse(searchValues),
       }));
       setPage(0);
       setCursors([""]);
     }, 300);
     return () => clearTimeout(timer);
-  }, [searchParam, searchTerm, committedSearch]);
+  }, [searchValues, committedSearch]);
   const viewport = useRef<HTMLDivElement>(null);
   const scroll = useRef({
     scrollTop: 0,
@@ -1538,7 +1548,8 @@ function DataListContent({
         }
       : {}),
   });
-  const resource = useResource(path);
+  // Cancel the previous request as soon as a search changes, including during debounce.
+  const resource = useResource(searching ? null : path);
   const data = searching ? null : resource.data;
   const error = searching ? null : resource.error;
   const loading = searching || resource.loading;
@@ -1634,12 +1645,14 @@ function DataListContent({
                   return;
                 }
                 setFilterError(null);
-                setFilters({
-                  ...draft,
-                  ...(searchParam
-                    ? { [searchParam]: searchTerm || undefined }
-                    : {}),
-                });
+                setFilters(
+                  Object.fromEntries(
+                    Object.entries(draft).map(([key, value]) => [
+                      key,
+                      typeof value === "string" ? value.trim() : value,
+                    ]),
+                  ),
+                );
                 setPage(0);
                 setCursors([""]);
               }}
@@ -1660,7 +1673,7 @@ function DataListContent({
                         );
                       }}
                     >
-                      <option value="">All</option>
+                      <option value="">{f.emptyLabel || "All"}</option>
                       {f.options.filter(Boolean).map((o) => (
                         <option key={o} value={o}>
                           {f.optionLabels?.[o] ||
