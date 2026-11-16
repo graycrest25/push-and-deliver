@@ -1,4 +1,5 @@
 import { FeatureTabs } from "./feature-tabs";
+import { nameFilter } from "./rider-filters";
 import { TabSectionSkeleton } from "@/components/ui/tab-section-skeleton";
 import { RewardCampaignManager } from "./reward-campaigns";
 import { RecordSkeleton } from "@/components/ui/loading-skeletons";
@@ -181,9 +182,9 @@ export function AdminRoles() {
           pageSizes: [10, 25, 50],
           search: {
             param: "q",
-            label: "Search by name or partial email",
-            placeholder: "Enter a name or part of an email",
-            help: "Clear the exact email filter before using partial search.",
+            label: "Search name, email or phone",
+            placeholder: "Enter a name, email or phone number",
+            help: "Search names, emails or phone numbers. Name and exact email filters apply together with this search.",
           },
           key: "items",
           paging: "cursor",
@@ -197,6 +198,7 @@ export function AdminRoles() {
                   : undefined,
           },
           filters: [
+            nameFilter,
             field("email", "Email address", { type: "email", required: false }),
             ...(tab === "admins"
               ? [

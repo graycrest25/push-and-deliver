@@ -2,11 +2,18 @@ import type { RecordData } from "@/lib/api";
 import { Input } from "@/components/ui/input";
 import { field, select, type Field } from "./shared";
 
+export const nameFilter: Field = field("name", "Name", {
+  required: false,
+  maxLength: 100,
+  debounce: true,
+});
+
 export const riderVehicleFilter: Field = {
   ...select("vehicleType", ["bike", "unassigned"], "Vehicle type"),
   optionLabels: { bike: "Motorbike", unassigned: "Not assigned" },
 };
 export const riderFilters: Field[] = [
+  nameFilter,
   riderVehicleFilter,
   select(
     "verificationStatus",
@@ -67,6 +74,7 @@ export function RiderExportFilters({
           ) : (
             <Input
               type={f.type === "email" || f.type === "date" ? f.type : "text"}
+              maxLength={f.maxLength}
               value={value[f.name] || ""}
               onChange={(event) =>
                 change({ ...value, [f.name]: event.target.value })

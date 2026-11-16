@@ -250,7 +250,7 @@ test("rider filters clear pending for blocked and encode email searches", async 
     .poll(() => requests.at(-1)?.searchParams.get("cursor"))
     .toBe("next");
   await page
-    .getByLabel("Search registered email", { exact: true })
+    .getByLabel("Search name or registered email", { exact: true })
     .fill("person+ops@gmail.com");
   await expect
     .poll(() => requests.at(-1)?.searchParams.get("q"))
@@ -648,7 +648,9 @@ test("configuration tabs preserve drafts and support links, history and keyboard
   await page.getByRole("tab", { name: "Dispatch", exact: true }).focus();
   await page.keyboard.press("End");
   await expect(
-    page.getByRole("tab", { name: "Game rules", exact: true }),
+    page
+      .getByRole("tablist", { name: "Configuration features", exact: true })
+      .getByRole("tab", { name: "Game rules", exact: true }),
   ).toHaveAttribute("aria-selected", "true");
   await expect(page).toHaveURL(/tab=game/);
   await page.goto("/app-config?tab=signup");

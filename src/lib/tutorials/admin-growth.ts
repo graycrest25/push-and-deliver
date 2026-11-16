@@ -600,7 +600,7 @@ export const adminGrowthHelp: FeatureHelp[] = [
         {
           title: "Find the account",
           description:
-            "Super admins can search all user accounts, current administrators or non-admin users. Clear the exact email filter before searching by part of a name or email.",
+            "Super admins can search all user accounts, current administrators or non-admin users. Search names, emails or phone numbers and combine this with name and exact email filters.",
         },
         {
           title: "Open and review access",
@@ -622,7 +622,7 @@ export const adminGrowthHelp: FeatureHelp[] = [
           {
             title: "Find the right person",
             description:
-              "Search by name or partial email, or use the exact Email address filter. Check the name and user ID before selecting a result.",
+              "Search names, emails or phone numbers and combine name and exact Email address filters. Check the name and user ID before selecting a result.",
           },
           {
             title: "Review access above the list",
