@@ -104,8 +104,11 @@ export async function apiResponse(
       path,
     )
   ) {
-    if (await refreshSession()) return apiResponse(path, options, false);
-    window.dispatchEvent(new Event("session-expired"));
+    const body = await response.clone().json().catch(() => null);
+    if (body?.error?.code !== "recent_auth_required") {
+      if (await refreshSession()) return apiResponse(path, options, false);
+      window.dispatchEvent(new Event("session-expired"));
+    }
   }
   if (!response.ok) {
     const data = await response.json().catch(() => ({}));

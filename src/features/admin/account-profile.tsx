@@ -18,6 +18,7 @@ import {
 import { useCurrentUser } from "@/contexts/UserContext";
 import { queryPath, segment, type RecordData } from "@/lib/api";
 import { AccountRoleEditor, CurrentRecord } from "./native-dashboard";
+import { PayoutNameCorrection } from "./payout-name-correction";
 import {
   ActionForm,
   DataList,
@@ -235,13 +236,30 @@ function EditProfile({
     </Dialog>
   );
 }
+function needsPayoutIdentity(data: RecordData) {
+  return (
+    verificationLabel(data.verificationStatus) === "Verified" &&
+    !data.disabled &&
+    !data.deleted &&
+    !(
+      data.payoutIdentity ??
+      data.profile?.payoutIdentity ??
+      data.approvedPayoutIdentity
+    )
+  );
+}
+
 export function AccountProfile({ riders = false }: { riders?: boolean }) {
   const { id = "" } = useParams();
   const { adminType } = useCurrentUser();
   const type = riders ? "riders" : "users";
-  const resource = useResource(
-    queryPath(`/v1/admin/users/${segment(id)}`, { type }),
-  );
+  const profilePath = queryPath(`/v1/admin/users/${segment(id)}`, { type });
+  const resource = useResource(profilePath);
+  const [correctionRevision, setCorrectionRevision] = useState(0);
+  function reloadProfile() {
+    resource.reload();
+    setCorrectionRevision((revision) => revision + 1);
+  }
   const data = resource.data;
   const sections = [
     ["personal-information", "Personal information"],
@@ -262,10 +280,17 @@ export function AccountProfile({ riders = false }: { riders?: boolean }) {
         title={riders ? "Rider profile" : "User profile"}
         description="Review contact information, verification and financial activity."
       >
-        <RefreshButton loading={resource.loading} onClick={resource.reload}>
+        <RefreshButton loading={resource.loading} onClick={reloadProfile}>
           Refresh profile
         </RefreshButton>
       </Heading>
+      {riders && id && (
+        <PayoutNameCorrection
+          key={id}
+          riderId={id}
+          refreshRevision={correctionRevision}
+        />
+      )}
       {resource.loading ? (
         <ProfileSkeleton riders={riders} />
       ) : resource.error ? (
@@ -314,7 +339,7 @@ export function AccountProfile({ riders = false }: { riders?: boolean }) {
               <EditProfile
                 data={data}
                 riders={riders}
-                reload={resource.reload}
+                reload={reloadProfile}
               />
             </div>
             <nav
@@ -377,6 +402,56 @@ export function AccountProfile({ riders = false }: { riders?: boolean }) {
                       </Link>
                     </Button>
                   )}
+                  {riders &&
+                    (adminType === "super" || adminType === "regular") &&
+                    needsPayoutIdentity(data) &&
+                    Number.isSafeInteger(data.version) &&
+                    data.version > 0 && (
+                      <ActionForm
+                        key={`payout-identity:${id}:${data.version}`}
+                        action={{
+                          title: "Approve payout identity",
+                          description:
+                            "Check the approved rider documents against the current profile name before recording the payout identity.",
+                          path: `/v1/admin/riders/${segment(id)}/payout-identity`,
+                          fields: [
+                            select(
+                              "documentsChecked",
+                              ["No", "Yes"],
+                              "I checked the approved rider documents",
+                            ),
+                            reasonField,
+                          ],
+                          body: (values) => {
+                            if (values.documentsChecked !== "Yes")
+                              throw new Error(
+                                "Confirm that you reviewed the rider’s documents.",
+                              );
+                            return {
+                              expectedVersion: version(data),
+                              reason: reason(values.reason),
+                            };
+                          },
+                          versionPath: profilePath,
+                          refreshBeforeSubmit: true,
+                          validateCurrent: (current) => {
+                            if (
+                              current.version !== data.version ||
+                              !needsPayoutIdentity(current)
+                            )
+                              throw new Error(
+                                "Refresh the profile and review the documents again before approving.",
+                              );
+                          },
+                          preserveRetry: true,
+                          retryPayment: true,
+                        }}
+                        onSuccess={() => {
+                          toast.success("Payout identity approved.");
+                          reloadProfile();
+                        }}
+                      />
+                    )}
                 </div>
               </InformationCard>
             </div>

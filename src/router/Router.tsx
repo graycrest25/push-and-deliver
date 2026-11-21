@@ -1,3 +1,4 @@
+import { CompanyFunds } from "@/features/admin/company-funds";
 import { BroadcastDetails } from "@/features/admin/broadcasts";
 import { LocalShippingType } from "@/features/admin/local-shipping-types";
 import { GameRulesPage } from "@/features/admin/game-rules";
@@ -335,6 +336,7 @@ export default function Router() {
                       }
                     />
                     <Route path="/payments" element={<PaymentsPage />} />
+                    <Route path="/company-funds" element={<CompanyFunds />} />
                     <Route
                       path="/payments/receipts/:id"
                       element={<ReceiptPage />}

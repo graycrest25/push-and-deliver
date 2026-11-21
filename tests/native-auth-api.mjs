@@ -33,6 +33,9 @@ let records = [],
   badContext = false,
   invalidLogin = false,
   failLogout = false;
+const payoutCorrectionPath =
+  "/v1/admin/riders/correction-rider/payout-identity/correction";
+let payoutCorrectionFixture;
 const response = (res, status, data) => {
   res.writeHead(status, {
     "content-type": "application/json",
@@ -127,7 +130,10 @@ http
         badContext = false;
         invalidLogin = false;
         failLogout = false;
+        payoutCorrectionFixture = undefined;
       }
+      if (body.payoutCorrectionFixture)
+        payoutCorrectionFixture = body.payoutCorrectionFixture;
       controlGame(body);
       controlEngagement(body);
       controlLatest(body);
@@ -159,6 +165,9 @@ http
       authorization: req.headers.authorization,
       account: req.headers["x-account-type"],
       key: req.headers["idempotency-key"],
+      ...(path === payoutCorrectionPath && {
+        contentType: req.headers["content-type"],
+      }),
     });
     if (path === "/v2/auth/social/challenges") {
       device = body.deviceId;
@@ -248,6 +257,24 @@ http
       req.headers["x-account-type"] !== "user"
     )
       return error(res, 401, "expired", "Session expired");
+    if (path === payoutCorrectionPath && payoutCorrectionFixture) {
+      const { data, failure, conflict, next } = payoutCorrectionFixture;
+      if (req.method === "GET") return success(res, data);
+      if (conflict) {
+        if (next) payoutCorrectionFixture = next;
+        return response(res, 409, { error: { details: { reason: conflict } } });
+      }
+      if (failure) {
+        payoutCorrectionFixture.failure = undefined;
+        return error(res, failure, "timeout", "Correction response timed out.");
+      }
+      payoutCorrectionFixture.data = {
+        ...data,
+        status: "pending",
+        canRequestCorrection: false,
+      };
+      return success(res, {}, 202);
+    }
     if (domesticPdf(path, req, res, body, success, error)) return;
     if (/^\/v1\/admin\/shipping\/tariffs\/[^/]+\/import-pdf$/.test(path)) {
       if (body.fileName === "scanned.pdf")
