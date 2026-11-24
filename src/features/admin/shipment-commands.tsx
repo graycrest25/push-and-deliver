@@ -317,6 +317,7 @@ export function ShipmentCommands({
               ? "Replace the current link once the payment provider confirms it is no longer active. Refresh payment status first. The replacement is queued for email to the customer."
               : "Prepare a payment link for this charge. The charge amount stays the same.",
             path: `${root}/assessment/checkout`,
+            retryPayment: true,
             expectedStatus: [200, 202],
             refreshBeforeSubmit: true,
             reconcileBeforeRetry: true,

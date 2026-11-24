@@ -58,6 +58,12 @@ export const navigation: NavigationItem[] = [
     group: "Workspace",
   },
   {
+    title: "Company funds",
+    url: "/company-funds",
+    icon: IconCash,
+    group: "Audit & review",
+  },
+  {
     title: "Payment review",
     url: "/payments",
     icon: IconCash,

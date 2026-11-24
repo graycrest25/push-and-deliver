@@ -361,6 +361,7 @@ async function proxyRequest(request: NextRequest, segments: string[]) {
   try {
     const localTypeRequest =
       /^\/v1\/admin\/shipping\/local-types(?:\/[^/]+)?$/.test(path);
+    const companyPayment = path.startsWith("/v1/admin/payments/company/");
     const gameRequest = path === "/v1/admin/game/rules";
     const reportReadinessRequest =
       path === "/v1/admin/analytics/coverage" ||
@@ -370,6 +371,7 @@ async function proxyRequest(request: NextRequest, segments: string[]) {
       (path === "/v1/admin/coupons/campaigns" ||
         /^\/v1\/admin\/coupons\/campaigns\/[^/]+\/status$/.test(path));
     if (
+      companyPayment ||
       gameRequest ||
       reportReadinessRequest ||
       campaignMutation ||
@@ -391,8 +393,8 @@ async function proxyRequest(request: NextRequest, segments: string[]) {
       if (!authorityResponse.ok)
         return fail(
           authorityResponse.status === 401 ? 401 : 403,
-          "game_access_denied",
-          "Unable to verify configuration access. Sign in again.",
+          companyPayment ? "forbidden" : "game_access_denied",
+          "Unable to verify administrator access. Sign in again.",
         );
       const authority = (await authorityResponse.json()).data;
       if (
@@ -400,21 +402,23 @@ async function proxyRequest(request: NextRequest, segments: string[]) {
         authority.accountType !== "user" ||
         authority.accountStatus !== "active" ||
         !(
-          gameRequest || reportReadinessRequest
+          companyPayment || gameRequest || reportReadinessRequest
             ? ["super"]
             : ["super", "regular"]
         ).includes(authority.adminType)
       )
         return fail(
           403,
-          "game_access_denied",
-          gameRequest
-            ? "Only super administrators can manage game rules."
-            : reportReadinessRequest
-              ? "Only super administrators can inspect report coverage or request rebuilds."
-              : localTypeRequest
-                ? "Only super and regular administrators can manage local shipping types."
-                : "Only super and regular administrators can manage reward campaigns.",
+          companyPayment ? "forbidden" : "game_access_denied",
+          companyPayment
+            ? "Only super administrators can access company funds."
+            : gameRequest
+              ? "Only super administrators can manage game rules."
+              : reportReadinessRequest
+                ? "Only super administrators can inspect report coverage or request rebuilds."
+                : localTypeRequest
+                  ? "Only super and regular administrators can manage local shipping types."
+                  : "Only super and regular administrators can manage reward campaigns.",
         );
     }
     // Ride cancellation and shipment commands are restricted to super admins.

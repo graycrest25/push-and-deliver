@@ -1,3 +1,4 @@
+import { payoutIsPending } from "@/lib/payment-operations";
 import { FeatureTabs } from "./feature-tabs";
 import { ShipmentCheckoutPanels } from "./shipment-checkout";
 import {
@@ -434,7 +435,7 @@ export function NativeWithdrawals() {
     <div className="space-y-6">
       <Heading
         title="Withdrawals"
-        description="Manual company bank payments. Claim a request before making its transfer."
+        description="Track automated rider payouts and review historical manual bank transfers."
       />
       <FeatureTabs
         label="Withdrawal sections"
@@ -448,19 +449,28 @@ export function NativeWithdrawals() {
                   path: "/v1/admin/withdrawals",
                   key: "items",
                   paging: "cursor",
+                  defaultPageSize: 20,
+                  pageSizes: [20, 50],
                   columns: cols(
                     "id",
+                    "payoutMethod",
                     "amountMinor",
+                    "withdrawalFeeMinor",
+                    "totalDebitMinor",
                     "status",
+                    "reviewRequired",
                     "assignedToMe",
                     "accountNumberMasked",
                     "createdAt",
+                    "updatedAt",
                   ),
                   filters: [
                     select("status", [
                       "requested",
                       "approved",
+                      "processing",
                       "succeeded",
+                      "failed",
                       "cancelled",
                     ]),
                   ],
@@ -477,15 +487,24 @@ export function NativeWithdrawals() {
     </div>
   );
 }
+const pollRiderPayout = (data: RecordData) =>
+  data.payoutMethod === "bachs" && payoutIsPending(data, "succeeded");
 export function NativeWithdrawal() {
   const { id = "" } = useParams();
   const { adminType } = useCurrentUser();
   const root = `/v1/admin/withdrawals/${segment(id)}`;
-  const record = useResource(root);
+  const record = useResource(root, pollRiderPayout);
   const [showBank, setShowBank] = useState(false);
   const data = record.data;
+  const manual =
+    data?.payoutMethod === "manual-bank-transfer" ||
+    (data?.payoutMethod == null &&
+      data?.withdrawalFeeMinor == null &&
+      data?.reviewRequired == null &&
+      typeof data?.assignedToMe === "boolean" &&
+      Object.hasOwn(data, "assignedAdminId"));
   const actions: Action[] = [];
-  if (data && canOperate(adminType)) {
+  if (data && manual && canOperate(adminType)) {
     if (data.status === "requested")
       actions.push({
         title: "Claim for payment",
@@ -573,14 +592,46 @@ export function NativeWithdrawal() {
       ) : (
         data && (
           <>
-            <RecordView data={data} />
-            {data.status === "approved" && (
+            <RecordView
+              data={{
+                id: data.id,
+                currency: data.currency,
+                payoutMethod: manual
+                  ? "Manual bank transfer"
+                  : data.payoutMethod === "bachs"
+                    ? "Bachs"
+                    : data.payoutMethod,
+                amountMinor: data.amountMinor,
+                withdrawalFeeMinor: data.withdrawalFeeMinor,
+                totalDebitMinor: data.totalDebitMinor,
+                status: data.status,
+                reviewRequired: data.reviewRequired,
+                accountNumberMasked: data.accountNumberMasked,
+                createdAt: data.createdAt,
+                updatedAt: data.updatedAt,
+                ...(manual
+                  ? {
+                      assignedAdminId: data.assignedAdminId,
+                      assignedToMe: data.assignedToMe,
+                      receipt: data.receipt,
+                    }
+                  : {}),
+              }}
+            />
+            {data.payoutMethod === "bachs" && (
+              <Notice>
+                Bachs processes this payout automatically.
+                {data.reviewRequired === true && " Provider review is pending."}
+              </Notice>
+            )}
+            {manual && data.status === "approved" && (
               <Notice>
                 If the bank outcome is uncertain, keep this request claimed
                 until the bank statement is reconciled.
               </Notice>
             )}
-            {canOperate(adminType) &&
+            {manual &&
+              canOperate(adminType) &&
               data.status === "approved" &&
               data.assignedToMe === true && (
                 <section className="space-y-3">
@@ -603,7 +654,7 @@ export function NativeWithdrawal() {
             {actions.map((action) => (
               <ActionForm
                 key={`${id}:${data.status}:${action.title}`}
-                action={action}
+                action={{ ...action, preserveRetry: true, retryPayment: true }}
                 onSuccess={() => {
                   setShowBank(false);
                   record.reload();

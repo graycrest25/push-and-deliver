@@ -1,3 +1,9 @@
+import {
+  paymentCommand,
+  paymentErrors,
+  retryAfterTime,
+  retryPaymentRequest,
+} from "@/lib/payment-operations";
 import { enumLabel, readableEnum } from "@/lib/enum-labels";
 import { tableColumnClass } from "@/lib/table-layout";
 import { DEFAULT_PAGE_SIZE } from "@/lib/pagination";
@@ -210,6 +216,15 @@ export function Notice({ children }: { children: ReactNode }) {
     </div>
   );
 }
+async function actionResponse(
+  path: string,
+  options: RequestInit,
+  retryPayment?: boolean,
+) {
+  return retryPayment
+    ? retryPaymentRequest(() => apiResponse(path, options))
+    : apiResponse(path, options);
+}
 export function ErrorNotice({
   error,
   retry,
@@ -225,8 +240,17 @@ export function ErrorNotice({
       className="rounded-xl border border-destructive/30 bg-destructive/5 p-4 text-sm space-y-2"
     >
       <p className="text-destructive">
-        {error instanceof Error ? error.message : String(error)}
+        {error instanceof ApiError
+          ? paymentErrors[error.code] || error.message
+          : error instanceof Error
+            ? error.message
+            : String(error)}
       </p>
+      {error instanceof ApiError && error.code === "recent_auth_required" && (
+        <Link className="text-primary underline" to="/login?reauth=company">
+          Sign in again
+        </Link>
+      )}
       {showReadinessLink &&
         error instanceof ApiError &&
         error.code === "analytics_not_ready" && (
@@ -234,12 +258,14 @@ export function ErrorNotice({
             Inspect report readiness
           </Link>
         )}
-      {error instanceof ApiError && error.status === 409 && (
-        <p>
-          Check the current record and the action’s requirements before starting
-          a new attempt.
-        </p>
-      )}
+      {error instanceof ApiError &&
+        error.status === 409 &&
+        !paymentErrors[error.code] && (
+          <p>
+            Check the current record and the action’s requirements before
+            starting a new attempt.
+          </p>
+        )}
       {error instanceof ApiError && error.requestId && (
         <p className="text-muted-foreground break-all">
           Request reference: {error.requestId}
@@ -252,36 +278,72 @@ export function ErrorNotice({
     </div>
   );
 }
-export function useResource(path: string | null) {
+export function useResource(
+  path: string | null,
+  shouldPoll?: (data: RecordData) => boolean,
+  refreshRevision = 0,
+) {
   const [data, setData] = useState<RecordData | null>(null);
   const [error, setError] = useState<unknown>(null);
   const [loading, setLoading] = useState(!!path);
   const [revision, setRevision] = useState(0);
   const [resourcePath, setResourcePath] = useState(path);
+  const retryAt = useRef(0);
   useEffect(() => {
     const abort = new AbortController();
+    let timer: ReturnType<typeof setTimeout>;
     setResourcePath(path);
     setData(null);
     setError(null);
     setLoading(!!path);
-    if (path)
-      api(path, { signal: abort.signal })
-        .then((result) => {
-          if (!abort.signal.aborted) setData(result);
-        })
-        .catch((e) => {
-          if (!abort.signal.aborted) setError(e);
-        })
-        .finally(() => {
-          if (!abort.signal.aborted) setLoading(false);
-        });
-    return () => abort.abort();
-  }, [path, revision]);
+    if (!path) return;
+    const target = path;
+    function schedule() {
+      timer = setTimeout(
+        () => void read(true),
+        Math.max(5000, retryAt.current - Date.now()),
+      );
+    }
+    async function read(polling = false) {
+      if (polling && (document.hidden || !navigator.onLine)) {
+        schedule();
+        return;
+      }
+      try {
+        const result = await api(target, { signal: abort.signal });
+        if (abort.signal.aborted) return;
+        retryAt.current = 0;
+        setData(result);
+        setError(null);
+        if (result && shouldPoll?.(result)) schedule();
+      } catch (failure) {
+        if (abort.signal.aborted) return;
+        retryAt.current = retryAfterTime(failure);
+        setError(failure);
+        if (
+          shouldPoll &&
+          (!(failure instanceof ApiError) ||
+            failure.status >= 500 ||
+            failure.status === 429)
+        )
+          schedule();
+      } finally {
+        if (!abort.signal.aborted) setLoading(false);
+      }
+    }
+    void read();
+    return () => {
+      abort.abort();
+      clearTimeout(timer);
+    };
+  }, [path, revision, shouldPoll, refreshRevision]);
   return {
     data: resourcePath === path ? data : null,
     error: resourcePath === path ? error : null,
     loading: resourcePath === path ? loading : !!path,
-    reload: () => setRevision((n) => n + 1),
+    reload: () => {
+      if (retryAt.current <= Date.now()) setRevision((n) => n + 1);
+    },
   };
 }
 export function InformationCard({
@@ -908,6 +970,7 @@ export interface Action {
   bodyWithCurrent?: (values: RecordData, current: RecordData) => unknown;
   success?: string;
   preserveRetry?: boolean;
+  retryPayment?: boolean;
   operationScope?: string;
   versionPath?: string;
   versionRead?: () => Promise<RecordData>;
@@ -1078,7 +1141,7 @@ export function ActionForm({
       let responseRequestId: string | undefined;
       let responseStatus: number | undefined;
       if (action.expectedStatus) {
-        const result = await apiResponse(path, options);
+        const result = await actionResponse(path, options, action.retryPayment);
         responseStatus = result.status;
         responseRequestId = result.headers.get("x-request-id") || undefined;
         const envelope = await result.json().catch(() => {
@@ -1104,7 +1167,11 @@ export function ActionForm({
             responseRequestId,
           );
         response = envelope?.data ?? envelope;
-      } else response = await api(path, options);
+      } else
+        response = await (action.retryPayment ? paymentCommand : api)(
+          path,
+          options,
+        );
       try {
         action.validateResult?.(response);
       } catch (failure) {
@@ -1132,12 +1199,16 @@ export function ActionForm({
         e instanceof ApiError &&
         e.status >= 400 &&
         e.status < 500 &&
-        ![408, 429].includes(e.status)
+        ![408, 429].includes(e.status) &&
+        !(
+          action.retryPayment &&
+          ["provider_unavailable", "unavailable"].includes(e.code)
+        )
       ) {
         pending.current = undefined;
         if (operationStorage.current)
           sessionStorage.removeItem(operationStorage.current);
-        if (e.status === 409) {
+        if (e.status === 409 && !paymentErrors[e.code]) {
           setConflict(true);
           setConflictReference(e.requestId);
           if (action.versionPath || action.versionRead) {
@@ -1153,12 +1224,8 @@ export function ActionForm({
           }
         }
       }
-      if (e instanceof ApiError && e.retryAfter) {
-        const until = /^\d+$/.test(e.retryAfter)
-          ? Date.now() + Number(e.retryAfter) * 1000
-          : Date.parse(e.retryAfter);
-        if (Number.isFinite(until) && until > Date.now()) setRetryAt(until);
-      }
+      const until = retryAfterTime(e);
+      if (until > Date.now()) setRetryAt(until);
       setError(
         e instanceof ApiError && action.errorMessages?.[e.code]
           ? new ApiError(

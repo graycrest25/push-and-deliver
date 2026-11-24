@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useSearchParams } from "react-router-dom";
 import { api } from "@/lib/api";
 import { useCurrentUser } from "@/contexts/UserContext";
 import { Button } from "@/components/ui/button";
@@ -19,9 +19,12 @@ import { IconEye, IconEyeOff } from "@tabler/icons-react";
 import { GoogleSignIn } from "./google-sign-in";
 export default function SignInPage() {
   const navigate = useNavigate();
-  const { refetchUser } = useCurrentUser();
+  const { user, refetchUser } = useCurrentUser();
+  const [params] = useSearchParams();
+  const reauth = params.get("reauth") === "company";
+  const destination = reauth ? "/company-funds" : "/dashboard";
   const [loading, setLoading] = useState(false);
-  const [email, setEmail] = useState("");
+  const [email, setEmail] = useState(reauth ? user?.email || "" : "");
   const [password, setPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
   const [error, setError] = useState("");
@@ -46,7 +49,7 @@ export default function SignInPage() {
           "Signed in, but your session could not be loaded. Retry the session check.",
         );
       toast.success("Signed in successfully");
-      navigate("/dashboard");
+      navigate(destination, { replace: reauth });
     } catch (error: unknown) {
       setError(
         error instanceof Error
@@ -62,9 +65,13 @@ export default function SignInPage() {
     <AuthFrame>
       <Card className="auth-form-card">
         <CardHeader className="space-y-1">
-          <CardTitle className="text-3xl font-bold">Welcome back</CardTitle>
+          <CardTitle className="text-3xl font-bold">
+            {reauth ? "Sign in again" : "Welcome back"}
+          </CardTitle>
           <CardDescription className="text-sm">
-            Sign in to your admin workspace to get started.
+            {reauth
+              ? "Confirm your session to manage company funds."
+              : "Sign in to your admin workspace to get started."}
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
@@ -129,7 +136,7 @@ export default function SignInPage() {
                 throw new Error(
                   "Signed in, but the session could not be loaded. Retry the session check.",
                 );
-              navigate("/dashboard");
+              navigate(destination, { replace: reauth });
             }}
           />
 
